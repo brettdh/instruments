@@ -1,11 +1,18 @@
-CFLAGS=-Wall -Werror -g -I../include
+CFLAGS=-Wall -Werror -g -I../include -m32
+LDFLAGS=-L../src -linstruments
+ifeq ($(shell uname), Darwin)
+LDFLAGS+=-Wl,-flat_namespace,-undefined,dynamic_lookup
+endif
 
-TESTS=test_fair_coin.c
+TESTS=test_coin_flip.o
 
 all: run_tests
 
-run_tests: main.c ctest.h $(TESTS)
-	gcc $(CFLAGS) main.c $(TESTS) -o $@
+%.o: %.c
+	gcc $(CFLAGS) -c -o $@ $<
+
+run_tests: main.o ctest.h $(TESTS)
+	gcc $(LDFLAGS) main.o $(TESTS) -o $@
 
 clean:
-	rm -f run_tests
+	rm -f run_tests *.o

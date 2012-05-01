@@ -6,6 +6,7 @@
 
 /* Functions to specify and manipulate strategies */
 
+typedef int estimator_id_t;
 typedef double (*eval_fn_t)(instruments_context_t, void *);
 
 instruments_strategy_t
@@ -13,6 +14,9 @@ make_strategy(eval_fn_t time_fn, /* return seconds */
               eval_fn_t energy_cost_fn, /* return Joules */
               eval_fn_t data_cost_fn, /* return bytes */
               void *arg);
+
+void add_estimator(instruments_strategy_t strategy, 
+                   estimator_id_t estimator_id);
 
 void free_strategy(instruments_strategy_t strategy);
 
@@ -29,6 +33,8 @@ ssize_t
 choose_strategy(const instruments_strategy_t *strategies, size_t num_strategies,
                 /* OUT */ instruments_strategy_t *chosen_strategies);
 
+#define INSTRUMENTS_ESTIMATOR_NETWORK 0
+/* #define INSTRUMENTS_ESTIMATOR_LOCAL_CPU 1 */
 
 /* Functions to get estimator values */
 double /* bytes/sec */ network_bandwidth_down(instruments_context_t ctx, const char *iface);
