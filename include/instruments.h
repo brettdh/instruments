@@ -1,11 +1,16 @@
 #ifndef instruments_h_incl
 #define instruments_h_incl
 
-#include "instruments_private.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <sys/types.h>
 
 /* Functions to specify and manipulate strategies */
 
+typedef void * instruments_context_t;
+typedef void * instruments_strategy_t;
 typedef int estimator_id_t;
 typedef double (*eval_fn_t)(instruments_context_t, void *);
 
@@ -41,5 +46,9 @@ double /* bytes/sec */ network_bandwidth_down(instruments_context_t ctx, const c
 double /* bytes/sec */ network_bandwidth_up(instruments_context_t ctx, const char *iface);
 double /*   seconds */ network_rtt(instruments_context_t ctx, const char *iface);
 /* ... */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

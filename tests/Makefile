@@ -1,5 +1,6 @@
 CFLAGS=-Wall -Werror -g -I../include -m32
-LDFLAGS=-L../src -linstruments
+LDFLAGS=
+LIBS=../src/libinstruments.a
 ifeq ($(shell uname), Darwin)
 LDFLAGS+=-Wl,-flat_namespace,-undefined,dynamic_lookup
 endif
@@ -12,7 +13,7 @@ all: run_tests
 	gcc $(CFLAGS) -c -o $@ $<
 
 run_tests: main.o ctest.h $(TESTS)
-	gcc $(LDFLAGS) main.o $(TESTS) -o $@
+	gcc $(LDFLAGS) main.o $(TESTS) -o $@ $(LIBS)
 
 clean:
 	rm -f run_tests *.o

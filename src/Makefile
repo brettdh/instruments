@@ -6,4 +6,7 @@ CFLAGS = -g -Wall -Werror -I../include
 all: $(LIB)
 
 $(LIB): $(OBJS)
-	$(AR)
+	ar rcs $@ $(OBJS)
+
+clean:
+	rm -f $(OBJS) $(LIB)
