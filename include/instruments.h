@@ -2,6 +2,7 @@
 #define instruments_h_incl
 
 #include "instruments_private.h"
+#include <sys/types.h>
 
 /* Functions to specify and manipulate strategies */
 
