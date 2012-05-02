@@ -1,19 +1,8 @@
-CFLAGS=-Wall -Werror -g -I../include -m32
-LDFLAGS=
-LIBS=../src/libinstruments.a
-ifeq ($(shell uname), Darwin)
-LDFLAGS+=-Wl,-flat_namespace,-undefined,dynamic_lookup
-endif
+SUBDIRS = unit acceptance
 
-TESTS=test_coin_flip.o
+.PHONY: subdirs $(SUBDIRS)
+subdirs: $(SUBDIRS)
+$(SUBDIRS)::
+	make -C $@
 
-all: run_tests
-
-%.o: %.c
-	gcc $(CFLAGS) -c -o $@ $<
-
-run_tests: main.o ctest.h $(TESTS)
-	gcc $(LDFLAGS) main.o $(TESTS) -o $@ $(LIBS)
-
-clean:
-	rm -f run_tests *.o
+all: subdirs

@@ -1,10 +1,55 @@
 #ifndef ESTIMATOR_SET_H_INCL
 #define ESTIMATOR_SET_H_INCL
 
+#include <set>
+#include "instruments.h"
+
+class Estimator;
+
 class EstimatorSet {
   public:
+    enum EvalStrategy {
+	TRUSTED_ORACLE,    // No error evaluation; estimators assumed perfect
+	SIMPLE_STATS,      // All-time statistical summary
+	EMPIRICAL_ERROR,   // Historical predictor error distribution
+	CONFIDENCE_BOUNDS, // Chebyshev bounds on predictor error
+	BAYESIAN           // Bayesian estimation of posterior 
+			   //   estimator distribution
+    };
+
+    static EstimatorSet *create(EvalStrategy type);
+    
+    // An EstimatorSet does not *own* its estimators; it just gets updates from them.
     void addEstimator(Estimator *estimator);
-    double expectedValue(eval_fn_t fn);
+    void observationAdded(Estimator *estimator, double value);
+    
+    double expectedValue(eval_fn_t fn, void *arg);
+
+    class Iterator {
+      public:
+	virtual double jointProbability();
+
+	// TODO: decide how to make this work with different estimators 
+	// TODO:  and the so-called 'estimator registry' that exists in my mind
+	//virtual double getEstimatorValue(TYPE);
+	
+	virtual void advance();
+	virtual bool done();
+    };
+  private:
+    EstimatorSet();
+
+    std::set<Estimator*> estimators;
+    
+    class ExpectationEvaluator;
+    ExpectationEvaluator *evaluator;
+
+    // for giving subclasses member access.
+    class TrustedOracleExpectationEvaluator;
+    class SimpleStatsExpectationEvaluator;
+    class EmpiricalErrorExpectationEvaluator;
+    class ConfidenceBoundsExpectationEvaluator;
+    class BayesianExpectationEvaluator;
 };
 
 #endif

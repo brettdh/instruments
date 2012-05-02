@@ -1,12 +1,14 @@
-LIB = libinstruments.a
-OBJS = instruments.o
+LIBRARIES := libinstruments.a
+OBJS := instruments.o estimator.o estimator_set.o 
 
-CFLAGS = -g -Wall -Werror -I../include
+CXXFLAGS := -g -Wall -Werror -I../include
 
-all: $(LIB)
+all: $(LIBRARIES)
 
-$(LIB): $(OBJS)
+libinstruments.a: $(OBJS)
 	ar rcs $@ $(OBJS)
 
 clean:
-	rm -f $(OBJS) $(LIB)
+	rm -f $(OBJS) $(LIBRARIES) *~
+
+include deps.mk

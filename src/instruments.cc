@@ -1,6 +1,7 @@
 #include <stdlib.h>
-#include "instruments.h"
-#include "instruments_private.h"
+
+#include <instruments.h>
+#include <instruments_private.h>
 
 struct instruments_strategy {
     eval_fn_t time_fn;
@@ -15,7 +16,8 @@ make_strategy(eval_fn_t time_fn, /* return seconds */
               eval_fn_t data_cost_fn, /* return bytes */
               void *arg)
 {
-    struct instruments_strategy *strategy = malloc(sizeof(struct instruments_strategy));
+    struct instruments_strategy *strategy = 
+	(struct instruments_strategy *) malloc(sizeof(struct instruments_strategy));
     strategy->time_fn = time_fn;
     strategy->energy_cost_fn = energy_cost_fn;
     strategy->data_cost_fn = data_cost_fn;
