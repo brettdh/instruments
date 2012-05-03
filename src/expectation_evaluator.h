@@ -3,6 +3,7 @@
 
 #include "instruments.h"
 #include "estimator_set.h"
+#include "estimator.h"
 
 /*
  * These help implement the different uncertainty evaluation methods
@@ -13,10 +14,15 @@ class EstimatorSet::ExpectationEvaluator {
     virtual double evaluate(eval_fn_t fn, void *arg);
     virtual void observationAdded(Estimator *estimator, double value) = 0;
     
-    virtual EstimatorSet::Iterator *startIterator() = 0;
-    virtual void finishIterator(EstimatorSet::Iterator *iter);
+    virtual void startIteration() = 0;
+    virtual void finishIteration() = 0;
+    virtual double jointProbability() = 0;
+    virtual double getAdjustedEstimatorValue(Estimator *estimator) = 0;
+    virtual void advance() = 0;
+    bool isDone();
   protected:
     ExpectationEvaluator(EstimatorSet *owner_);
+    bool done;
   private:
     EstimatorSet *owner;
 };

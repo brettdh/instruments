@@ -6,8 +6,10 @@ extern "C" {
 #endif
 
 /* for testing. */
-#define INSTRUMENTS_ESTIMATOR_FAIR_COIN 0x10001
+void add_fair_coin_estimator(instruments_strategy_t strategy);
+void add_heads_heavy_coin_estimator(instruments_strategy_t strategy);
 int fair_coin_lands_heads(instruments_context_t ctx);
+int heads_heavy_coin_lands_heads(instruments_context_t ctx);
 
 #ifdef __cplusplus
 }

@@ -11,7 +11,7 @@ void
 Estimator::addObservation(double value)
 {
     if (owner) {
-      owner->observationAdded(this, value);
+        owner->observationAdded(this, value);
     }
     storeNewObservation(value);
 }

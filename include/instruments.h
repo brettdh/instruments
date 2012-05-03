@@ -11,7 +11,6 @@ extern "C" {
 
 typedef void * instruments_context_t;
 typedef void * instruments_strategy_t;
-typedef int estimator_id_t;
 typedef double (*eval_fn_t)(instruments_context_t, void *);
 
 instruments_strategy_t
@@ -20,26 +19,30 @@ make_strategy(eval_fn_t time_fn, /* return seconds */
               eval_fn_t data_cost_fn, /* return bytes */
               void *arg);
 
-void add_estimator(instruments_strategy_t strategy, 
-                   estimator_id_t estimator_id);
+instruments_strategy_t
+make_redundant_strategy(const instruments_strategy_t *strategies, 
+			size_t num_strategies);
+
+/* before calling choose_strategy, clients should call 
+ * add_*_estimator functions with each of their strategies,
+ * for all the estimators that a strategy considers. */
+/* TODO: maybe somehow discover these at compile time? */
+void add_network_bandwidth_down_estimator(instruments_strategy_t strategy, 
+					  const char *iface);
+void add_network_bandwidth_up_estimator(instruments_strategy_t strategy, 
+					const char *iface);
+void add_network_rtt_estimator(instruments_strategy_t strategy, 
+			       const char *iface);
+/* ... */
 
 void free_strategy(instruments_strategy_t strategy);
 
-/* Choose the strategy (or comibination of strategies)
- *   that maximizes expected (time + cost).
- * Writes chosen strategy handles to chosen_strategies;
- *   returns the number of strategies chosen.
- * Assumptions:
- *   1) Strategies are single-option strategies, not redundant.
- *   2) Time(strategies) = min(Time(strategy_1), Time(strategy_2), ...)
- *   3) Cost(strategies) = Cost(strategy_1) + Cost(strategy_2) + ...
+/* Choose and return the best strategy.
+ * strategies contains all interested strategies, singular and redundant.
+ * (see make_strategy and make_redundant_strategy above)
  */
 ssize_t
-choose_strategy(const instruments_strategy_t *strategies, size_t num_strategies,
-                /* OUT */ instruments_strategy_t *chosen_strategies);
-
-#define INSTRUMENTS_ESTIMATOR_NETWORK 0
-/* #define INSTRUMENTS_ESTIMATOR_LOCAL_CPU 1 */
+choose_strategy(const instruments_strategy_t *strategies, size_t num_strategies);
 
 /* Functions to get estimator values */
 double /* bytes/sec */ network_bandwidth_down(instruments_context_t ctx, const char *iface);

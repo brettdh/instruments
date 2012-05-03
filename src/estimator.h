@@ -26,7 +26,7 @@ class Estimator {
     EstimatorSet *owner;
 };
 
-/* Things that are missing from the design right now:
+/* TODO: Things that are missing from the design right now:
  * 1) Each type of estimator is essentially a singleton.
  *    i.e. there probably needs to be something like an
  *    "estimator registry," even if it's just static methods

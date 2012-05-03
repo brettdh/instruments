@@ -33,22 +33,18 @@ static double coinflip_data(instruments_context_t ctx, void *arg)
 
 CTEST(coinflip, faircoin)
 {
-    int i;
-    instruments_strategy_t
-        strategies[2], 
-        chosen_strategies[2] = {NULL, NULL};
+    int i, NUM_STRATEGIES = 3;
+    instruments_strategy_t strategies[NUM_STRATEGIES];
     strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
     strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0);
-    ASSERT_NOT_NULL(strategies[0]);
-    ASSERT_NOT_NULL(strategies[1]);
+    strategies[2] = make_redundant_strategy(strategies, 2);
+    for (i = 0; i < NUM_STRATEGIES; ++i) {
+        ASSERT_NOT_NULL(strategies[i]);
+    }
 
     add_estimator(strategies[0], INSTRUMENTS_ESTIMATOR_FAIR_COIN);
     add_estimator(strategies[1], INSTRUMENTS_ESTIMATOR_FAIR_COIN);
 
-    ssize_t num_chosen = choose_strategy(strategies, 2, chosen_strategies);
-    ASSERT_EQUAL(2, num_chosen);
-    for (i = 0; i < 2; ++i) {
-        ASSERT_NOT_NULL(chosen_strategies[i]);
-        ASSERT_EQUAL((int)strategies[i], (int)chosen_strategies[i]);
-    }
+    instruments_strategy_t chosen_strategy = choose_strategy(strategies, 3);
+    ASSERT_EQUAL((int)strategies[2], (int)chosen_strategy);
 }
