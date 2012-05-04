@@ -43,6 +43,25 @@ CTEST(coinflip, one_strategy)
     ASSERT_EQUAL((int)strategy, (int)chosen);
 }
 
+CTEST(coinflip, two_strategies)
+{
+    // TODO: mock out the coin flip estimator to ensure it should do this
+
+    int i, NUM_STRATEGIES = 2;
+    instruments_strategy_t strategies[NUM_STRATEGIES];
+    strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0);
+    strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
+    for (i = 0; i < NUM_STRATEGIES; ++i) {
+        ASSERT_NOT_NULL(strategies[i]);
+    }
+
+    add_fair_coin_estimator(strategies[0]);
+    add_fair_coin_estimator(strategies[1]);
+    
+    instruments_strategy_t chosen_strategy = choose_strategy(strategies, 2);
+    ASSERT_EQUAL((int)strategies[1], (int)chosen_strategy);
+}
+
 CTEST_SKIP(coinflip, faircoin)
 {
     int i, NUM_STRATEGIES = 3;
