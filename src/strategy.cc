@@ -1,4 +1,5 @@
 #include "strategy.h"
+#include "estimator_set.h"
 
 Strategy::Strategy(eval_fn_t time_fn_, 
                    eval_fn_t energy_cost_fn_, 
@@ -16,7 +17,7 @@ Strategy::Strategy(eval_fn_t time_fn_,
 void
 Strategy::addEstimator(Estimator *estimator)
 {
-    estimators->addEstimators(estimator);
+    estimators->addEstimator(estimator);
 }
 
 double 
@@ -28,5 +29,6 @@ Strategy::calculateTime()
 double
 Strategy::calculateCost()
 {
-    
+    // TODO: finish implementing.
+    return estimators->expectedValue(data_cost_fn, fn_arg);
 }

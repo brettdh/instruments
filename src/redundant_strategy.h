@@ -2,11 +2,13 @@
 #define REDUNDANT_STRATEGY_H_INCL
 
 #include <vector>
+#include "instruments.h"
 #include "strategy.h"
 
 class RedundantStrategy : public Strategy {
   public:
-    RedundantStrategy(const Strategy *strategies[], size_t num_strategies);
+    RedundantStrategy(const instruments_strategy_t strategies[], 
+                      size_t num_strategies);
     
     virtual double calculateTime();
     virtual double calculateCost();

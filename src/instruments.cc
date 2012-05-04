@@ -2,13 +2,18 @@
 
 #include <instruments.h>
 #include <instruments_private.h>
-
+#include "strategy.h"
+#include "redundant_strategy.h"
+#include "estimator.h"
+#include "estimator_set.h"
+#include "estimator_registry.h"
+#include "expectation_evaluator.h"
 
 instruments_strategy_t
 make_strategy(eval_fn_t time_fn, /* return seconds */
               eval_fn_t energy_cost_fn, /* return Joules */
               eval_fn_t data_cost_fn, /* return bytes */
-              void *arg)
+              void *fn_arg)
 {
     return new Strategy(time_fn, energy_cost_fn, data_cost_fn, fn_arg);
 }
@@ -70,14 +75,14 @@ double network_rtt(instruments_context_t ctx, const char *iface)
 }
 
 
-ssize_t
+instruments_strategy_t
 choose_strategy(const instruments_strategy_t *strategies, size_t num_strategies)
 {
     // first, pick the singular strategy that takes the least time (expected)
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
-    for (size_t i = 0; i <= num_strategies; ++i) {
-        Strategy *cur_strategy = strategies[i];
+    for (size_t i = 0; i < num_strategies; ++i) {
+        Strategy *cur_strategy = (Strategy *) strategies[i];
         if (!cur_strategy->isRedundant()) {
             double time = cur_strategy->calculateTime();
             if (!best_singular || time < best_singular_time) {
@@ -91,8 +96,8 @@ choose_strategy(const instruments_strategy_t *strategies, size_t num_strategies)
     //  over the best singular strategy (if any)
     Strategy *best_redundant = NULL;
     double best_redundant_net_benefit = 0.0;
-    for (size_t i = 0; i <= num_strategies; ++i) {
-        Strategy *cur_strategy = strategies[i];
+    for (size_t i = 0; i < num_strategies; ++i) {
+        Strategy *cur_strategy = (Strategy *) strategies[i];
         if (cur_strategy->isRedundant()) {
             double benefit = best_singular_time - cur_strategy->calculateTime();
             double net_benefit = benefit - (cur_strategy->calculateCost() -
@@ -114,9 +119,10 @@ choose_strategy(const instruments_strategy_t *strategies, size_t num_strategies)
     }
 }
 
-void add_fair_coin_estimator(instruments_strategy_t strategy)
+void add_fair_coin_estimator(instruments_strategy_t s)
 {
-    /* TODO */
+    Strategy *strategy = (Strategy *) s;
+    strategy->addEstimator(EstimatorRegistry::getFairCoinEstimator());
 }
 
 void add_heads_heavy_coin_estimator(instruments_strategy_t strategy)
@@ -126,8 +132,12 @@ void add_heads_heavy_coin_estimator(instruments_strategy_t strategy)
 
 int fair_coin_lands_heads(instruments_context_t ctx)
 {
-    /* TODO */
-    return 0;
+    EstimatorSet::ExpectationEvaluator *evaluator = 
+        (EstimatorSet::ExpectationEvaluator *) ctx;
+    Estimator *estimator = EstimatorRegistry::getFairCoinEstimator();
+    double value = evaluator->getAdjustedEstimatorValue(estimator);
+    
+    return (value >= 0.5);
 }
 
 int heads_heavy_coin_lands_heads(instruments_context_t ctx)

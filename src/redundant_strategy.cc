@@ -1,11 +1,11 @@
 #include "redundant_strategy.h"
 
-RedundantStrategy::RedundantStrategy(const Strategy *strategies[], 
+RedundantStrategy::RedundantStrategy(const instruments_strategy_t strategies[], 
                                      size_t num_strategies)
     : Strategy(NULL, NULL, NULL, NULL)
 {
     for (size_t i = 0; i < num_strategies; ++i) {
-        this->strategies.push_back(strategies[i]);
+        this->strategies.push_back((Strategy *) strategies[i]);
     }
 }
 

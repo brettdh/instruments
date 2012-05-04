@@ -12,7 +12,7 @@ EstimatorSet::TrustedOracleExpectationEvaluator::observationAdded(Estimator *est
 }
 
 void
-EstimatorSet::TrustedOracleExpectationEvaluator::startIterator()
+EstimatorSet::TrustedOracleExpectationEvaluator::startIteration()
 {
     done = false;
 }

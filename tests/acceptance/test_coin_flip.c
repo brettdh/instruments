@@ -31,7 +31,19 @@ static double coinflip_data(instruments_context_t ctx, void *arg)
     return 4.0;
 }
 
-CTEST(coinflip, faircoin)
+CTEST(coinflip, one_strategy)
+{
+    instruments_strategy_t strategy =
+        make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
+    ASSERT_NOT_NULL(strategy);
+    add_fair_coin_estimator(strategy);
+    
+    instruments_strategy_t chosen = choose_strategy(&strategy, 1);
+    ASSERT_NOT_NULL(chosen);
+    ASSERT_EQUAL((int)strategy, (int)chosen);
+}
+
+CTEST_SKIP(coinflip, faircoin)
 {
     int i, NUM_STRATEGIES = 3;
     instruments_strategy_t strategies[NUM_STRATEGIES];
@@ -42,9 +54,9 @@ CTEST(coinflip, faircoin)
         ASSERT_NOT_NULL(strategies[i]);
     }
 
-    add_estimator(strategies[0], INSTRUMENTS_ESTIMATOR_FAIR_COIN);
-    add_estimator(strategies[1], INSTRUMENTS_ESTIMATOR_FAIR_COIN);
-
+    add_fair_coin_estimator(strategies[0]);
+    add_fair_coin_estimator(strategies[1]);
+    
     instruments_strategy_t chosen_strategy = choose_strategy(strategies, 3);
     ASSERT_EQUAL((int)strategies[2], (int)chosen_strategy);
 }

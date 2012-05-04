@@ -13,12 +13,15 @@ class EstimatorSet;
  */
 class Estimator {
   public:
-    Estimator();
+    static Estimator *create();
+    
     void addObservation(double value);
     void setOwner(EstimatorSet *owner_);
     
     virtual double getEstimate() = 0;
   protected:
+    Estimator();
+
     /* override to get estimates from addObservation. */
     virtual void storeNewObservation(double value) = 0;
     

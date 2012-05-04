@@ -11,6 +11,8 @@
  */
 class EstimatorSet::ExpectationEvaluator {
   public:
+    ExpectationEvaluator(EstimatorSet *owner_);
+    
     virtual double evaluate(eval_fn_t fn, void *arg);
     virtual void observationAdded(Estimator *estimator, double value) = 0;
     
@@ -21,7 +23,6 @@ class EstimatorSet::ExpectationEvaluator {
     virtual void advance() = 0;
     bool isDone();
   protected:
-    ExpectationEvaluator(EstimatorSet *owner_);
     bool done;
   private:
     EstimatorSet *owner;

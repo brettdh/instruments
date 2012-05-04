@@ -28,11 +28,11 @@ make_redundant_strategy(const instruments_strategy_t *strategies,
  * for all the estimators that a strategy considers. */
 /* TODO: maybe somehow discover these at compile time? */
 void add_network_bandwidth_down_estimator(instruments_strategy_t strategy, 
-					  const char *iface);
+                                          const char *iface);
 void add_network_bandwidth_up_estimator(instruments_strategy_t strategy, 
-					const char *iface);
+                                        const char *iface);
 void add_network_rtt_estimator(instruments_strategy_t strategy, 
-			       const char *iface);
+                               const char *iface);
 /* ... */
 
 void free_strategy(instruments_strategy_t strategy);
@@ -41,7 +41,7 @@ void free_strategy(instruments_strategy_t strategy);
  * strategies contains all interested strategies, singular and redundant.
  * (see make_strategy and make_redundant_strategy above)
  */
-ssize_t
+instruments_strategy_t
 choose_strategy(const instruments_strategy_t *strategies, size_t num_strategies);
 
 /* Functions to get estimator values */

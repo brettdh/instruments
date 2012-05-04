@@ -1,12 +1,22 @@
-LIBRARIES := libinstruments.a
-OBJS := instruments.o estimator.o estimator_set.o 
+LIBRARIES := libinstruments.so
+OBJS := \
+	estimator.o \
+	estimator_registry.o \
+	estimator_set.o \
+	expectation_evaluator.o \
+	instruments.o \
+	redundant_strategy.o \
+	running_mean_estimator.o \
+	simple_stats_expectation_evaluator.o \
+	strategy.o \
+	trusted_oracle_expectation_evaluator.o
 
-CXXFLAGS := -g -Wall -Werror -I../include
+CXXFLAGS := -g -Wall -Werror -I../include -fpic
 
 all: $(LIBRARIES)
 
-libinstruments.a: $(OBJS)
-	ar rcs $@ $(OBJS)
+libinstruments.so: $(OBJS)
+	g++ $(LDFLAGS) -shared -o $@ $^
 
 clean:
 	rm -f $(OBJS) $(LIBRARIES) *~

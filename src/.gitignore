@@ -1,2 +1,2 @@
-libinstruments.a
+libinstruments.so
 .*.dep

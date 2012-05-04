@@ -1,6 +1,6 @@
 CFLAGS=-Wall -Werror -g -I../include -I../../include -m32
 LDFLAGS=
-LIBS=../../src/libinstruments.a
+LIBS=../../src/libinstruments.so
 ifeq ($(shell uname), Darwin)
 LDFLAGS+=-Wl,-flat_namespace,-undefined,dynamic_lookup
 endif

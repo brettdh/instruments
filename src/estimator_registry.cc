@@ -1,6 +1,5 @@
+#include "estimator.h"
 #include "estimator_registry.h"
-
-// TODO: add an 'init' method that sets up all of the singleton estimators.
 
 Estimator *
 EstimatorRegistry::getNetworkBandwidthDownEstimator(const char *iface)
@@ -26,13 +25,37 @@ EstimatorRegistry::getNetworkRttEstimator(const char *iface)
 Estimator *
 EstimatorRegistry::getFairCoinEstimator()
 {
-    // TODO: implement
-    return NULL;
+    return singletonEstimator("FairCoin");
 }
 
 Estimator *
 EstimatorRegistry::getHeadsHeavyCoinEstimator()
 {
-    // TODO: implement
-    return NULL;
+    return singletonEstimator("HeadsHeavyCoin");
+}
+
+
+std::map<std::string, Estimator *> EstimatorRegistry::estimators;
+EstimatorRegistry::initializer EstimatorRegistry::theInitializer;
+
+void
+EstimatorRegistry::init()
+{
+    estimators["FairCoin"] = Estimator::create();
+    
+    // TODO: move this into the testcase.
+    getFairCoinEstimator()->addObservation(1.0);
+    getFairCoinEstimator()->addObservation(0.0);
+
+    estimators["HeadsHeavyCoin"] = Estimator::create();
+}
+
+Estimator *
+EstimatorRegistry::singletonEstimator(const char *name)
+{
+    if (estimators.count(name) > 0) {
+        return estimators[name];
+    } else {
+        return NULL;
+    }
 }

@@ -1,6 +1,11 @@
 #ifndef ESTIMATOR_REGISTRY_H_INCL
 #define ESTIMATOR_REGISTRY_H_INCL
 
+#include <map>
+#include <string>
+
+class Estimator;
+
 class EstimatorRegistry {
   public:
     static Estimator *getNetworkBandwidthDownEstimator(const char *iface);
@@ -9,6 +14,19 @@ class EstimatorRegistry {
     
     static Estimator *getFairCoinEstimator();
     static Estimator *getHeadsHeavyCoinEstimator();
+
+  private:
+    class initializer {
+    public:
+        initializer() {
+            init();
+        }
+    };
+    static initializer theInitializer;
+    
+    static void init();
+    static Estimator *singletonEstimator(const char *name);
+    static std::map<std::string, Estimator *> estimators;
 };
 
 #endif

@@ -1,6 +1,15 @@
 #include <stdlib.h>
 #include "estimator.h"
 #include "estimator_set.h"
+#include "running_mean_estimator.h"
+
+Estimator *
+Estimator::create()
+{
+    // for now: default type.
+    // TODO: choose between types.
+    return new RunningMeanEstimator();
+}
 
 Estimator::Estimator() 
     : owner(NULL)
