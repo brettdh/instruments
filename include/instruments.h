@@ -21,7 +21,7 @@ make_strategy(eval_fn_t time_fn, /* return seconds */
 
 instruments_strategy_t
 make_redundant_strategy(const instruments_strategy_t *strategies, 
-			size_t num_strategies);
+                        size_t num_strategies);
 
 /* before calling choose_strategy, clients should call 
  * add_*_estimator functions with each of their strategies,
