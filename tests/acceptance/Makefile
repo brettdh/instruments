@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Werror -g -I../include -I../../include -m32
+CFLAGS=-Wall -Werror -g -I../include -I../../include -I ../../src -m32
 LDFLAGS=
 LIBS=../../src/libinstruments.so
 ifeq ($(shell uname), Darwin)

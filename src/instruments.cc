@@ -145,3 +145,13 @@ int heads_heavy_coin_lands_heads(instruments_context_t ctx)
     /* TODO */
     return 0;
 }
+
+void reset_fair_coin_estimator(EstimatorType type)
+{
+    EstimatorRegistry::resetEstimator("FairCoin", type);
+}
+
+void add_coin_flip_observation(int heads)
+{
+    EstimatorRegistry::getFairCoinEstimator()->addObservation(heads ? 1.0 : 0.0);
+}

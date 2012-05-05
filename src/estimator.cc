@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <assert.h>
 #include "estimator.h"
 #include "estimator_set.h"
 #include "running_mean_estimator.h"
@@ -6,9 +7,19 @@
 Estimator *
 Estimator::create()
 {
-    // for now: default type.
-    // TODO: choose between types.
-    return new RunningMeanEstimator();
+    return create(DEFAULT_TYPE);
+}
+
+Estimator *
+Estimator::create(EstimatorType type)
+{
+    switch (type) {
+    case RUNNING_MEAN:
+        return new RunningMeanEstimator();
+    default:
+        // TODO: implement more types
+        assert(0);
+    }
 }
 
 Estimator::Estimator() 

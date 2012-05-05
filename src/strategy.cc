@@ -11,7 +11,7 @@ Strategy::Strategy(eval_fn_t time_fn_,
       fn_arg(fn_arg_)
 {
     // TODO: don't hardcode the evaluation mode; make it an argument?
-    estimators = EstimatorSet::create(EstimatorSet::SIMPLE_STATS);
+    estimators = EstimatorSet::create(SIMPLE_STATS);
 }
 
 void
@@ -29,6 +29,6 @@ Strategy::calculateTime()
 double
 Strategy::calculateCost()
 {
-    // TODO: finish implementing.
+    // TODO: finish implementing.  e.g. energy, goal-directed adaptation
     return estimators->expectedValue(data_cost_fn, fn_arg);
 }

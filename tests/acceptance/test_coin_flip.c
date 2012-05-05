@@ -33,6 +33,9 @@ static double coinflip_data(instruments_context_t ctx, void *arg)
 
 CTEST(coinflip, one_strategy)
 {
+    reset_fair_coin_estimator(RUNNING_MEAN);
+    add_coin_flip_observation(0);
+
     instruments_strategy_t strategy =
         make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
     ASSERT_NOT_NULL(strategy);
@@ -45,7 +48,10 @@ CTEST(coinflip, one_strategy)
 
 CTEST(coinflip, two_strategies)
 {
-    // TODO: mock out the coin flip estimator to ensure it should do this
+    reset_fair_coin_estimator(RUNNING_MEAN);
+    add_coin_flip_observation(1);
+    add_coin_flip_observation(0);
+    add_coin_flip_observation(1);
 
     int i, NUM_STRATEGIES = 2;
     instruments_strategy_t strategies[NUM_STRATEGIES];
@@ -62,8 +68,14 @@ CTEST(coinflip, two_strategies)
     ASSERT_EQUAL((int)strategies[1], (int)chosen_strategy);
 }
 
-CTEST_SKIP(coinflip, faircoin)
+CTEST(coinflip, faircoin)
 {
+    reset_fair_coin_estimator(RUNNING_MEAN);
+    add_coin_flip_observation(1);
+    add_coin_flip_observation(0);
+    add_coin_flip_observation(1);
+    add_coin_flip_observation(0);
+    
     int i, NUM_STRATEGIES = 3;
     instruments_strategy_t strategies[NUM_STRATEGIES];
     strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
@@ -77,5 +89,14 @@ CTEST_SKIP(coinflip, faircoin)
     add_fair_coin_estimator(strategies[1]);
     
     instruments_strategy_t chosen_strategy = choose_strategy(strategies, 3);
+    if (chosen_strategy != strategies[2]) {
+        ASSERT_TRUE(chosen_strategy == strategies[0] ||
+                    chosen_strategy == strategies[1]);
+        
+        const char *names[] = {"'pick heads'", "'pick tails'"};
+        int idx = (chosen_strategy == strategies[0] ? 0 : 1);
+        CTEST_LOG("Failed to choose redundant strategy; chose %s instead\n", names[idx]);
+        ASSERT_FAIL();
+    }
     ASSERT_EQUAL((int)strategies[2], (int)chosen_strategy);
 }

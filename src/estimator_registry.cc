@@ -59,3 +59,12 @@ EstimatorRegistry::singletonEstimator(const char *name)
         return NULL;
     }
 }
+
+void
+EstimatorRegistry::resetEstimator(const char *name, EstimatorType type)
+{
+    if (estimators.count(name) > 0) {
+        delete estimators[name];
+    }
+    estimators[name] = Estimator::create(type);
+}

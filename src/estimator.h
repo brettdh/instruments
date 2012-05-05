@@ -1,6 +1,8 @@
 #ifndef ESTIMATOR_H_INCL
 #define ESTIMATOR_H_INCL
 
+#include <estimator_type.h>
+
 class EstimatorSet;
 
 /* Pure virtual base class for all types of estimators.
@@ -14,6 +16,7 @@ class EstimatorSet;
 class Estimator {
   public:
     static Estimator *create();
+    static Estimator *create(EstimatorType type);
     
     void addObservation(double value);
     void setOwner(EstimatorSet *owner_);
@@ -27,16 +30,7 @@ class Estimator {
     
   private:
     EstimatorSet *owner;
+    const static EstimatorType DEFAULT_TYPE = RUNNING_MEAN;
 };
-
-/* TODO: Things that are missing from the design right now:
- * 1) Each type of estimator is essentially a singleton.
- *    i.e. there probably needs to be something like an
- *    "estimator registry," even if it's just static methods
- *    on this class.
- * 2) The ExpectationEvaluator subclasses need to iterate over
- *    the stored error values and combine that with the 
- *    Estimator values to feed to the eval function.
- */
 
 #endif

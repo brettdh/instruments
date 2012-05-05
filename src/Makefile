@@ -11,7 +11,7 @@ OBJS := \
 	strategy.o \
 	trusted_oracle_expectation_evaluator.o
 
-CXXFLAGS := -g -Wall -Werror -I../include -fpic
+CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic
 
 all: $(LIBRARIES)
 

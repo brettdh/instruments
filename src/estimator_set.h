@@ -3,20 +3,13 @@
 
 #include <set>
 #include "instruments.h"
+#include "eval_strategy.h"
 
 class Estimator;
 
 class EstimatorSet {
   public:
-    enum EvalStrategy {
-        TRUSTED_ORACLE,    // No error evaluation; estimators assumed perfect
-        SIMPLE_STATS,      // All-time statistical summary
-        EMPIRICAL_ERROR,   // Historical predictor error distribution
-        CONFIDENCE_BOUNDS, // Chebyshev bounds on predictor error
-        BAYESIAN           // Bayesian estimation of posterior 
-                           //   estimator distribution
-    };
-
+    static EstimatorSet *create();
     static EstimatorSet *create(EvalStrategy type);
     
     // An EstimatorSet does not *own* its estimators; it just gets updates from them.
@@ -39,6 +32,9 @@ class EstimatorSet {
     class EmpiricalErrorExpectationEvaluator;
     class ConfidenceBoundsExpectationEvaluator;
     class BayesianExpectationEvaluator;
+
+    // TODO: change to a better default.
+    const static EvalStrategy DEFAULT_EVAL_STRATEGY = TRUSTED_ORACLE;
 };
 
 #endif

@@ -15,6 +15,7 @@ class EstimatorRegistry {
     static Estimator *getFairCoinEstimator();
     static Estimator *getHeadsHeavyCoinEstimator();
 
+    static void resetEstimator(const char *name, EstimatorType type);
   private:
     class initializer {
     public:
