@@ -9,10 +9,19 @@ extern "C" {
 
 /* Functions to specify and manipulate strategies */
 
+/** Opaque handle representing strategy evaluation context. */
 typedef void * instruments_context_t;
+
+/** Opaque handle rep */
 typedef void * instruments_strategy_t;
+
+/** Function pointer type for all strategy-evaluation callbacks.
+ *  The second argument is the argument supplied in make_strategy.
+ */
 typedef double (*eval_fn_t)(instruments_context_t, void *);
 
+/** 
+ */
 instruments_strategy_t
 make_strategy(eval_fn_t time_fn, /* return seconds */
               eval_fn_t energy_cost_fn, /* return Joules */
@@ -26,7 +35,6 @@ make_redundant_strategy(const instruments_strategy_t *strategies,
 /* before calling choose_strategy, clients should call 
  * add_*_estimator functions with each of their strategies,
  * for all the estimators that a strategy considers. */
-/* TODO: maybe somehow discover these at compile time? */
 void add_network_bandwidth_down_estimator(instruments_strategy_t strategy, 
                                           const char *iface);
 void add_network_bandwidth_up_estimator(instruments_strategy_t strategy, 
@@ -34,6 +42,7 @@ void add_network_bandwidth_up_estimator(instruments_strategy_t strategy,
 void add_network_rtt_estimator(instruments_strategy_t strategy, 
                                const char *iface);
 /* ... */
+/* TODO: maybe somehow discover these at compile time? */
 
 void free_strategy(instruments_strategy_t strategy);
 
