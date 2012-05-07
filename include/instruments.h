@@ -12,13 +12,22 @@ extern "C" {
 /** Opaque handle representing strategy evaluation context. */
 typedef void * instruments_context_t;
 
-/** Opaque handle rep */
+/** Opaque handle representing an application's strategy
+ *  for accomplishing its task and the calculations
+ *  of time, energy, and data cost of that strategy. 
+ */
 typedef void * instruments_strategy_t;
 
 /** Function pointer type for all strategy-evaluation callbacks.
  *  The second argument is the argument supplied in make_strategy.
  */
 typedef double (*eval_fn_t)(instruments_context_t, void *);
+
+/** Opaque handle representing a 'set' of strategies
+ *  that the application has registered and can ask
+ *  the framework to choose between. 
+ */
+typedef void * instruments_strategy_evaluator_t;
 
 /** 
  */
@@ -46,12 +55,28 @@ void add_network_rtt_estimator(instruments_strategy_t strategy,
 
 void free_strategy(instruments_strategy_t strategy);
 
-/* Choose and return the best strategy.
- * strategies contains all interested strategies, singular and redundant.
- * (see make_strategy and make_redundant_strategy above)
+/** Register a set of strategies with the framework and obtain
+ *  a handle to an evaluator, which can be used later with
+ *  choose_strategy.
+ *  strategies contains all interested strategies, singular and redundant.
+ *  (see make_strategy and make_redundant_strategy above)
+ */
+instruments_strategy_evaluator_t
+register_strategy_set(const instruments_strategy_t *strategies, size_t num_strategies);
+
+void free_strategy_evaluator(instruments_strategy_evaluator_t evaluator);
+
+/** Choose and return the best strategy.
  */
 instruments_strategy_t
-choose_strategy(const instruments_strategy_t *strategies, size_t num_strategies);
+choose_strategy(instruments_strategy_evaluator_t strategies);
+/* TODO: add 'excludes' for when a strategy is not possible? 
+ *       or else the opposite? 
+ *       or maybe a 'disable_strategy' function that prevents
+ *       choose_strategy from considering a strategy until
+ *       'enable_strategy' is called? */
+
+/* TODO: need an interface for re-evaluation given new information. */
 
 /* Functions to get estimator values */
 double /* bytes/sec */ network_bandwidth_down(instruments_context_t ctx, const char *iface);

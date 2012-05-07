@@ -1,5 +1,5 @@
 #include "strategy.h"
-#include "estimator_set.h"
+#include "strategy_evaluator.h"
 
 Strategy::Strategy(eval_fn_t time_fn_, 
                    eval_fn_t energy_cost_fn_, 
@@ -10,25 +10,23 @@ Strategy::Strategy(eval_fn_t time_fn_,
       data_cost_fn(data_cost_fn_),
       fn_arg(fn_arg_)
 {
-    // TODO: don't hardcode the evaluation mode; make it an argument?
-    estimators = EstimatorSet::create(SIMPLE_STATS);
 }
 
 void
 Strategy::addEstimator(Estimator *estimator)
 {
-    estimators->addEstimator(estimator);
-}
-
-double 
-Strategy::calculateTime()
-{
-    return estimators->expectedValue(time_fn, fn_arg);
+    estimators.insert(estimator);
 }
 
 double
-Strategy::calculateCost()
+Strategy::calculateTime(StrategyEvaluator *evaluator)
+{
+    return evaluator->expectedValue(time_fn, fn_arg);
+}
+
+double
+Strategy::calculateCost(StrategyEvaluator *evaluator)
 {
     // TODO: finish implementing.  e.g. energy, goal-directed adaptation
-    return estimators->expectedValue(data_cost_fn, fn_arg);
+    return evaluator->expectedValue(data_cost_fn, fn_arg);
 }

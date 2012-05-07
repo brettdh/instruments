@@ -1,12 +1,10 @@
 #ifndef SIMPLE_STATS_EXPECTATION_EVALUATOR
 #define SIMPLE_STATS_EXPECTATION_EVALUATOR
 
-#include "estimator_set.h"
-#include "expectation_evaluator.h"
+#include "strategy_evaluator.h"
 
-class EstimatorSet::SimpleStatsExpectationEvaluator : public EstimatorSet::ExpectationEvaluator {
+class SimpleStatsExpectationEvaluator : public StrategyEvaluator {
   protected:
-    SimpleStatsExpectationEvaluator(EstimatorSet *owner_);
     virtual void observationAdded(Estimator *estimator, double value);
 };
 

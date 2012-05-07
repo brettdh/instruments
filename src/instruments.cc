@@ -5,9 +5,8 @@
 #include "strategy.h"
 #include "redundant_strategy.h"
 #include "estimator.h"
-#include "estimator_set.h"
 #include "estimator_registry.h"
-#include "expectation_evaluator.h"
+#include "strategy_evaluator.h"
 
 instruments_strategy_t
 make_strategy(eval_fn_t time_fn, /* return seconds */
@@ -52,106 +51,73 @@ void add_network_rtt_estimator(instruments_strategy_t strategy,
 
 double network_bandwidth_down(instruments_context_t ctx, const char *iface)
 {
-    EstimatorSet::ExpectationEvaluator *evaluator = 
-        (EstimatorSet::ExpectationEvaluator *) ctx;
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) ctx;
     Estimator *estimator = EstimatorRegistry::getNetworkBandwidthDownEstimator(iface);
     return evaluator->getAdjustedEstimatorValue(estimator);
 }
 
 double network_bandwidth_up(instruments_context_t ctx, const char *iface)
 {
-    EstimatorSet::ExpectationEvaluator *evaluator = 
-        (EstimatorSet::ExpectationEvaluator *) ctx;
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) ctx;
     Estimator *estimator = EstimatorRegistry::getNetworkBandwidthUpEstimator(iface);
     return evaluator->getAdjustedEstimatorValue(estimator);
 }
 
 double network_rtt(instruments_context_t ctx, const char *iface)
 {
-    EstimatorSet::ExpectationEvaluator *evaluator = 
-        (EstimatorSet::ExpectationEvaluator *) ctx;
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) ctx;
     Estimator *estimator = EstimatorRegistry::getNetworkRttEstimator(iface);
     return evaluator->getAdjustedEstimatorValue(estimator);
 }
 
 
-instruments_strategy_t
-choose_strategy(const instruments_strategy_t *strategies, size_t num_strategies)
+instruments_strategy_evaluator_t
+register_strategy_set(const instruments_strategy_t *strategies, size_t num_strategies)
 {
-    // first, pick the singular strategy that takes the least time (expected)
-    Strategy *best_singular = NULL;
-    double best_singular_time = 0.0;
-    for (size_t i = 0; i < num_strategies; ++i) {
-        Strategy *cur_strategy = (Strategy *) strategies[i];
-        if (!cur_strategy->isRedundant()) {
-            double time = cur_strategy->calculateTime();
-            if (!best_singular || time < best_singular_time) {
-                best_singular = cur_strategy;
-                best_singular_time = time;
-            }
-        }
-    }
-    
-    // then, pick the cheapest redundant strategy that offers net benefit
-    //  over the best singular strategy (if any)
-    Strategy *best_redundant = NULL;
-    double best_redundant_net_benefit = 0.0;
-    for (size_t i = 0; i < num_strategies; ++i) {
-        Strategy *cur_strategy = (Strategy *) strategies[i];
-        if (cur_strategy->isRedundant()) {
-            double benefit = best_singular_time - cur_strategy->calculateTime();
-            double net_benefit = benefit - (cur_strategy->calculateCost() -
-                                            best_singular->calculateCost());
-            if (net_benefit > 0.0 && 
-                (best_redundant == NULL || net_benefit > best_redundant_net_benefit)) {
-                best_redundant = cur_strategy;
-                best_redundant_net_benefit = net_benefit;
-            }
-        }
-    }
-
-    // if any redundant strategy was better than the best singular strategy, use it.
-    //  otherwise, just use the best singular strategy.
-    if (best_redundant) {
-        return best_redundant;
-    } else {
-        return best_singular;
-    }
+    return StrategyEvaluator::create(strategies, num_strategies);
 }
 
-void add_fair_coin_estimator(instruments_strategy_t s)
+instruments_strategy_evaluator_t
+register_strategy_set_with_method(const instruments_strategy_t *strategies, size_t num_strategies,
+                                  EvalMethod method)
+{
+    return StrategyEvaluator::create(strategies, num_strategies, method);
+}
+
+void
+free_strategy_evaluator(instruments_strategy_evaluator_t evaluator)
+{
+    
+}
+
+instruments_strategy_t
+choose_strategy(instruments_strategy_evaluator_t evaluator_handle)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    return evaluator->chooseStrategy();
+}
+
+void add_coin_flip_estimator(instruments_strategy_t s)
 {
     Strategy *strategy = (Strategy *) s;
-    strategy->addEstimator(EstimatorRegistry::getFairCoinEstimator());
+    strategy->addEstimator(EstimatorRegistry::getCoinFlipEstimator());
 }
 
-void add_heads_heavy_coin_estimator(instruments_strategy_t strategy)
+int coin_flip_lands_heads(instruments_context_t ctx)
 {
-    /* TODO */
-}
-
-int fair_coin_lands_heads(instruments_context_t ctx)
-{
-    EstimatorSet::ExpectationEvaluator *evaluator = 
-        (EstimatorSet::ExpectationEvaluator *) ctx;
-    Estimator *estimator = EstimatorRegistry::getFairCoinEstimator();
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) ctx;
+    Estimator *estimator = EstimatorRegistry::getCoinFlipEstimator();
     double value = evaluator->getAdjustedEstimatorValue(estimator);
     
     return (value >= 0.5);
 }
 
-int heads_heavy_coin_lands_heads(instruments_context_t ctx)
+void reset_coin_flip_estimator(EstimatorType type)
 {
-    /* TODO */
-    return 0;
-}
-
-void reset_fair_coin_estimator(EstimatorType type)
-{
-    EstimatorRegistry::resetEstimator("FairCoin", type);
+    EstimatorRegistry::resetEstimator("CoinFlip", type);
 }
 
 void add_coin_flip_observation(int heads)
 {
-    EstimatorRegistry::getFairCoinEstimator()->addObservation(heads ? 1.0 : 0.0);
+    EstimatorRegistry::getCoinFlipEstimator()->addObservation(heads ? 1.0 : 0.0);
 }

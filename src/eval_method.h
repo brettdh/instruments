@@ -1,11 +1,11 @@
-#ifndef EVAL_STRATEGY_H_INCL
-#define EVAL_STRATEGY_H_INCL
+#ifndef EVAL_METHOD_H_INCL
+#define EVAL_METHOD_H_INCL
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum EvalStrategy {
+enum EvalMethod {
     TRUSTED_ORACLE,    // No error evaluation; estimators assumed perfect
     SIMPLE_STATS,      // All-time statistical summary
     EMPIRICAL_ERROR,   // Historical predictor error distribution

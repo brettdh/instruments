@@ -10,13 +10,13 @@ RedundantStrategy::RedundantStrategy(const instruments_strategy_t strategies[],
 }
 
 double 
-RedundantStrategy::calculateTime()
+RedundantStrategy::calculateTime(StrategyEvaluator *evaluator)
 {
     Strategy *best_strategy = NULL;
     double best_time = 0.0;
     for (size_t i = 0; i < strategies.size(); ++i) {
         Strategy *strategy = strategies[i];
-        double time = strategy->calculateTime();
+        double time = strategy->calculateTime(evaluator);
         if (!best_strategy || time < best_time) {
             best_strategy = strategy;
             best_time = time;
@@ -26,11 +26,11 @@ RedundantStrategy::calculateTime()
 }
 
 double
-RedundantStrategy::calculateCost()
+RedundantStrategy::calculateCost(StrategyEvaluator *evaluator)
 {
     double total_cost = 0.0;
     for (size_t i = 0; i < strategies.size(); ++i) {
-        total_cost += strategies[i]->calculateCost();
+        total_cost += strategies[i]->calculateCost(evaluator);
     }
     return total_cost;
 }

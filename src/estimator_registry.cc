@@ -23,15 +23,9 @@ EstimatorRegistry::getNetworkRttEstimator(const char *iface)
 }
 
 Estimator *
-EstimatorRegistry::getFairCoinEstimator()
+EstimatorRegistry::getCoinFlipEstimator()
 {
-    return singletonEstimator("FairCoin");
-}
-
-Estimator *
-EstimatorRegistry::getHeadsHeavyCoinEstimator()
-{
-    return singletonEstimator("HeadsHeavyCoin");
+    return singletonEstimator("CoinFlip");
 }
 
 
@@ -41,13 +35,7 @@ EstimatorRegistry::initializer EstimatorRegistry::theInitializer;
 void
 EstimatorRegistry::init()
 {
-    estimators["FairCoin"] = Estimator::create();
-    
-    // TODO: move this into the testcase.
-    getFairCoinEstimator()->addObservation(1.0);
-    getFairCoinEstimator()->addObservation(0.0);
-
-    estimators["HeadsHeavyCoin"] = Estimator::create();
+    estimators["CoinFlip"] = Estimator::create();
 }
 
 Estimator *

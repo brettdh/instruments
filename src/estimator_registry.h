@@ -12,8 +12,7 @@ class EstimatorRegistry {
     static Estimator *getNetworkBandwidthUpEstimator(const char *iface);
     static Estimator *getNetworkRttEstimator(const char *iface);
     
-    static Estimator *getFairCoinEstimator();
-    static Estimator *getHeadsHeavyCoinEstimator();
+    static Estimator *getCoinFlipEstimator();
 
     static void resetEstimator(const char *name, EstimatorType type);
   private:
