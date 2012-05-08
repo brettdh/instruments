@@ -122,3 +122,9 @@ void add_coin_flip_observation(int heads)
 {
     EstimatorRegistry::getCoinFlipEstimator()->addObservation(heads ? 1.0 : 0.0);
 }
+
+double get_adjusted_estimator_value(instruments_context_t ctx, Estimator *estimator)
+{
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
+    return context->getAdjustedEstimatorValue(estimator);
+}

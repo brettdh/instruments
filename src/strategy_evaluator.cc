@@ -2,7 +2,9 @@
 #include <assert.h>
 #include "strategy_evaluator.h"
 #include "trusted_oracle_strategy_evaluator.h"
+#include "empirical_error_strategy_evaluator.h"
 #include "strategy.h"
+#include "estimator.h"
 
 using std::set;
 
@@ -18,6 +20,7 @@ StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
         for (set<Estimator*>::const_iterator it = strategy->estimators.begin();
              it != strategy->estimators.end(); ++it) {
             estimators.insert(*it);
+            (*it)->subscribe(this);
         }
         strategies.insert(strategy);
     }
@@ -38,6 +41,9 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
     switch (type) {
     case TRUSTED_ORACLE:
         evaluator = new TrustedOracleStrategyEvaluator;
+        break;
+    case EMPIRICAL_ERROR:
+        evaluator = new EmpiricalErrorStrategyEvaluator;
         break;
     default:
         // TODO: implement the rest.

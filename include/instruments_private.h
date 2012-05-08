@@ -19,6 +19,11 @@ instruments_strategy_evaluator_t
 register_strategy_set_with_method(const instruments_strategy_t *strategies, size_t num_strategies,
                                   enum EvalMethod type);
 
+#ifdef __cplusplus
+class Estimator;
+/* for testing, get the adjusted value of any estimator. */
+double get_adjusted_estimator_value(instruments_context_t ctx, Estimator *estimator);
+#endif
 
 #ifdef __cplusplus
 }

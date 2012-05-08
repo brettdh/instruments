@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "estimator.h"
+#include "last_observation_estimator.h"
 #include "running_mean_estimator.h"
 #include "strategy_evaluator.h"
 
@@ -16,6 +17,8 @@ Estimator *
 Estimator::create(EstimatorType type)
 {
     switch (type) {
+    case LAST_OBSERVATION:
+        return new LastObservationEstimator();
     case RUNNING_MEAN:
         return new RunningMeanEstimator();
     default:

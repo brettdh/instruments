@@ -29,6 +29,7 @@ class Strategy {
 
   private:
     friend class StrategyEvaluator;
+    friend class EmpiricalErrorStrategyEvaluatorTest;
 
     typesafe_eval_fn_t time_fn;
     typesafe_eval_fn_t energy_cost_fn;

@@ -7,9 +7,9 @@
 #include "strategy.h"
 #include "strategy_evaluator.h"
 #include "strategy_evaluation_context.h"
+#include "stats_distribution.h"
 
 class Estimator;
-class StatsDistribution;
 
 class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
   public:
@@ -18,13 +18,14 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
     class EvalContext : public StrategyEvaluationContext {
       public:
         EvalContext(EmpiricalErrorStrategyEvaluator *e);
+        ~EvalContext();
         virtual double getAdjustedEstimatorValue(Estimator *estimator);
 
         double jointProbability();
         void advance();
         bool isDone();
       private:
-        typedef std::stack<std::pair<Estimator*, StatsDistribution::Iterator *> IteratorStack;
+        typedef std::stack<std::pair<Estimator*, StatsDistribution::Iterator *> > IteratorStack;
         IteratorStack setupIteratorStack();
         
         EmpiricalErrorStrategyEvaluator *evaluator;
@@ -33,7 +34,7 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
   protected:
     virtual void observationAdded(Estimator *estimator, double value);
   private:
-    std::map<Estimator *, ErrorDistribution *> jointError;
+    std::map<Estimator *, StatsDistribution *> jointError;
 };
 
 #endif
