@@ -23,8 +23,6 @@ class StrategyEvaluator {
     
     virtual double expectedValue(typesafe_eval_fn_t fn, void *arg) = 0;
     virtual void observationAdded(Estimator *estimator, double value) = 0;
-    
-    virtual double getAdjustedEstimatorValue(Estimator *estimator) = 0;
   protected:
     StrategyEvaluator() {}
     void setStrategies(const instruments_strategy_t *strategies,
