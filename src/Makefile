@@ -19,4 +19,4 @@ libinstruments.so: $(OBJS)
 clean:
 	rm -f $(OBJS) $(LIBRARIES) *~
 
-include deps.mk
+include ../deps.mk
