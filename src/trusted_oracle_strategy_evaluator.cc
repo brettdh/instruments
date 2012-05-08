@@ -7,27 +7,11 @@ TrustedOracleStrategyEvaluator::observationAdded(Estimator *estimator, double va
     // ignore values, trust the estimator
 }
 
-void
-TrustedOracleStrategyEvaluator::startIteration()
+double
+TrustedOracleStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn, void *arg)
 {
-    done = false;
-}
-
-void
-TrustedOracleStrategyEvaluator::finishIteration()
-{
-}
-
-double 
-TrustedOracleStrategyEvaluator::jointProbability()
-{
-    return 1.0;
-}
-
-void 
-TrustedOracleStrategyEvaluator::advance()
-{
-    done = true;
+    // no weighted sum; just trust the estimators and evaluate the function
+    return fn(this, arg);
 }
 
 double

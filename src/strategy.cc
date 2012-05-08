@@ -5,9 +5,9 @@ Strategy::Strategy(eval_fn_t time_fn_,
                    eval_fn_t energy_cost_fn_, 
                    eval_fn_t data_cost_fn_, 
                    void *fn_arg_)
-    : time_fn(time_fn_),
-      energy_cost_fn(energy_cost_fn_),
-      data_cost_fn(data_cost_fn_),
+    : time_fn((typesafe_eval_fn_t) time_fn_),
+      energy_cost_fn((typesafe_eval_fn_t) energy_cost_fn_),
+      data_cost_fn((typesafe_eval_fn_t) data_cost_fn_),
       fn_arg(fn_arg_)
 {
 }

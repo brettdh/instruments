@@ -6,11 +6,6 @@
 
 using std::set;
 
-StrategyEvaluator::StrategyEvaluator()
-    : done(false)
-{
-}
-
 void
 StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
                                  size_t num_strategies)
@@ -50,30 +45,6 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
     }
     evaluator->setStrategies(strategies, num_strategies);
     return evaluator;
-}
-
-
-double
-StrategyEvaluator::expectedValue(eval_fn_t fn, void *arg)
-{
-    double weightedSum = 0.0;
-
-    startIteration();
-    while (!isDone()) {
-        double prob = jointProbability();
-        double value = fn(this, arg);
-        weightedSum += (prob * value);
-        
-        advance();
-    }
-    finishIteration();
-    return weightedSum;
-}
-
-bool
-StrategyEvaluator::isDone()
-{
-    return done;
 }
 
 double

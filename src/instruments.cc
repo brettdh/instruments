@@ -7,6 +7,7 @@
 #include "estimator.h"
 #include "estimator_registry.h"
 #include "strategy_evaluator.h"
+#include "strategy_evaluation_context.h"
 
 instruments_strategy_t
 make_strategy(eval_fn_t time_fn, /* return seconds */
@@ -51,23 +52,23 @@ void add_network_rtt_estimator(instruments_strategy_t strategy,
 
 double network_bandwidth_down(instruments_context_t ctx, const char *iface)
 {
-    StrategyEvaluator *evaluator = (StrategyEvaluator *) ctx;
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
     Estimator *estimator = EstimatorRegistry::getNetworkBandwidthDownEstimator(iface);
-    return evaluator->getAdjustedEstimatorValue(estimator);
+    return context->getAdjustedEstimatorValue(estimator);
 }
 
 double network_bandwidth_up(instruments_context_t ctx, const char *iface)
 {
-    StrategyEvaluator *evaluator = (StrategyEvaluator *) ctx;
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
     Estimator *estimator = EstimatorRegistry::getNetworkBandwidthUpEstimator(iface);
-    return evaluator->getAdjustedEstimatorValue(estimator);
+    return context->getAdjustedEstimatorValue(estimator);
 }
 
 double network_rtt(instruments_context_t ctx, const char *iface)
 {
-    StrategyEvaluator *evaluator = (StrategyEvaluator *) ctx;
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
     Estimator *estimator = EstimatorRegistry::getNetworkRttEstimator(iface);
-    return evaluator->getAdjustedEstimatorValue(estimator);
+    return context->getAdjustedEstimatorValue(estimator);
 }
 
 
@@ -105,9 +106,9 @@ void add_coin_flip_estimator(instruments_strategy_t s)
 
 int coin_flip_lands_heads(instruments_context_t ctx)
 {
-    StrategyEvaluator *evaluator = (StrategyEvaluator *) ctx;
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
     Estimator *estimator = EstimatorRegistry::getCoinFlipEstimator();
-    double value = evaluator->getAdjustedEstimatorValue(estimator);
+    double value = context->getAdjustedEstimatorValue(estimator);
     
     return (value >= 0.5);
 }

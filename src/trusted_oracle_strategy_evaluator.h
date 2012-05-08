@@ -2,14 +2,11 @@
 #define TRUSTED_ORACLE_STRATEGY_EVALUATOR_H_INCL
 
 #include "strategy_evaluator.h"
+#include "strategy_evaluation_context.h"
 
-class TrustedOracleStrategyEvaluator : public StrategyEvaluator {
+class TrustedOracleStrategyEvaluator : public StrategyEvaluator, public StrategyEvaluationContext {
   public:
-    virtual void startIteration();
-    virtual void finishIteration();
-    virtual double jointProbability();
-    virtual void advance();
-
+    virtual double expectedValue(typesafe_eval_fn_t fn, void *arg);
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
   protected:
     virtual void observationAdded(Estimator *estimator, double value);

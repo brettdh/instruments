@@ -3,6 +3,7 @@
 
 #include <set>
 #include "instruments.h"
+#include "strategy.h"
 #include "eval_method.h"
 
 class Estimator;
@@ -20,22 +21,15 @@ class StrategyEvaluator {
                                      size_t num_strategies, EvalMethod type);
     instruments_strategy_t chooseStrategy();
     
-    virtual double expectedValue(eval_fn_t fn, void *arg);
+    virtual double expectedValue(typesafe_eval_fn_t fn, void *arg) = 0;
     virtual void observationAdded(Estimator *estimator, double value) = 0;
     
-    virtual void startIteration() = 0;
-    virtual void finishIteration() = 0;
-    virtual double jointProbability() = 0;
     virtual double getAdjustedEstimatorValue(Estimator *estimator) = 0;
-    virtual void advance() = 0;
-
-    bool isDone();
   protected:
-    StrategyEvaluator();
+    StrategyEvaluator() {}
     void setStrategies(const instruments_strategy_t *strategies,
                        size_t num_strategies);
 
-    bool done;
     std::set<Strategy*> strategies;
     std::set<Estimator*> estimators;
 
