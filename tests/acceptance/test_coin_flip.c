@@ -99,7 +99,7 @@ CTEST(coinflip, faircoin_should_choose_redundant)
     add_coin_flip_estimator(strategies[1]);
     
     instruments_strategy_evaluator_t evaluator = 
-        register_strategy_set_with_method(strategies, 3, SIMPLE_STATS);
+        register_strategy_set_with_method(strategies, 3, EMPIRICAL_ERROR);
 
     instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
     if (chosen_strategy != strategies[2]) {

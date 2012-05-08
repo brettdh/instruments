@@ -5,7 +5,6 @@ OBJS := \
 	instruments.o \
 	redundant_strategy.o \
 	running_mean_estimator.o \
-	simple_stats_expectation_evaluator.o \
 	strategy.o \
 	strategy_evaluator.o \
 	trusted_oracle_strategy_evaluator.o

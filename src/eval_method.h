@@ -7,7 +7,6 @@ extern "C" {
 
 enum EvalMethod {
     TRUSTED_ORACLE,    // No error evaluation; estimators assumed perfect
-    SIMPLE_STATS,      // All-time statistical summary
     EMPIRICAL_ERROR,   // Historical predictor error distribution
     CONFIDENCE_BOUNDS, // Chebyshev bounds on predictor error
     BAYESIAN           // Bayesian estimation of posterior 
