@@ -78,30 +78,62 @@ CTEST(coinflip, two_strategies)
     free_strategy(strategies[1]);
 }
 
-CTEST(coinflip, faircoin_should_choose_redundant)
+static const int NUM_STRATEGIES = 3;
+
+CTEST_DATA(coinflip) {
+    instruments_strategy_t *strategies;
+    instruments_strategy_evaluator_t evaluator;
+};
+
+CTEST_SETUP(coinflip)
 {
+    int i;
     reset_coin_flip_estimator(RUNNING_MEAN);
     
-    int i, NUM_STRATEGIES = 3;
-    instruments_strategy_t strategies[NUM_STRATEGIES];
-    strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
-    strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0);
-    strategies[2] = make_redundant_strategy(strategies, 2);
+    data->strategies = calloc(NUM_STRATEGIES, sizeof(*data));
+    data->strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
+    data->strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0);
+    data->strategies[2] = make_redundant_strategy(data->strategies, 2);
     for (i = 0; i < NUM_STRATEGIES; ++i) {
-        ASSERT_NOT_NULL(strategies[i]);
+        ASSERT_NOT_NULL(data->strategies[i]);
     }
 
-    add_coin_flip_estimator(strategies[0]);
-    add_coin_flip_estimator(strategies[1]);
+    add_coin_flip_estimator(data->strategies[0]);
+    add_coin_flip_estimator(data->strategies[1]);
     
-    instruments_strategy_evaluator_t evaluator = 
-        register_strategy_set_with_method(strategies, 3, EMPIRICAL_ERROR);
+    data->evaluator = 
+        register_strategy_set_with_method(data->strategies, NUM_STRATEGIES, EMPIRICAL_ERROR);
+}
 
-    for (i = 0; i < 50; ++i) {
-        add_coin_flip_observation(1);
-        add_coin_flip_observation(0);
+CTEST_TEARDOWN(coinflip)
+{
+    int i;
+    free_strategy_evaluator(data->evaluator);
+    for (i = 0; i < NUM_STRATEGIES; ++i) {
+        free_strategy(data->strategies[i]);
     }
+    free(data->strategies);
+}
 
+static void init_coin(int num_heads_in_ten_flips, int numflips)
+{
+    int i;
+    for (i = 0; i < numflips; ++i) {
+        if ((i % 10) < num_heads_in_ten_flips) {
+            add_coin_flip_observation(1);
+        } else {
+            add_coin_flip_observation(0);
+        }
+    }
+}
+
+CTEST2(coinflip, faircoin_should_choose_redundant)
+{
+    instruments_strategy_t *strategies = data->strategies;
+    instruments_strategy_evaluator_t evaluator = data->evaluator;
+
+    init_coin(5, 100);
+    
     instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
     if (chosen_strategy != strategies[2]) {
         ASSERT_TRUE(chosen_strategy == strategies[0] ||
@@ -113,9 +145,44 @@ CTEST(coinflip, faircoin_should_choose_redundant)
         ASSERT_FAIL();
     }
     ASSERT_EQUAL((int)strategies[2], (int)chosen_strategy);
+}
 
-    free_strategy_evaluator(evaluator);
-    for (i = 0; i < NUM_STRATEGIES; ++i) {
-        free_strategy(strategies[i]);
+CTEST2(coinflip, heads_heavy_coin_should_choose_heads)
+{
+    instruments_strategy_t *strategies = data->strategies;
+    instruments_strategy_evaluator_t evaluator = data->evaluator;
+
+    init_coin(9, 100);
+
+    instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
+    if (chosen_strategy != strategies[0]) {
+        ASSERT_TRUE(chosen_strategy == strategies[1] ||
+                    chosen_strategy == strategies[2]);
+        
+        const char *names[] = {"'pick tails'", "'pick both'"};
+        int idx = (chosen_strategy == strategies[1] ? 0 : 1);
+        CTEST_LOG("Failed to choose heads; chose %s instead\n", names[idx]);
+        ASSERT_FAIL();
     }
+    ASSERT_EQUAL((int)strategies[0], (int)chosen_strategy);
+}
+
+CTEST2(coinflip, tails_heavy_coin_should_choose_tails)
+{
+    instruments_strategy_t *strategies = data->strategies;
+    instruments_strategy_evaluator_t evaluator = data->evaluator;
+
+    init_coin(1, 100);
+
+    instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
+    if (chosen_strategy != strategies[1]) {
+        ASSERT_TRUE(chosen_strategy == strategies[0] ||
+                    chosen_strategy == strategies[2]);
+        
+        const char *names[] = {"'pick heads'", "'pick both'"};
+        int idx = (chosen_strategy == strategies[0] ? 0 : 1);
+        CTEST_LOG("Failed to choose tails; chose %s instead\n", names[idx]);
+        ASSERT_FAIL();
+    }
+    ASSERT_EQUAL((int)strategies[1], (int)chosen_strategy);
 }
