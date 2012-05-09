@@ -20,7 +20,7 @@ RunningMeanEstimator::storeNewObservation(double value)
     if (count == 0) {
         mean = value;
     } else {
-        mean = ((mean * count) + value) / count + 1;
+        mean = ((mean * count) + value) / (count + 1);
     }
     count++;
 }

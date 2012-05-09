@@ -20,12 +20,15 @@ all: $(EXECUTABLES)
 %.o: ../../src/%.cc
 	g++ $(CXXFLAGS) -c -o $@ $<
 
-TESTOBJS := stats_distribution_test.o empirical_error_strategy_evaluator_test.o
+TESTOBJS := \
+	running_mean_estimator_test.o \
+	stats_distribution_test.o \
+	empirical_error_strategy_evaluator_test.o
+
 SUPPORTOBJS := \
 	estimator.o \
 	estimator_registry.o \
 	instruments.o \
-	redundant_strategy.o \
 	running_mean_estimator.o \
 	strategy.o \
 	strategy_evaluator.o \

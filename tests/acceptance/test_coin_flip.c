@@ -81,10 +81,6 @@ CTEST(coinflip, two_strategies)
 CTEST(coinflip, faircoin_should_choose_redundant)
 {
     reset_coin_flip_estimator(RUNNING_MEAN);
-    add_coin_flip_observation(1);
-    add_coin_flip_observation(0);
-    add_coin_flip_observation(1);
-    add_coin_flip_observation(0);
     
     int i, NUM_STRATEGIES = 3;
     instruments_strategy_t strategies[NUM_STRATEGIES];
@@ -100,6 +96,11 @@ CTEST(coinflip, faircoin_should_choose_redundant)
     
     instruments_strategy_evaluator_t evaluator = 
         register_strategy_set_with_method(strategies, 3, EMPIRICAL_ERROR);
+
+    for (i = 0; i < 50; ++i) {
+        add_coin_flip_observation(1);
+        add_coin_flip_observation(0);
+    }
 
     instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
     if (chosen_strategy != strategies[2]) {

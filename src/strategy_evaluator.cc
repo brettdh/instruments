@@ -56,13 +56,13 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
 double
 StrategyEvaluator::calculateTime(Strategy *strategy)
 {
-    return expectedValue(strategy->time_fn, strategy->fn_arg);
+    return strategy->calculateTime(this);
 }
 
 double
 StrategyEvaluator::calculateCost(Strategy *strategy)
 {
-    return expectedValue(strategy->data_cost_fn, strategy->fn_arg);
+    return strategy->calculateCost(this);
 }
 
 

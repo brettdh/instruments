@@ -1,10 +1,12 @@
 LIBRARIES := libinstruments.so
 OBJS := \
+	empirical_error_strategy_evaluator.o \
 	estimator.o \
 	estimator_registry.o \
 	instruments.o \
-	redundant_strategy.o \
 	running_mean_estimator.o \
+	stats_distribution.o \
+	stats_distribution_all_samples.o \
 	strategy.o \
 	strategy_evaluator.o \
 	trusted_oracle_strategy_evaluator.o

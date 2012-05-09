@@ -3,7 +3,6 @@
 #include <instruments.h>
 #include <instruments_private.h>
 #include "strategy.h"
-#include "redundant_strategy.h"
 #include "estimator.h"
 #include "estimator_registry.h"
 #include "strategy_evaluator.h"
@@ -22,7 +21,7 @@ instruments_strategy_t
 make_redundant_strategy(const instruments_strategy_t *strategies, 
                         size_t num_strategies)
 {
-    return new RedundantStrategy(strategies, num_strategies);
+    return new Strategy(strategies, num_strategies);
 }
 
 void free_strategy(instruments_strategy_t strategy)
