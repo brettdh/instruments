@@ -30,22 +30,25 @@ void free_strategy(instruments_strategy_t strategy)
 }
 
 
-void add_network_bandwidth_down_estimator(instruments_strategy_t strategy,
+void add_network_bandwidth_down_estimator(instruments_strategy_t s,
                                           const char *iface)
 {
-    /* TODO */
+    Strategy *strategy = (Strategy *) s;
+    strategy->addEstimator(EstimatorRegistry::getNetworkBandwidthDownEstimator(iface));
 }
 
-void add_network_bandwidth_up_estimator(instruments_strategy_t strategy,
+void add_network_bandwidth_up_estimator(instruments_strategy_t s,
                                         const char *iface)
 {
-    /* TODO */
+    Strategy *strategy = (Strategy *) s;
+    strategy->addEstimator(EstimatorRegistry::getNetworkBandwidthUpEstimator(iface));
 }
 
-void add_network_rtt_estimator(instruments_strategy_t strategy,
+void add_network_rtt_estimator(instruments_strategy_t s,
                                const char *iface)
 {
-    /* TODO */
+    Strategy *strategy = (Strategy *) s;
+    strategy->addEstimator(EstimatorRegistry::getNetworkRttEstimator(iface));
 }
 
 
@@ -85,9 +88,10 @@ register_strategy_set_with_method(const instruments_strategy_t *strategies, size
 }
 
 void
-free_strategy_evaluator(instruments_strategy_evaluator_t evaluator)
+free_strategy_evaluator(instruments_strategy_evaluator_t e)
 {
-    
+    StrategyEvaluator *evaluator = static_cast<StrategyEvaluator*>(e);
+    delete evaluator;
 }
 
 instruments_strategy_t
