@@ -127,62 +127,48 @@ static void init_coin(int num_heads_in_ten_flips, int numflips)
     }
 }
 
-CTEST2(coinflip, faircoin_should_choose_redundant)
+static void assert_correct_strategy(struct coinflip_data *data, 
+                                    instruments_strategy_t correct_strategy)
 {
     instruments_strategy_t *strategies = data->strategies;
     instruments_strategy_evaluator_t evaluator = data->evaluator;
-
-    init_coin(5, 100);
     
     instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
-    if (chosen_strategy != strategies[2]) {
-        ASSERT_TRUE(chosen_strategy == strategies[0] ||
-                    chosen_strategy == strategies[1]);
-        
-        const char *names[] = {"'pick heads'", "'pick tails'"};
-        int idx = (chosen_strategy == strategies[0] ? 0 : 1);
-        CTEST_LOG("Failed to choose redundant strategy; chose %s instead\n", names[idx]);
-        ASSERT_FAIL();
+    int chosen_strategy_idx = -1, correct_strategy_idx = -1, i;
+    for (i = 0; i < NUM_STRATEGIES; ++i) {
+        if (correct_strategy == strategies[i]) {
+            correct_strategy_idx = i;
+        }
+        if (chosen_strategy == strategies[i]) {
+            chosen_strategy_idx = i;
+        }
     }
-    ASSERT_EQUAL((int)strategies[2], (int)chosen_strategy);
+    ASSERT_NOT_EQUAL(-1, correct_strategy_idx);
+    ASSERT_NOT_EQUAL(-1, chosen_strategy_idx);
+
+    if (chosen_strategy != correct_strategy) {
+        const char *names[] = {"'pick heads'", "'pick tails'", "'pick both'"};
+        CTEST_LOG("Failed to choose %s; chose %s instead\n", 
+                  names[correct_strategy_idx],
+                  names[chosen_strategy_idx]);
+    }
+    ASSERT_EQUAL((int)correct_strategy, (int)chosen_strategy);
+}
+
+CTEST2(coinflip, faircoin_should_choose_redundant)
+{
+    init_coin(5, 100);
+    assert_correct_strategy(data, data->strategies[2]);
 }
 
 CTEST2(coinflip, heads_heavy_coin_should_choose_heads)
 {
-    instruments_strategy_t *strategies = data->strategies;
-    instruments_strategy_evaluator_t evaluator = data->evaluator;
-
     init_coin(9, 100);
-
-    instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
-    if (chosen_strategy != strategies[0]) {
-        ASSERT_TRUE(chosen_strategy == strategies[1] ||
-                    chosen_strategy == strategies[2]);
-        
-        const char *names[] = {"'pick tails'", "'pick both'"};
-        int idx = (chosen_strategy == strategies[1] ? 0 : 1);
-        CTEST_LOG("Failed to choose heads; chose %s instead\n", names[idx]);
-        ASSERT_FAIL();
-    }
-    ASSERT_EQUAL((int)strategies[0], (int)chosen_strategy);
+    assert_correct_strategy(data, data->strategies[0]);
 }
 
 CTEST2(coinflip, tails_heavy_coin_should_choose_tails)
 {
-    instruments_strategy_t *strategies = data->strategies;
-    instruments_strategy_evaluator_t evaluator = data->evaluator;
-
     init_coin(1, 100);
-
-    instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
-    if (chosen_strategy != strategies[1]) {
-        ASSERT_TRUE(chosen_strategy == strategies[0] ||
-                    chosen_strategy == strategies[2]);
-        
-        const char *names[] = {"'pick heads'", "'pick both'"};
-        int idx = (chosen_strategy == strategies[0] ? 0 : 1);
-        CTEST_LOG("Failed to choose tails; chose %s instead\n", names[idx]);
-        ASSERT_FAIL();
-    }
-    ASSERT_EQUAL((int)strategies[1], (int)chosen_strategy);
+    assert_correct_strategy(data, data->strategies[1]);
 }
