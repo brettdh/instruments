@@ -1,14 +1,29 @@
+#include <stdarg.h>
 #include <math.h>
 #include "goal_adaptive_resource_weight.h"
 #include "timeops.h"
+#include "pthread_util.h"
 
 #include <functional>
 using std::min; using std::max;
 
-// TODO: go through and do the trivial Java->C++ conversions
 // TODO: figure out what needs to be protected with mutexes
 
 double GoalAdaptiveResourceWeight::PROHIBITIVELY_LARGE_WEIGHT = -1.0;
+
+void*
+WeightUpdateThread(void *arg)
+{
+    GoalAdaptiveResourceWeight *weight =
+        static_cast<GoalAdaptiveResourceWeight*>(arg);
+
+    PthreadScopedLock lock(&weight->mutex);
+    while (weight->stillUpdating()) {
+        weight->updateWeightLocked();
+        weight->waitForNextPeriodicUpdate();
+    }
+    return NULL;
+}
 
 GoalAdaptiveResourceWeight::GoalAdaptiveResourceWeight(std::string type, double supply, struct timeval goalTime)
 {
@@ -30,6 +45,13 @@ GoalAdaptiveResourceWeight::GoalAdaptiveResourceWeight(std::string type, double 
     //  an amount of time as big as my entire goal.
     this->weight = secondsUntil(goalTime) / supply;
         
+
+    pthread_mutex_init(&mutex, NULL);
+    pthread_cond_init(&cv, NULL);
+    updating = true;
+    int rc = pthread_create(&update_thread, NULL, WeightUpdateThread, this);
+    PTHREAD_ASSERT_SUCCESS(rc);
+
     // TODO: redo this using an update thread, or else centralize the call to updateWeight();
     /*
     updateTimer = new Timer();
@@ -44,15 +66,25 @@ GoalAdaptiveResourceWeight::GoalAdaptiveResourceWeight(std::string type, double 
     */
 }
 
+GoalAdaptiveResourceWeight::~GoalAdaptiveResourceWeight()
+{
+    {
+        PthreadScopedLock lock(&mutex);
+        updating = false;
+        pthread_cond_signal(&cv);
+    }
+    pthread_join(update_thread, NULL);
+}
+
 void 
 GoalAdaptiveResourceWeight::reportSpentResource(double amount)
 {
     double samplePeriod = secondsSince(lastResourceUseSample);
     TIME(lastResourceUseSample);
 
-    logPrint("Old %s spending rate: %.6f   old supply: %.6f",
+    logPrint("Old %s spending rate: %.6f   old supply: %.6f\n",
              type.c_str(), lastSpendingRate, lastSupply);
-    logPrint("current %s spent amount %.6f over past %.6f seconds",
+    logPrint("current %s spent amount %.6f over past %.6f seconds\n",
              type.c_str(), amount, samplePeriod);
         
     double rateSample = amount / samplePeriod;
@@ -61,7 +93,7 @@ GoalAdaptiveResourceWeight::reportSpentResource(double amount)
     spendingRateUpdateCount++;
     lastSupply -= amount;
         
-    logPrint("New %s spending rate: %.6f   new supply: %.6f  (alpha %.6f)",
+    logPrint("New %s spending rate: %.6f   new supply: %.6f  (alpha %.6f)\n",
              type.c_str(), lastSpendingRate, lastSupply, alpha);
 }
 
@@ -84,11 +116,11 @@ GoalAdaptiveResourceWeight::getWeight()
 double 
 GoalAdaptiveResourceWeight::getWeight(std::string type, double cost, double duration) 
 {
-    logPrint("Calculating lookahead %s weight: cost %.6f duration %.6f",
+    logPrint("Calculating lookahead %s weight: cost %.6f duration %.6f\n",
              type.c_str(), cost, duration);
     double spendingRate = 
         calculateNewSpendingRate(lastSpendingRate, lastSpendingRate + (cost / duration));
-    logPrint("Lookahead %s spending rate: %.6f", 
+    logPrint("Lookahead %s spending rate: %.6f\n", 
              type.c_str(), spendingRate);
     return calculateNewWeight(weight, lastSupply - cost, spendingRate);
 }
@@ -103,7 +135,10 @@ GoalAdaptiveResourceWeight::updateGoalTime(struct timeval newGoalTime)
 void
 GoalAdaptiveResourceWeight::logPrint(const char *fmt, ...)
 {
-    // TODO: implement?
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
 }
 
 double 
@@ -158,6 +193,14 @@ GoalAdaptiveResourceWeight::calculateNewSpendingRate(double oldRate, double rate
 void
 GoalAdaptiveResourceWeight::updateWeight()
 {
+    PthreadScopedLock lock(&mutex);
+    updateWeightLocked();
+}
+
+// MUST hold mutex.
+void
+GoalAdaptiveResourceWeight::updateWeightLocked()
+{
     weight = calculateNewWeight(weight, lastSupply, lastSpendingRate);
 }
 
@@ -168,7 +211,7 @@ GoalAdaptiveResourceWeight::calculateNewWeight(double oldWeight, double supply, 
     TIME(now);
     double newWeight = oldWeight;
         
-    logPrint("Old %s weight: %.6f", type.c_str(), oldWeight);
+    logPrint("Old %s weight: %.6f\n", type.c_str(), oldWeight);
     // "fudge factor" to avoid overshooting budget.  Borrowed from Odyssey.
     double adjustedSupply = computeAdjustedSupply(supply);
     if (supply <= 0.0 || adjustedSupply <= 0.0) {
@@ -181,16 +224,16 @@ GoalAdaptiveResourceWeight::calculateNewWeight(double oldWeight, double supply, 
         return PROHIBITIVELY_LARGE_WEIGHT;
     } else {
         double futureDemand = spendingRate * secondsUntil(goalTime);
-        logPrint("%s spending rate: %.6f  adjusted supply: %.6f", 
+        logPrint("%s spending rate: %.6f  adjusted supply: %.6f\n", 
                  type.c_str(), spendingRate, adjustedSupply);
-        logPrint("Future %s demand: %.6f  weight %.6f  multiplier %.6f",
+        logPrint("Future %s demand: %.6f  weight %.6f  multiplier %.6f\n",
                  type.c_str(), futureDemand, oldWeight, futureDemand / adjustedSupply);
         newWeight *= (futureDemand / adjustedSupply);
     }
     newWeight = max(newWeight, aggressiveNonZeroWeight());
     newWeight = min(newWeight, PROHIBITIVELY_LARGE_WEIGHT); // make sure it doesn't grow without bound
         
-    logPrint("New %s weight: %.6f", type.c_str(), newWeight);
+    logPrint("New %s weight: %.6f\n", type.c_str(), newWeight);
     return newWeight;
 }
 
@@ -209,4 +252,23 @@ GoalAdaptiveResourceWeight::aggressiveNonZeroWeight()
     //  we use something very small but proportional to the initial supply:
     //  "I would spend my entire budget to save 10ms."
     return 0.01 / initialSupply;
+}
+
+// MUST hold mutex.
+bool
+GoalAdaptiveResourceWeight::stillUpdating()
+{
+    return updating;
+}
+
+// MUST hold mutex.
+void
+GoalAdaptiveResourceWeight::waitForNextPeriodicUpdate()
+{
+    struct timespec abstime;
+    struct timeval now;
+    TIME(now);
+    abstime.tv_sec = now.tv_sec + UPDATE_INTERVAL_SECS;
+    abstime.tv_nsec = now.tv_usec * 1000;
+    pthread_cond_timedwait(&cv, &mutex, &abstime);
 }

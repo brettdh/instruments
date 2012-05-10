@@ -7,6 +7,7 @@
 class GoalAdaptiveResourceWeight {
   public:
     GoalAdaptiveResourceWeight(std::string type, double supply, struct timeval goalTime);
+    ~GoalAdaptiveResourceWeight();
     void reportSpentResource(double amount);
     bool supplyIsExhausted();
     
@@ -20,7 +21,7 @@ class GoalAdaptiveResourceWeight {
     void updateGoalTime(struct timeval newGoalTime);
 
   private:
-    static const int UPDATE_DURATION_MILLIS = 1000;
+    static const int UPDATE_INTERVAL_SECS = 1;
     static double PROHIBITIVELY_LARGE_WEIGHT;
     
     static const int EWMA_SWITCH_THRESHOLD = 100;
@@ -43,7 +44,9 @@ class GoalAdaptiveResourceWeight {
     double secondsSince(struct timeval date);
     double calculateNewSpendingRate(double oldRate, double rateSample);
     
+    friend class GoalAdaptiveResourceWeightTest;
     void updateWeight();
+    void updateWeightLocked();
     
     double calculateNewWeight(double oldWeight, double supply, double spendingRate);
 
@@ -61,6 +64,15 @@ class GoalAdaptiveResourceWeight {
     double computeAdjustedSupply(double supply);
     
     double aggressiveNonZeroWeight();
+
+    // synchronization stuff
+    friend void *WeightUpdateThread(void*);
+    pthread_t update_thread;
+    pthread_mutex_t mutex;
+    pthread_cond_t cv;
+    bool updating;
+    bool stillUpdating();
+    void waitForNextPeriodicUpdate();
 };
 
 #endif

@@ -13,7 +13,8 @@ OBJS := \
 	timeops.o \
 	trusted_oracle_strategy_evaluator.o
 
-CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic
+CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic -pthread
+LDFLAGS := -lpthread
 
 all: $(LIBRARIES)
 

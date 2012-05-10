@@ -1,4 +1,4 @@
-CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g
+CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g -pthread
 LDFLAGS += -L. -lcppunit
 
 EXECUTABLES=run_unit_tests
@@ -21,13 +21,15 @@ all: $(EXECUTABLES)
 	g++ $(CXXFLAGS) -c -o $@ $<
 
 TESTOBJS := \
+	empirical_error_strategy_evaluator_test.o \
+	goal_adaptive_resource_weight_test.o \
 	running_mean_estimator_test.o \
-	stats_distribution_test.o \
-	empirical_error_strategy_evaluator_test.o
+	stats_distribution_test.o
 
 SUPPORTOBJS := \
 	estimator.o \
 	estimator_registry.o \
+	goal_adaptive_resource_weight.o \
 	instruments.o \
 	running_mean_estimator.o \
 	strategy.o \
@@ -35,6 +37,7 @@ SUPPORTOBJS := \
 	empirical_error_strategy_evaluator.o \
 	stats_distribution.o \
 	stats_distribution_all_samples.o \
+	timeops.o \
 	trusted_oracle_strategy_evaluator.o
 
 run_unit_tests: run_all_tests.o $(TESTOBJS) $(SUPPORTOBJS)
