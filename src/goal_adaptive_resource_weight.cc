@@ -64,6 +64,8 @@ GoalAdaptiveResourceWeight::~GoalAdaptiveResourceWeight()
 void 
 GoalAdaptiveResourceWeight::reportSpentResource(double amount)
 {
+    PthreadScopedLock lock(&mutex);
+
     double samplePeriod = secondsSince(lastResourceUseSample);
     TIME(lastResourceUseSample);
 
@@ -85,6 +87,8 @@ GoalAdaptiveResourceWeight::reportSpentResource(double amount)
 bool
 GoalAdaptiveResourceWeight::supplyIsExhausted()
 {
+    PthreadScopedLock lock(&mutex);
+
     double adjustedSupply = computeAdjustedSupply(lastSupply);
     return (lastSupply <= 0.0 || adjustedSupply <= 0.0);
 }
@@ -93,6 +97,7 @@ GoalAdaptiveResourceWeight::supplyIsExhausted()
 double
 GoalAdaptiveResourceWeight::getWeight()
 {
+    PthreadScopedLock lock(&mutex);
     return weight;
 }
     
@@ -101,6 +106,8 @@ GoalAdaptiveResourceWeight::getWeight()
 double 
 GoalAdaptiveResourceWeight::getWeight(std::string type, double cost, double duration) 
 {
+    PthreadScopedLock lock(&mutex);
+
     logPrint("Calculating lookahead %s weight: cost %.6f duration %.6f\n",
              type.c_str(), cost, duration);
     double spendingRate = 
@@ -113,6 +120,7 @@ GoalAdaptiveResourceWeight::getWeight(std::string type, double cost, double dura
 void
 GoalAdaptiveResourceWeight::updateGoalTime(struct timeval newGoalTime)
 {
+    PthreadScopedLock lock(&mutex);
     goalTime = newGoalTime;
 }
 

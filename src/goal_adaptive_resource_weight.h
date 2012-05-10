@@ -16,7 +16,7 @@ class GoalAdaptiveResourceWeight {
     
     // return the resource cost weight assuming I incur 'cost' over 'duration' seconds.
     // the values passed in here are for current cost, not delta cost.
-    double getWeight(std::string type, double prefetchCost, double prefetchDuration);
+    double getWeight(std::string type, double cost, double duration);
 
     void updateGoalTime(struct timeval newGoalTime);
 
