@@ -18,17 +18,13 @@ GoalAdaptiveResourceWeightTest::testWeight()
     double initWeight = weight->getWeight();
     usleep(1000000);
     weight->reportSpentResource(0);
-    double nextWeight = weight->getWeight();
-    
-    // XXX: why is this here?  why is it in the IMP test?
-    //CPPUNIT_ASSERT_DOUBLES_EQUAL(initWeight, nextWeight, 0.00001);
     
     weight->updateWeight();
     double smallerWeight = weight->getWeight();
     CPPUNIT_ASSERT(smallerWeight < initWeight);
     
     weight->reportSpentResource(5);
-    nextWeight = weight->getWeight();
+    double nextWeight = weight->getWeight();
     CPPUNIT_ASSERT_DOUBLES_EQUAL(smallerWeight, nextWeight, 0.00001);
     weight->updateWeight();
     double largerWeight = weight->getWeight();
@@ -36,10 +32,10 @@ GoalAdaptiveResourceWeightTest::testWeight()
 }
 
 void 
-GoalAdaptiveResourceWeightTest::testConstantlyDecreasingWeight()
+GoalAdaptiveResourceWeightTest::testConstantlyIncreasingWeight()
 {
     double duration = 20.0;
-    fprintf(stderr, "Testing decreasing weight over %.1f seconds\n", duration);
+    fprintf(stderr, "Testing increasing weight over %.1f seconds\n", duration);
 
     struct timeval goalTime = secondsInFuture(duration);
     weight = new GoalAdaptiveResourceWeight("test", duration * (duration + 1) / 2.0, 
@@ -55,7 +51,7 @@ GoalAdaptiveResourceWeightTest::testConstantlyDecreasingWeight()
     for (int i = 0; i < (int) duration; ++i) {
         weight->reportSpentResource(duration - i + 1);
         usleep(1000000);
-        //weight->updateWeight();
+        
         //fprintf(stderr, "New weight: %.6f\n", weight->getWeight());
         double curWeight = weight->getWeight();
         struct timeval now;

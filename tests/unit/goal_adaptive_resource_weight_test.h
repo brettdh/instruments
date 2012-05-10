@@ -10,7 +10,7 @@ class GoalAdaptiveResourceWeight;
 class GoalAdaptiveResourceWeightTest : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE(GoalAdaptiveResourceWeightTest);
     CPPUNIT_TEST(testWeight);
-    CPPUNIT_TEST(testConstantlyDecreasingWeight);
+    CPPUNIT_TEST(testConstantlyIncreasingWeight);
     CPPUNIT_TEST(testWeightUpdatesPeriodically);
     CPPUNIT_TEST_SUITE_END();
 
@@ -19,7 +19,7 @@ class GoalAdaptiveResourceWeightTest : public CppUnit::TestFixture {
     void tearDown();
 
     void testWeight();
-    void testConstantlyDecreasingWeight();
+    void testConstantlyIncreasingWeight();
     void testWeightUpdatesPeriodically();
     
   private:

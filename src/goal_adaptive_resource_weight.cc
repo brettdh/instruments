@@ -7,8 +7,6 @@
 #include <functional>
 using std::min; using std::max;
 
-// TODO: figure out what needs to be protected with mutexes
-
 double GoalAdaptiveResourceWeight::PROHIBITIVELY_LARGE_WEIGHT = -1.0;
 
 void*
@@ -51,19 +49,6 @@ GoalAdaptiveResourceWeight::GoalAdaptiveResourceWeight(std::string type, double 
     updating = true;
     int rc = pthread_create(&update_thread, NULL, WeightUpdateThread, this);
     PTHREAD_ASSERT_SUCCESS(rc);
-
-    // TODO: redo this using an update thread, or else centralize the call to updateWeight();
-    /*
-    updateTimer = new Timer();
-    updateTask = new TimerTask() {
-        @Override
-        public void run() {
-            updateWeight();
-        }
-    };
-
-    updateTimer.schedule(updateTask, UPDATE_DURATION_MILLIS, UPDATE_DURATION_MILLIS);
-    */
 }
 
 GoalAdaptiveResourceWeight::~GoalAdaptiveResourceWeight()
@@ -135,10 +120,12 @@ GoalAdaptiveResourceWeight::updateGoalTime(struct timeval newGoalTime)
 void
 GoalAdaptiveResourceWeight::logPrint(const char *fmt, ...)
 {
+    /*
     va_list ap;
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     va_end(ap);
+    */
 }
 
 double 
