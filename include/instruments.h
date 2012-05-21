@@ -52,6 +52,12 @@ void add_network_rtt_estimator(instruments_strategy_t strategy,
                                const char *iface);
 /* ... */
 /* TODO: maybe somehow discover these at compile time? */
+/* TODO: even simpler: change the API a bit so that
+ * TODO:   the app obtains estimator handles.
+ * TODO:   then, evaluate the strategy's functions
+ * TODO:   when it is created to determine which estimators it uses.
+ * TODO: This adds a requirement: eval functions must not have side effects.
+ */
 
 void free_strategy(instruments_strategy_t strategy);
 
@@ -74,7 +80,10 @@ choose_strategy(instruments_strategy_evaluator_t strategies);
  *       or else the opposite? 
  *       or maybe a 'disable_strategy' function that prevents
  *       choose_strategy from considering a strategy until
- *       'enable_strategy' is called? */
+ *       'enable_strategy' is called? 
+ * NOTE: this only matters if there are more than two 
+ *        'singular' strategies. 
+ */
 
 /* TODO: need an interface for re-evaluation given new information. */
 
