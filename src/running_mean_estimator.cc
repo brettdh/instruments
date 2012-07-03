@@ -4,8 +4,6 @@
 double
 RunningMeanEstimator::getEstimate()
 {
-    // TODO: provide initial value?
-    assert(count > 0);
     return mean;
 }
 

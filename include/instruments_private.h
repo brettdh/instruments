@@ -6,7 +6,7 @@ extern "C" {
 #endif
 
 /* for testing. */
-void add_coin_flip_estimator(instruments_strategy_t strategy);
+instruments_estimator_t get_coin_flip_heads_estimator(instruments_strategy_t strategy);
 int coin_flip_lands_heads(instruments_context_t ctx);
 
 #include "estimator_type.h"

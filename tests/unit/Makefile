@@ -34,6 +34,7 @@ SUPPORTOBJS := \
 	running_mean_estimator.o \
 	strategy.o \
 	strategy_evaluator.o \
+	strategy_evaluation_context.o \
 	empirical_error_strategy_evaluator.o \
 	stats_distribution.o \
 	stats_distribution_all_samples.o \

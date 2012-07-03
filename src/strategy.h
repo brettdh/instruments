@@ -43,6 +43,8 @@ class Strategy {
     typesafe_eval_fn_t data_cost_fn;
     void *fn_arg;
 
+    void collectEstimators();
+
     std::set<Estimator*> estimators;
 
     std::vector<Strategy *> child_strategies;

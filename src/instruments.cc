@@ -4,6 +4,7 @@
 #include <instruments_private.h>
 #include "strategy.h"
 #include "estimator.h"
+#include "estimator_context.h"
 #include "estimator_registry.h"
 #include "strategy_evaluator.h"
 #include "strategy_evaluation_context.h"
@@ -29,50 +30,37 @@ void free_strategy(instruments_strategy_t strategy)
     delete ((Strategy *) strategy);
 }
 
-
-void add_network_bandwidth_down_estimator(instruments_strategy_t s,
-                                          const char *iface)
+double get_estimator_value(instruments_estimator_t handle)
 {
-    Strategy *strategy = (Strategy *) s;
-    strategy->addEstimator(EstimatorRegistry::getNetworkBandwidthDownEstimator(iface));
+    EstimatorContext *estimatorCtx = static_cast<EstimatorContext*>(handle);
+    Estimator *estimator = estimatorCtx->estimator;
+    StrategyEvaluationContext *context = estimatorCtx->context;
+    return context->getAdjustedEstimatorValue(estimator);
 }
 
-void add_network_bandwidth_up_estimator(instruments_strategy_t s,
-                                        const char *iface)
-{
-    Strategy *strategy = (Strategy *) s;
-    strategy->addEstimator(EstimatorRegistry::getNetworkBandwidthUpEstimator(iface));
-}
-
-void add_network_rtt_estimator(instruments_strategy_t s,
-                               const char *iface)
-{
-    Strategy *strategy = (Strategy *) s;
-    strategy->addEstimator(EstimatorRegistry::getNetworkRttEstimator(iface));
-}
-
-
-double network_bandwidth_down(instruments_context_t ctx, const char *iface)
+instruments_estimator_t
+get_network_bandwidth_down_estimator(instruments_context_t ctx, const char *iface)
 {
     StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
     Estimator *estimator = EstimatorRegistry::getNetworkBandwidthDownEstimator(iface);
-    return context->getAdjustedEstimatorValue(estimator);
+    return context->getEstimatorContext(estimator);
 }
 
-double network_bandwidth_up(instruments_context_t ctx, const char *iface)
+instruments_estimator_t
+get_network_bandwidth_up_estimator(instruments_context_t ctx, const char *iface)
 {
     StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
     Estimator *estimator = EstimatorRegistry::getNetworkBandwidthUpEstimator(iface);
-    return context->getAdjustedEstimatorValue(estimator);
+    return context->getEstimatorContext(estimator);
 }
 
-double network_rtt(instruments_context_t ctx, const char *iface)
+instruments_estimator_t
+get_network_rtt_estimator(instruments_context_t ctx, const char *iface)
 {
     StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
     Estimator *estimator = EstimatorRegistry::getNetworkRttEstimator(iface);
-    return context->getAdjustedEstimatorValue(estimator);
+    return context->getEstimatorContext(estimator);
 }
-
 
 instruments_strategy_evaluator_t
 register_strategy_set(const instruments_strategy_t *strategies, size_t num_strategies)
@@ -101,17 +89,18 @@ choose_strategy(instruments_strategy_evaluator_t evaluator_handle)
     return evaluator->chooseStrategy();
 }
 
-void add_coin_flip_estimator(instruments_strategy_t s)
+instruments_estimator_t
+get_coin_flip_heads_estimator(instruments_context_t ctx)
 {
-    Strategy *strategy = (Strategy *) s;
-    strategy->addEstimator(EstimatorRegistry::getCoinFlipEstimator());
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
+    Estimator *estimator = EstimatorRegistry::getCoinFlipEstimator();
+    return context->getEstimatorContext(estimator);
 }
 
 int coin_flip_lands_heads(instruments_context_t ctx)
 {
-    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
-    Estimator *estimator = EstimatorRegistry::getCoinFlipEstimator();
-    double value = context->getAdjustedEstimatorValue(estimator);
+    instruments_estimator_t estimator = get_coin_flip_heads_estimator(ctx);
+    double value = get_estimator_value(estimator);
     
     return (value >= 0.5);
 }

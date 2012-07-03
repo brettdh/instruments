@@ -1,6 +1,8 @@
 #include <float.h>
 #include "strategy.h"
 #include "strategy_evaluator.h"
+#include "strategy_evaluation_context.h"
+#include "estimator.h"
 
 Strategy::Strategy(eval_fn_t time_fn_, 
                    eval_fn_t energy_cost_fn_, 
@@ -11,6 +13,40 @@ Strategy::Strategy(eval_fn_t time_fn_,
       data_cost_fn((typesafe_eval_fn_t) data_cost_fn_),
       fn_arg(fn_arg_)
 {
+    collectEstimators();
+}
+
+/* fake context that just collects all the estimators 
+ *  that the given strategy uses. */
+class EstimatorCollector : public StrategyEvaluationContext {
+    Strategy *strategy;
+  public:
+    EstimatorCollector(Strategy *s) : strategy(s) {}
+    virtual double getAdjustedEstimatorValue(Estimator *estimator) {
+        return estimator->getEstimate();
+    }
+    
+    virtual instruments_estimator_t getEstimatorContext(Estimator *estimator) {
+        strategy->addEstimator(estimator);
+        return this->StrategyEvaluationContext::getEstimatorContext(estimator);
+    }
+};
+
+void
+Strategy::collectEstimators()
+{
+    // run all the eval functions and add all their estimators
+    //  to this strategy.
+    EstimatorCollector collector(this);
+    if (time_fn) {
+        (void)time_fn(&collector, fn_arg);
+    }
+    if (energy_cost_fn) {
+        (void)energy_cost_fn(&collector, fn_arg);
+    }
+    if (data_cost_fn) {
+        (void)data_cost_fn(&collector, fn_arg);
+    }
 }
 
 void
