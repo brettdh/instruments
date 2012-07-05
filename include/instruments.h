@@ -7,14 +7,23 @@
 #define CDECL
 #endif
 
+/**
+ * @file instruments.h
+ *
+ * Interface functions for evaluating multiple execution strategies.
+ */
+
 #include <sys/types.h>
 
 /* Functions to specify and manipulate strategies */
 
-/** Opaque handle representing strategy evaluation context. */
+/** 
+ * Opaque handle representing strategy evaluation context. 
+ */
 typedef void * instruments_context_t;
 
-/** Opaque handle representing an application's strategy
+/** 
+ *  Opaque handle representing an application's strategy
  *  for accomplishing its task and the calculations
  *  of time, energy, and data cost of that strategy. 
  */
@@ -76,6 +85,7 @@ CDECL void free_strategy(instruments_strategy_t strategy);
 /** Register a set of strategies with the framework and obtain
  *  a handle to an evaluator, which can be used later with
  *  choose_strategy.
+ *
  *  strategies contains all interested strategies, singular and redundant.
  *  (see make_strategy and make_redundant_strategy above)
  */
