@@ -38,28 +38,29 @@ double get_estimator_value(instruments_estimator_t handle)
     return context->getAdjustedEstimatorValue(estimator);
 }
 
+static instruments_estimator_t
+get_estimator_context(instruments_context_t ctx, Estimator *estimator)
+{
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
+    return context->getEstimatorContext(estimator);
+}
+
 instruments_estimator_t
 get_network_bandwidth_down_estimator(instruments_context_t ctx, const char *iface)
 {
-    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
-    Estimator *estimator = EstimatorRegistry::getNetworkBandwidthDownEstimator(iface);
-    return context->getEstimatorContext(estimator);
+    return get_estimator_context(ctx, EstimatorRegistry::getNetworkBandwidthDownEstimator(iface));
 }
 
 instruments_estimator_t
 get_network_bandwidth_up_estimator(instruments_context_t ctx, const char *iface)
 {
-    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
-    Estimator *estimator = EstimatorRegistry::getNetworkBandwidthUpEstimator(iface);
-    return context->getEstimatorContext(estimator);
+    return get_estimator_context(ctx, EstimatorRegistry::getNetworkBandwidthUpEstimator(iface));
 }
 
 instruments_estimator_t
 get_network_rtt_estimator(instruments_context_t ctx, const char *iface)
 {
-    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
-    Estimator *estimator = EstimatorRegistry::getNetworkRttEstimator(iface);
-    return context->getEstimatorContext(estimator);
+    return get_estimator_context(ctx, EstimatorRegistry::getNetworkRttEstimator(iface));
 }
 
 instruments_strategy_evaluator_t
@@ -92,9 +93,7 @@ choose_strategy(instruments_strategy_evaluator_t evaluator_handle)
 instruments_estimator_t
 get_coin_flip_heads_estimator(instruments_context_t ctx)
 {
-    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
-    Estimator *estimator = EstimatorRegistry::getCoinFlipEstimator();
-    return context->getEstimatorContext(estimator);
+    return get_estimator_context(ctx, EstimatorRegistry::getCoinFlipEstimator());
 }
 
 int coin_flip_lands_heads(instruments_context_t ctx)
@@ -117,6 +116,6 @@ void add_coin_flip_observation(int heads)
 
 double get_adjusted_estimator_value(instruments_context_t ctx, Estimator *estimator)
 {
-    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
-    return context->getAdjustedEstimatorValue(estimator);
+    instruments_estimator_t estimatorContext = get_estimator_context(ctx, estimator);
+    return get_estimator_value(estimatorContext);
 }

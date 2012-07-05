@@ -4,6 +4,9 @@
 #include "strategy_evaluation_context.h"
 #include "estimator.h"
 
+#include <set>
+using std::set;
+
 Strategy::Strategy(eval_fn_t time_fn_, 
                    eval_fn_t energy_cost_fn_, 
                    eval_fn_t data_cost_fn_, 
@@ -53,6 +56,22 @@ void
 Strategy::addEstimator(Estimator *estimator)
 {
     estimators.insert(estimator);
+}
+
+void
+Strategy::getAllEstimators(StrategyEvaluator *evaluator)
+{
+    for (set<Estimator*>::const_iterator it = estimators.begin();
+         it != estimators.end(); ++it) {
+        Estimator *estimator = *it;
+        evaluator->addEstimator(estimator);
+    }
+}
+
+bool
+Strategy::usesEstimator(Estimator *estimator)
+{
+    return (estimators.count(estimator) != 0);
 }
 
 double

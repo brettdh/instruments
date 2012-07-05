@@ -165,3 +165,4 @@ CTEST2(coinflip, tails_heavy_coin_should_choose_tails)
     init_coin(1, 100);
     assert_correct_strategy(data, data->strategies[1]);
 }
+
