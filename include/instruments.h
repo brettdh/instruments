@@ -20,6 +20,11 @@ typedef void * instruments_strategy_t;
 
 /** Function pointer type for all strategy-evaluation callbacks.
  *  The second argument is the argument supplied in make_strategy.
+ * Requirements:
+ *  eval functions must not have side effects.
+ *  eval functions must not store their first argument
+ *    for later use; they should consider it invalid
+ *    after they return.
  */
 typedef double (*eval_fn_t)(instruments_context_t, void *);
 
@@ -40,24 +45,6 @@ make_strategy(eval_fn_t time_fn, /* return seconds */
 instruments_strategy_t
 make_redundant_strategy(const instruments_strategy_t *strategies, 
                         size_t num_strategies);
-
-/* before calling choose_strategy, clients should call 
- * add_*_estimator functions with each of their strategies,
- * for all the estimators that a strategy considers. */
-void add_network_bandwidth_down_estimator(instruments_strategy_t strategy, 
-                                          const char *iface);
-void add_network_bandwidth_up_estimator(instruments_strategy_t strategy, 
-                                        const char *iface);
-void add_network_rtt_estimator(instruments_strategy_t strategy, 
-                               const char *iface);
-/* ... */
-/* TODO: maybe somehow discover these at compile time? */
-/* TODO: even simpler: change the API a bit so that
- * TODO:   the app obtains estimator handles.
- * TODO:   then, evaluate the strategy's functions
- * TODO:   when it is created to determine which estimators it uses.
- * TODO: This adds a requirement: eval functions must not have side effects.
- */
 
 void free_strategy(instruments_strategy_t strategy);
 
@@ -87,11 +74,38 @@ choose_strategy(instruments_strategy_evaluator_t strategies);
 
 /* TODO: need an interface for re-evaluation given new information. */
 
-/* Functions to get estimator values */
-double /* bytes/sec */ network_bandwidth_down(instruments_context_t ctx, const char *iface);
-double /* bytes/sec */ network_bandwidth_up(instruments_context_t ctx, const char *iface);
-double /*   seconds */ network_rtt(instruments_context_t ctx, const char *iface);
+
+
+/** Opaque handle representing a quantity that the application
+ *  uses to calculate the time and cost of its strategies.
+ */
+typedef void * instruments_estimator_t;
+
+/** Returns an estimator for the downstream bandwidth 
+ *  of a network (named by 'iface') in bytes/sec.
+ */
+instruments_estimator_t 
+get_network_bandwidth_down_estimator(instruments_context_t ctx, const char *iface);
+
+/** Returns an estimator for the upstream bandwidth 
+ *  of a network (named by 'iface') in bytes/sec.
+ */
+instruments_estimator_t
+get_network_bandwidth_up_estimator(instruments_context_t ctx, const char *iface);
+
+/** Returns an estimator for the round-trip time
+ *  of a network (named by 'iface').
+ */
+instruments_estimator_t
+get_network_rtt_estimator(instruments_context_t ctx, const char *iface);
+
 /* ... */
+
+/** Given an estimator (obtained from one of the above functions),
+ *  return its value.  Used in eval functions (obtaining an estimator handle
+ *  requires a context, which is only available in eval functions).
+ */
+double get_estimator_value(instruments_estimator_t estimator);
 
 #ifdef __cplusplus
 }

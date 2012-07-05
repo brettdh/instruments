@@ -3,6 +3,37 @@
 #include "stats_distribution.h"
 #include "stats_distribution_all_samples.h"
 
+#include <assert.h>
+
+class EmpiricalErrorStrategyEvaluator::JointErrorIterator {
+public:
+    JointErrorIterator(EmpiricalErrorStrategyEvaluator *e);
+    ~JointErrorIterator();
+    double getAdjustedEstimatorValue(Estimator *estimator);
+    
+    double jointProbability();
+    void advance();
+    bool isDone();
+private:
+    typedef std::stack<std::pair<Estimator*, StatsDistribution::Iterator *> > IteratorStack;
+    IteratorStack setupIteratorStack();
+    
+    EmpiricalErrorStrategyEvaluator *evaluator;
+    std::map<Estimator*, StatsDistribution::Iterator *> iterators;
+};
+
+EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator()
+    : jointErrorIterator(NULL)
+{
+}
+
+double 
+EmpiricalErrorStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
+{
+    assert(jointErrorIterator != NULL);
+    return jointErrorIterator->getAdjustedEstimatorValue(estimator);
+}
+
 void 
 EmpiricalErrorStrategyEvaluator::observationAdded(Estimator *estimator, double value)
 {
@@ -20,16 +51,25 @@ double
 EmpiricalErrorStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn, void *arg)
 {
     double weightedSum = 0.0;
-    EvalContext context(this);
-    while (!context.isDone()) {
-        weightedSum += fn(&context, arg) * context.jointProbability();
-        context.advance();
+
+    if (jointErrorIterator != NULL) {
+        // TODO: print message and abort; chooseStrategy has been called concurrently.
+        assert(0);
     }
+    
+    jointErrorIterator = new JointErrorIterator(this);
+    while (!jointErrorIterator->isDone()) {
+        weightedSum += fn(this, arg) * jointErrorIterator->jointProbability();
+        jointErrorIterator->advance();
+    }
+    delete jointErrorIterator;
+    jointErrorIterator = NULL;
+    
     return weightedSum;
 }
 
 EmpiricalErrorStrategyEvaluator::
-EvalContext::EvalContext(EmpiricalErrorStrategyEvaluator *e)
+JointErrorIterator::JointErrorIterator(EmpiricalErrorStrategyEvaluator *e)
     : evaluator(e)
 {
     for (std::map<Estimator*, StatsDistribution *>::const_iterator it = evaluator->jointError.begin();
@@ -41,7 +81,7 @@ EvalContext::EvalContext(EmpiricalErrorStrategyEvaluator *e)
 }
 
 EmpiricalErrorStrategyEvaluator::
-EvalContext::~EvalContext()
+JointErrorIterator::~JointErrorIterator()
 {
     for (std::map<Estimator*, StatsDistribution::Iterator *>::iterator it = iterators.begin();
          it != iterators.end(); ++it) {
@@ -54,7 +94,7 @@ EvalContext::~EvalContext()
 
 double
 EmpiricalErrorStrategyEvaluator::
-EvalContext::getAdjustedEstimatorValue(Estimator *estimator)
+JointErrorIterator::getAdjustedEstimatorValue(Estimator *estimator)
 {
     StatsDistribution::Iterator *it = iterators[estimator];
     double error = it->value();
@@ -62,7 +102,7 @@ EvalContext::getAdjustedEstimatorValue(Estimator *estimator)
 }
 
 double
-EmpiricalErrorStrategyEvaluator::EvalContext::jointProbability()
+EmpiricalErrorStrategyEvaluator::JointErrorIterator::jointProbability()
 {
     double probability = 1.0;
     for (std::map<Estimator*, StatsDistribution::Iterator *>::iterator it = iterators.begin();
@@ -73,8 +113,8 @@ EmpiricalErrorStrategyEvaluator::EvalContext::jointProbability()
     return probability;
 }
 
-EmpiricalErrorStrategyEvaluator::EvalContext::IteratorStack
-EmpiricalErrorStrategyEvaluator::EvalContext::setupIteratorStack()
+EmpiricalErrorStrategyEvaluator::JointErrorIterator::IteratorStack
+EmpiricalErrorStrategyEvaluator::JointErrorIterator::setupIteratorStack()
 {
     IteratorStack the_stack;
     for (std::map<Estimator*, StatsDistribution::Iterator *>::iterator it = iterators.begin();
@@ -85,7 +125,7 @@ EmpiricalErrorStrategyEvaluator::EvalContext::setupIteratorStack()
 }
 
 void
-EmpiricalErrorStrategyEvaluator::EvalContext::advance()
+EmpiricalErrorStrategyEvaluator::JointErrorIterator::advance()
 {
     IteratorStack iterator_stack = setupIteratorStack();
     std::pair<Estimator*, StatsDistribution::Iterator *>* top_iter
@@ -133,7 +173,7 @@ EmpiricalErrorStrategyEvaluator::EvalContext::advance()
 }
 
 bool
-EmpiricalErrorStrategyEvaluator::EvalContext::isDone()
+EmpiricalErrorStrategyEvaluator::JointErrorIterator::isDone()
 {
     for (std::map<Estimator*, StatsDistribution::Iterator *>::iterator it = iterators.begin();
          it != iterators.end(); ++it) {

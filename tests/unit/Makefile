@@ -24,7 +24,8 @@ TESTOBJS := \
 	empirical_error_strategy_evaluator_test.o \
 	goal_adaptive_resource_weight_test.o \
 	running_mean_estimator_test.o \
-	stats_distribution_test.o
+	stats_distribution_test.o \
+	strategy_estimators_discovery_test.o
 
 SUPPORTOBJS := \
 	estimator.o \
@@ -34,6 +35,7 @@ SUPPORTOBJS := \
 	running_mean_estimator.o \
 	strategy.o \
 	strategy_evaluator.o \
+	strategy_evaluation_context.o \
 	empirical_error_strategy_evaluator.o \
 	stats_distribution.o \
 	stats_distribution_all_samples.o \

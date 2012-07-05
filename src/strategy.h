@@ -30,8 +30,9 @@ class Strategy {
     double calculateCost(StrategyEvaluator *evaluator);
     bool isRedundant();
 
+    void getAllEstimators(StrategyEvaluator *evaluator);
+    bool usesEstimator(Estimator *estimator);
   private:
-    friend class StrategyEvaluator;
     friend class EmpiricalErrorStrategyEvaluatorTest;
 
     friend double redundant_strategy_minimum_time(StrategyEvaluationContext *ctx, void *arg);
@@ -42,6 +43,8 @@ class Strategy {
     typesafe_eval_fn_t energy_cost_fn;
     typesafe_eval_fn_t data_cost_fn;
     void *fn_arg;
+
+    void collectEstimators();
 
     std::set<Estimator*> estimators;
 

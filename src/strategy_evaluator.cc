@@ -8,6 +8,11 @@
 
 using std::set;
 
+StrategyEvaluator::StrategyEvaluator()
+    : currentStrategy(NULL)
+{
+}
+
 void
 StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
                                  size_t num_strategies)
@@ -17,13 +22,22 @@ StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
     
     for (size_t i = 0; i < num_strategies; ++i) {
         Strategy *strategy = (Strategy *)new_strategies[i];
-        for (set<Estimator*>::const_iterator it = strategy->estimators.begin();
-             it != strategy->estimators.end(); ++it) {
-            estimators.insert(*it);
-            (*it)->subscribe(this);
-        }
+        strategy->getAllEstimators(this);
         strategies.insert(strategy);
     }
+}
+
+void
+StrategyEvaluator::addEstimator(Estimator *estimator)
+{
+    estimators.insert(estimator);
+    estimator->subscribe(this);
+}
+
+bool
+StrategyEvaluator::usesEstimator(Estimator *estimator)
+{
+    return (estimators.count(estimator) != 0);
 }
 
 StrategyEvaluator *
@@ -69,16 +83,19 @@ StrategyEvaluator::calculateCost(Strategy *strategy)
 instruments_strategy_t
 StrategyEvaluator::chooseStrategy()
 {
+    // TODO: error message about concurrent calls
+    assert(currentStrategy == NULL);
+
     // first, pick the singular strategy that takes the least time (expected)
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
     for (set<Strategy *>::const_iterator it = strategies.begin();
          it != strategies.end(); ++it) {
-        Strategy *cur_strategy = *it;
-        if (!cur_strategy->isRedundant()) {
-            double time = calculateTime(cur_strategy);
+        currentStrategy = *it;
+        if (!currentStrategy->isRedundant()) {
+            double time = calculateTime(currentStrategy);
             if (!best_singular || time < best_singular_time) {
-                best_singular = cur_strategy;
+                best_singular = currentStrategy;
                 best_singular_time = time;
             }
         }
@@ -90,14 +107,14 @@ StrategyEvaluator::chooseStrategy()
     double best_redundant_net_benefit = 0.0;
     for (set<Strategy *>::const_iterator it = strategies.begin();
          it != strategies.end(); ++it) {
-        Strategy *cur_strategy = *it;
-        if (cur_strategy->isRedundant()) {
-            double benefit = best_singular_time - calculateTime(cur_strategy);
-            double net_benefit = benefit - (calculateCost(cur_strategy) -
+        currentStrategy = *it;
+        if (currentStrategy->isRedundant()) {
+            double benefit = best_singular_time - calculateTime(currentStrategy);
+            double net_benefit = benefit - (calculateCost(currentStrategy) -
                                             calculateCost(best_singular));
             if (net_benefit > 0.0 && 
                 (best_redundant == NULL || net_benefit > best_redundant_net_benefit)) {
-                best_redundant = cur_strategy;
+                best_redundant = currentStrategy;
                 best_redundant_net_benefit = net_benefit;
             }
         }
@@ -110,4 +127,15 @@ StrategyEvaluator::chooseStrategy()
     } else {
         return best_singular;
     }
+}
+
+instruments_estimator_t 
+StrategyEvaluator::getEstimatorContext(Estimator *estimator)
+{
+    if (currentStrategy) {
+        currentStrategy->addEstimator(estimator);
+        this->addEstimator(estimator);
+    }
+    
+    return this->StrategyEvaluationContext::getEstimatorContext(estimator);
 }
