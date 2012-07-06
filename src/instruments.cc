@@ -1,9 +1,11 @@
 #include <stdlib.h>
+#include <sys/time.h>
 
 #include <instruments.h>
 #include <instruments_private.h>
 #include "strategy.h"
 #include "estimator.h"
+#include "external_estimator.h"
 #include "estimator_context.h"
 #include "estimator_registry.h"
 #include "strategy_evaluator.h"
@@ -90,6 +92,15 @@ choose_strategy(instruments_strategy_evaluator_t evaluator_handle)
     return evaluator->chooseStrategy();
 }
 
+struct timeval
+get_retry_time(instruments_strategy_evaluator_t evaluator_handle)
+{
+    // TODO: implement for real.
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    return now;
+}
+
 instruments_estimator_t
 get_coin_flip_heads_estimator(instruments_context_t ctx)
 {
@@ -116,6 +127,34 @@ void add_coin_flip_observation(int heads)
 
 double get_adjusted_estimator_value(instruments_context_t ctx, Estimator *estimator)
 {
+    instruments_estimator_t estimatorContext = get_estimator_context(ctx, estimator);
+    return get_estimator_value(estimatorContext);
+}
+
+
+instruments_external_estimator_t
+create_external_estimator()
+{
+    return new ExternalEstimator();
+}
+
+void free_external_estimator(instruments_external_estimator_t est_handle)
+{
+    Estimator *estimator = static_cast<Estimator *>(est_handle);
+    delete estimator;
+}
+
+void add_observation(instruments_external_estimator_t est_handle, 
+                     double observation, double new_estimate)
+{
+    ExternalEstimator *estimator = static_cast<ExternalEstimator *>(est_handle);
+    estimator->addObservation(observation, new_estimate);
+}
+
+double get_external_estimator_value(instruments_context_t ctx,
+                                    instruments_external_estimator_t est_handle)
+{
+    Estimator *estimator = static_cast<Estimator*>(est_handle);
     instruments_estimator_t estimatorContext = get_estimator_context(ctx, estimator);
     return get_estimator_value(estimatorContext);
 }

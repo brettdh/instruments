@@ -90,7 +90,7 @@ CDECL void free_strategy_evaluator(instruments_strategy_evaluator_t evaluator);
 /** Choose and return the best strategy.
  */
 CDECL instruments_strategy_t
-choose_strategy(instruments_strategy_evaluator_t strategies);
+choose_strategy(instruments_strategy_evaluator_t evaluator);
 /* TODO: add 'excludes' for when a strategy is not possible? 
  *       or else the opposite? 
  *       or maybe a 'disable_strategy' function that prevents
@@ -100,8 +100,13 @@ choose_strategy(instruments_strategy_evaluator_t strategies);
  *        'singular' strategies. 
  */
 
-/* TODO: need an interface for re-evaluation given new information. */
-
+/** Queries the evaluator for the recommended time at which
+ *  the strategies should be re-evaluated.
+ *  This time may be in the past; this indicates that
+ *  the strategies should be re-evaluated now.
+ */
+CDECL struct timeval
+get_retry_time(instruments_strategy_evaluator_t evaluator);
 
 
 /** Opaque handle representing a quantity that the application
@@ -111,31 +116,69 @@ typedef void * instruments_estimator_t;
 
 /** Returns an estimator for the downstream bandwidth 
  *  of a network (named by 'iface') in bytes/sec.
+ *
+ *  @param ctx The 'context' handle, available in strategy evaluation callbacks.
  */
 CDECL instruments_estimator_t 
 get_network_bandwidth_down_estimator(instruments_context_t ctx, const char *iface);
 
 /** Returns an estimator for the upstream bandwidth 
  *  of a network (named by 'iface') in bytes/sec.
+ *
+ *  @param ctx The 'context' handle, available in strategy evaluation callbacks.
  */
 CDECL instruments_estimator_t
 get_network_bandwidth_up_estimator(instruments_context_t ctx, const char *iface);
 
 /** Returns an estimator for the round-trip time
  *  of a network (named by 'iface').
+ *
+ *  @param ctx The 'context' handle, available in strategy evaluation callbacks.
  */
 CDECL instruments_estimator_t
 get_network_rtt_estimator(instruments_context_t ctx, const char *iface);
 
 /* ... */
 
-/* TODO: interface for external estimators? */
-
-
 /** Given an estimator (obtained from one of the above functions),
  *  return its value.  Used in eval functions (obtaining an estimator handle
  *  requires a context, which is only available in eval functions).
  */
 CDECL double get_estimator_value(instruments_estimator_t estimator);
+
+
+/* interface for external estimators */
+
+/** Handle for an 'external' estimator - one that takes
+ *  values from outside of the Instruments library.
+ */
+typedef void * instruments_external_estimator_t;
+
+/** Create an external estimator, initially with no observations. */
+CDECL instruments_external_estimator_t create_external_estimator();
+
+/** Destroy an external estimator. */
+CDECL void free_external_estimator(instruments_external_estimator_t estimator);
+
+/** Add an observation to an external estimator.
+ *
+ *  @param observation The latest observation (measurement) of the estimated quantity.
+ *  @param previous_estimate The value of the estimator just before this observation.
+ */
+CDECL void add_observation(instruments_external_estimator_t estimator, 
+                           double observation, double previous_estimate);
+
+/** Return the value of the estimator.
+ *
+ *  Clients should use this function rather than using their
+ *  internal stored value for the estimator, as this function
+ *  allows Instruments to incorporate observed estimator error
+ *  when evaluating strategies.
+ *
+ *  @param ctx The 'context' handle, available in strategy evaluation callbacks.
+ *  @param estimator The external estimator in question.
+ */
+CDECL double get_external_estimator_value(instruments_context_t ctx, 
+                                          instruments_external_estimator_t estimator);
 
 #endif

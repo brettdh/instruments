@@ -3,6 +3,7 @@ OBJS := \
 	empirical_error_strategy_evaluator.o \
 	estimator.o \
 	estimator_registry.o \
+	external_estimator.o \
 	goal_adaptive_resource_weight.o \
 	instruments.o \
 	running_mean_estimator.o \
