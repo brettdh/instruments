@@ -23,6 +23,7 @@ all: $(EXECUTABLES)
 TESTOBJS := \
 	empirical_error_strategy_evaluator_test.o \
 	goal_adaptive_resource_weight_test.o \
+	r_test.o \
 	running_mean_estimator_test.o \
 	stats_distribution_test.o \
 	strategy_estimators_discovery_test.o
