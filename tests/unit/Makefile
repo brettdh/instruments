@@ -1,5 +1,7 @@
-CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g -pthread
-LDFLAGS += -L. -lcppunit
+include R.mk
+
+CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g -pthread $(R_CXXFLAGS)
+LDFLAGS += -L. -lcppunit $(R_LDLIBS)
 
 EXECUTABLES=run_unit_tests
 
