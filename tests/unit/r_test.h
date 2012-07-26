@@ -4,6 +4,10 @@
 #include <cppunit/TestFixture.h>
 #include <cppunit/extensions/HelperMacros.h>
 
+#include <vector>
+#include <string>
+#include <RInside.h>
+
 class RTest : public CppUnit::TestFixture {
 
     CPPUNIT_TEST_SUITE(RTest);
@@ -12,6 +16,10 @@ class RTest : public CppUnit::TestFixture {
 
   public:
     void testHistogram();
+
+  private:
+    void assertListMatches(const std::string& msg, 
+                           std::vector<double> clist, SEXP rlist);
 };
 
 #endif
