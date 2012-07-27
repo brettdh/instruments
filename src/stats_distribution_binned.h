@@ -2,10 +2,15 @@
 #define STATS_DISTRIBUTION_BINNED_H_INCL
 
 #include <vector>
+#include <set>
 #include "stats_distribution.h"
+#include "stats_distribution_all_samples.h"
+
+#include <RInside.h>
 
 class StatsDistributionBinned : public StatsDistribution {
   public:
+    StatsDistributionBinned();
     virtual void addValue(double value);
 
     class Iterator : StatsDistribution::Iterator {
@@ -19,13 +24,48 @@ class StatsDistributionBinned : public StatsDistribution {
         friend class StatsDistributionBinned;
         Iterator(StatsDistributionBinned *d);
         StatsDistributionBinned *distribution;
-        std::vector<double>::const_iterator real_iterator;
+
+        int index;
     };
     
   protected:
     virtual StatsDistribution::Iterator *makeNewIterator();
   private:
     // TODO: finish implementing.
+    std::vector<double> breaks;  // size: number of bins + 1
+    std::vector<double> mids;    // size: number of bins + 2 (left & right tail)
+    std::vector<int> counts;     // size: number of bins + 2 (left & right tail)
+    // the first and last elements in mids and counts
+    //  will store the "tail," or counts for any values that fall outside
+    //  of the precalculated bins.
+    // the value of each will be the average of all values added to the tail.
+    //  TODO: decide between mean and median for the tails.
+
+    // used until we have "enough" samples to pick bins.
+    StatsDistributionAllSamples all_samples;
+
+    std::set<double> all_samples_sorted;
+    
+    // TODO: set this in a principled way.
+    static const size_t histogram_threshold = 30; // "enough" samples
+
+    void addToHistogram(double value);
+    void addToTail(int& count, double& mid, double value);
+    bool shouldRebin();
+    void calculateBins();
+
+    void updateBin(int index, double value);
+
+    std::string r_samples_name;
+    static RInside& R;
+
+    class initer {
+      public:
+        initer();
+    };
+    static initer the_initer;
+
+    void assertValidHistogram();
 };
 
 #endif

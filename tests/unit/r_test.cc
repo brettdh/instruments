@@ -7,6 +7,8 @@ using Rcpp::Environment; using Rcpp::Function;
 using Rcpp::List; using Rcpp::Language;
 using Rcpp::as; using Rcpp::wrap;
 
+#include "r_singleton.h"
+
 #include <string>
 #include <vector>
 #include <sstream>
@@ -41,9 +43,8 @@ static void mark_timepoint(const char *msg)
 void
 RTest::testHistogram()
 {
-    const char *Rargv[] = {"my_RTest", (char*) NULL};
     mark_timepoint("Creating RInside instance");
-    RInside R(1, Rargv);
+    RInside& R = get_rinside_instance();
     mark_timepoint("loading histogram library");
     R.parseEvalQ("library(histogram)");
     mark_timepoint(NULL);
@@ -57,7 +58,8 @@ RTest::testHistogram()
     mark_timepoint("assigning vector to R object");
     R["numbers"] = numbers;
     mark_timepoint("running histogram function");
-    Rcpp::List hist_result = R.parseEval("histogram::histogram(numbers, verbose=FALSE)");
+    const char *str = "histogram::histogram(numbers, verbose=FALSE, plot=FALSE)";
+    Rcpp::List hist_result = R.parseEval(str);
     mark_timepoint(NULL);
     
     Language attr_fn("attr", wrap(hist_result), wrap("class"));

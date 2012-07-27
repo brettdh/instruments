@@ -1,4 +1,4 @@
-include R.mk
+include ../../src/R.mk
 
 CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g -pthread $(R_CXXFLAGS)
 LDFLAGS += -L. -lcppunit $(R_LDLIBS)
@@ -23,12 +23,12 @@ all: $(EXECUTABLES)
 	g++ $(CXXFLAGS) -c -o $@ $<
 
 TESTOBJS := \
-	r_test.o 
-#	empirical_error_strategy_evaluator_test.o \
-#	goal_adaptive_resource_weight_test.o \
-#	running_mean_estimator_test.o \
-#	stats_distribution_test.o \
-#	strategy_estimators_discovery_test.o
+	r_test.o \
+	stats_distribution_test.o \
+	empirical_error_strategy_evaluator_test.o \
+	goal_adaptive_resource_weight_test.o \
+	running_mean_estimator_test.o \
+	strategy_estimators_discovery_test.o
 
 SUPPORTOBJS := \
 	estimator.o \
@@ -36,6 +36,7 @@ SUPPORTOBJS := \
 	external_estimator.o \
 	goal_adaptive_resource_weight.o \
 	instruments.o \
+	r_singleton.o \
 	running_mean_estimator.o \
 	strategy.o \
 	strategy_evaluator.o \
@@ -43,6 +44,7 @@ SUPPORTOBJS := \
 	empirical_error_strategy_evaluator.o \
 	stats_distribution.o \
 	stats_distribution_all_samples.o \
+	stats_distribution_binned.o \
 	timeops.o \
 	trusted_oracle_strategy_evaluator.o
 
