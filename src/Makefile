@@ -1,6 +1,11 @@
-include R.mk
-
 LIBRARIES := libinstruments.so
+all: $(LIBRARIES)
+
+../common/R_generated_vars.mk: ../common/Makefile
+	make -C ../common
+
+include ../common/R_generated_vars.mk
+
 OBJS := \
 	empirical_error_strategy_evaluator.o \
 	estimator.o \
@@ -21,8 +26,6 @@ OBJS := \
 
 CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic -pthread $(R_CXXFLAGS)
 LDFLAGS := -lpthread $(R_LDLIBS)
-
-all: $(LIBRARIES)
 
 libinstruments.so: $(OBJS)
 	g++ $(LDFLAGS) -shared -o $@ $^
