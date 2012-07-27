@@ -11,6 +11,10 @@
 class StatsDistributionBinned : public StatsDistribution {
   public:
     StatsDistributionBinned();
+    
+    // for testing only
+    StatsDistributionBinned(std::vector<double> breaks);
+
     virtual void addValue(double value);
 
     class Iterator : StatsDistribution::Iterator {
@@ -53,10 +57,13 @@ class StatsDistributionBinned : public StatsDistribution {
     void addToTail(int& count, double& mid, double value);
     bool shouldRebin();
     void calculateBins();
+    bool binsAreSet();
 
     void updateBin(int index, double value);
 
     std::string r_samples_name;
+    void initRSamplesName();
+
     static RInside& R;
 
     class initer {

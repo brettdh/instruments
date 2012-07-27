@@ -12,18 +12,39 @@ using Rcpp::as;
 
 #include "r_singleton.h"
 
-StatsDistributionBinned::StatsDistributionBinned()
+void
+StatsDistributionBinned::initRSamplesName()
 {
     ostringstream oss;
     oss << "samples_" << hex << this;
     r_samples_name = oss.str();
 }
 
+StatsDistributionBinned::StatsDistributionBinned()
+{
+    initRSamplesName();
+}
+
+StatsDistributionBinned::StatsDistributionBinned(vector<double> breaks_)
+{
+    initRSamplesName();
+
+    breaks = breaks_;
+    counts.resize(breaks.size() + 1, 0);
+    mids.push_back(0.0);
+    for (size_t i = 0; i < breaks.size() - 1; ++i) {
+        double mid = (breaks[i] + breaks[i+1]) / 2.0;
+        mids.push_back(mid);
+    }
+    mids.push_back(0.0);
+    
+    assertValidHistogram();
+}
+
 void 
 StatsDistributionBinned::addValue(double value)
 {
     all_samples.addValue(value);
-    all_samples_sorted.insert(value);
     addToHistogram(value);
     if (shouldRebin()) {
         calculateBins();
@@ -59,13 +80,14 @@ StatsDistributionBinned::Iterator::isDone()
 
 StatsDistributionBinned::Iterator::Iterator(StatsDistributionBinned *d)
 {
+    distribution = d;
     index = 0;
 }
 
 StatsDistribution::Iterator *
 StatsDistributionBinned::makeNewIterator()
 {
-    if (all_samples_sorted.size() < histogram_threshold) {
+    if (breaks.empty()) {
         return all_samples.getIterator();
     } else {
         return new StatsDistributionBinned::Iterator(this);
@@ -105,7 +127,17 @@ void StatsDistributionBinned::calculateBins()
     
     // tails are now empty, because all the data fits in the bins.
 
+    oss.str("");
+    oss << "remove(" << r_samples_name << ")";
+    R.parseEvalQ(oss.str());
+
     assertValidHistogram();
+}
+
+bool
+StatsDistributionBinned::binsAreSet()
+{
+    return (!breaks.empty());
 }
 
 bool
@@ -113,7 +145,7 @@ StatsDistributionBinned::shouldRebin()
 {
     // TODO: periodic rebinning?
     return (all_samples_sorted.size() >= histogram_threshold &&
-            breaks.empty());
+            !binsAreSet());
 }
 
 void
@@ -134,7 +166,7 @@ StatsDistributionBinned::addToHistogram(double value)
     
     assertValidHistogram();
     
-    if (!breaks.empty()) {
+    if (binsAreSet()) {
         vector<double>::iterator pos = 
             lower_bound(breaks.begin(), breaks.end(), value);
         size_t index = int(pos - breaks.begin());
@@ -142,6 +174,7 @@ StatsDistributionBinned::addToHistogram(double value)
     } else {
         // no histogram yet; ignore.
     }
+    all_samples_sorted.insert(value);
 
     assertValidHistogram();
 }
@@ -164,16 +197,19 @@ StatsDistributionBinned::assertValidHistogram()
         assert((breaks.size() + 1) == counts.size());
 
         int total_counts = 0;
-        for (size_t i = 0; i < mids.size(); ++i) {
-            if (i > 0) {
-                assert(breaks[i-1] <= mids[i]);
-            }
-            if (i < breaks.size()) {
-                assert(breaks[i] > mids[i]);
-            }
+        for (size_t i = 1; i < breaks.size(); ++i) {
+            assert(breaks[i-1] <= mids[i]);
+            assert(breaks[i] > mids[i]);
             
             total_counts += counts[i];
         }
+
+        assert(counts[0] == 0 || mids[0] < breaks[0]);
+        assert(counts[counts.size()-1] == 0 ||
+               mids[mids.size()-1] > breaks[breaks.size()-1]);
+
+        total_counts += counts[0];
+        total_counts += counts[counts.size() - 1];
         assert(total_counts == (int) all_samples_sorted.size());
     }
 }
