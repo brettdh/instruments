@@ -10,10 +10,17 @@ class StatsDistributionTest : public CppUnit::TestFixture {
 
     CPPUNIT_TEST_SUITE(StatsDistributionTest);
     CPPUNIT_TEST(testIdenticalSamples);
+    CPPUNIT_TEST(testHistogram);
+    CPPUNIT_TEST(testHistogramWithKnownBins);
     CPPUNIT_TEST_SUITE_END();
 
   public:
     void testIdenticalSamples();
+    void testHistogram();
+    void testHistogramWithKnownBins();
+    
+  private:
+    void sanityCheckPDF(StatsDistribution *dist);
 };
 
 #endif
