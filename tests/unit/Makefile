@@ -8,24 +8,31 @@ include ../../common/R_generated_vars.mk
 
 R_CXXFLAGS := $(subst -O3,,$(R_CXXFLAGS))
 
-CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g -pthread $(R_CXXFLAGS)
+CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g $(R_CXXFLAGS)
 LDFLAGS += -L. -lcppunit $(R_LDLIBS)
+
+ifeq ($(shell uname), Darwin)
+CXXFLAGS += -I/opt/local/include
+LDFLAGS += -L/opt/local/lib
+else
+CXXFLAGS += -pthread
+endif
 
 
 %.o: %.cc %.h
-	g++ $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o: ../../src/%.cc ../../src/%.h
-	g++ $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o: %.cc
-	g++ $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o: ../%.cc
-	g++ $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o: ../../src/%.cc
-	g++ $(CXXFLAGS) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 TESTOBJS := \
 	r_test.o \
@@ -54,7 +61,7 @@ SUPPORTOBJS := \
 	trusted_oracle_strategy_evaluator.o
 
 run_unit_tests: run_all_tests.o $(TESTOBJS) $(SUPPORTOBJS)
-	g++ -o $@ $^ $(CXXFLAGS) $(LDFLAGS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS)
 
 clean:
 	rm -f *.o *~ $(EXECUTABLES)

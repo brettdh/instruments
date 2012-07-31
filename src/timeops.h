@@ -6,19 +6,20 @@
 #include <sys/types.h>
 #include <time.h>
 #include <string>
+#include "debug.h"
 
 
-const long int& subseconds(const struct timeval&  tv);
+const suseconds_t& subseconds(const struct timeval&  tv);
 const long int& subseconds(const struct timespec& tv);
-long int& subseconds(struct timeval&  tv);
+suseconds_t& subseconds(struct timeval&  tv);
 long int& subseconds(struct timespec& tv);
-const long int& subseconds(const struct timeval  *tv);
+const suseconds_t& subseconds(const struct timeval  *tv);
 const long int& subseconds(const struct timespec *tv);
-long int& subseconds(struct timeval  *tv);
+suseconds_t& subseconds(struct timeval  *tv);
 long int& subseconds(struct timespec *tv);
 
-long int MAX_SUBSECS(const struct timeval& tv);
-long int MAX_SUBSECS(const struct timeval *tv);
+suseconds_t MAX_SUBSECS(const struct timeval& tv);
+suseconds_t MAX_SUBSECS(const struct timeval *tv);
 long int MAX_SUBSECS(const struct timespec& tv);
 long int MAX_SUBSECS(const struct timespec *tv);
 
@@ -33,7 +34,7 @@ void TIME(struct timespec& tv);
 /* tve should be >= tvb. */
 #define TIMEDIFF(tvb,tve,tvr)                                    \
 do {                                                             \
-    assert(((tve).tv_sec > (tvb).tv_sec)                         \
+    ASSERT(((tve).tv_sec > (tvb).tv_sec)                         \
            || (((tve).tv_sec == (tvb).tv_sec)                    \
                && (subseconds(tve) >= subseconds(tvb))));             \
     if (subseconds(tve) < subseconds(tvb)) {                         \
@@ -94,6 +95,24 @@ do {                                                             \
 
 struct timespec abs_time(struct timespec rel_time);
 
+struct TimeFunctionBody {
+#ifndef CMM_DEBUG
+    TimeFunctionBody(const char *str) { (void)str; }
+#else
+    struct timeval begin, end, diff;
+    const char *str;
+  
+    TimeFunctionBody(const char *str_) : str(str_) { 
+        TIME(begin); 
+    }
+    ~TimeFunctionBody() {
+        TIME(end);
+        TIMEDIFF(begin, end, diff);
+        dbgprintf("%s took %lu.%06lu seconds\n", str,
+                  diff.tv_sec, diff.tv_usec);
+    }
+#endif
+};
 #endif /* DEF_TIMEOPS */
 
 /* convert between u_long and struct timeval */

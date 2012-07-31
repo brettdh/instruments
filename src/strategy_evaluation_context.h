@@ -5,14 +5,14 @@
 #include "instruments.h"
 
 class Estimator;
-class EstimatorContext;
+struct EstimatorContext;
 
 class StrategyEvaluationContext {
   public:
     virtual double getAdjustedEstimatorValue(Estimator *estimator) = 0;
 
     virtual instruments_estimator_t getEstimatorContext(Estimator *estimator);
-    ~StrategyEvaluationContext();
+    virtual ~StrategyEvaluationContext();
   private:
     std::map<Estimator *, EstimatorContext *> estimators;
 };

@@ -7,6 +7,16 @@
 #include <functional>
 using std::min; using std::max;
 
+const double GoalAdaptiveResourceWeight::VARIABLE_BUFFER_WEIGHT = 0.05;
+
+//const double GoalAdaptiveResourceWeight::CONSTANT_BUFFER_WEIGHT = 0.01;
+
+// trying a higher constant factor because of the artificially short experiment.
+// This is based on taking 1% of a 2-hour experiment's starting supply.
+//  If X is the 15-minute supply and 8X is the 2-hour supply,
+//  then the fudge factor is 0.01 * 8X, or 0.08X.
+const double GoalAdaptiveResourceWeight::CONSTANT_BUFFER_WEIGHT = 0.08;
+
 double GoalAdaptiveResourceWeight::PROHIBITIVELY_LARGE_WEIGHT = -1.0;
 
 void*
