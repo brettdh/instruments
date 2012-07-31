@@ -119,6 +119,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
             }
         }
     }
+    currentStrategy = NULL;
 
     // if any redundant strategy was better than the best singular strategy, use it.
     //  otherwise, just use the best singular strategy.
