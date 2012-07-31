@@ -24,6 +24,7 @@ class Estimator {
     void subscribe(StrategyEvaluator *subscriber);
     
     virtual double getEstimate() = 0;
+    virtual ~Estimator() {}
   protected:
     Estimator() {}
 

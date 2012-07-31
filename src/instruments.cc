@@ -15,9 +15,10 @@ instruments_strategy_t
 make_strategy(eval_fn_t time_fn, /* return seconds */
               eval_fn_t energy_cost_fn, /* return Joules */
               eval_fn_t data_cost_fn, /* return bytes */
-              void *fn_arg)
+              void *strategy_arg, void *default_chooser_arg)
 {
-    return new Strategy(time_fn, energy_cost_fn, data_cost_fn, fn_arg);
+    return new Strategy(time_fn, energy_cost_fn, data_cost_fn, 
+                        strategy_arg, default_chooser_arg);
 }
 
 instruments_strategy_t
@@ -86,10 +87,11 @@ free_strategy_evaluator(instruments_strategy_evaluator_t e)
 }
 
 instruments_strategy_t
-choose_strategy(instruments_strategy_evaluator_t evaluator_handle)
+choose_strategy(instruments_strategy_evaluator_t evaluator_handle,
+                void *chooser_arg)
 {
     StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
-    return evaluator->chooseStrategy();
+    return evaluator->chooseStrategy(chooser_arg);
 }
 
 struct timeval

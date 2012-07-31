@@ -13,6 +13,7 @@ class StatsDistribution {
         virtual double value() = 0;
         virtual void advance() = 0;
         virtual bool isDone() = 0;
+        virtual ~Iterator() {}
     };
     
     Iterator *getIterator();

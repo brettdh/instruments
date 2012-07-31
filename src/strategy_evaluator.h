@@ -27,16 +27,16 @@ class StrategyEvaluator : public StrategyEvaluationContext {
                                      size_t num_strategies, EvalMethod type);
 
     // TODO: declare this not-thread-safe?  that seems reasonable.
-    instruments_strategy_t chooseStrategy();
+    instruments_strategy_t chooseStrategy(void *chooser_arg);
     
     void addEstimator(Estimator *estimator);
     bool usesEstimator(Estimator *estimator);
 
-    virtual double expectedValue(typesafe_eval_fn_t fn, void *arg) = 0;
+    virtual double expectedValue(typesafe_eval_fn_t fn, 
+                                 void *strategy_arg, void *chooser_arg) = 0;
     virtual void observationAdded(Estimator *estimator, double value) = 0;
 
     virtual instruments_estimator_t getEstimatorContext(Estimator *estimator);
-
   protected:
     StrategyEvaluator();
     void setStrategies(const instruments_strategy_t *strategies,
@@ -49,8 +49,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     const static EvalMethod DEFAULT_EVAL_METHOD = TRUSTED_ORACLE;
 
   private:
-    double calculateTime(Strategy *strategy);
-    double calculateCost(Strategy *strategy);
+    double calculateTime(Strategy *strategy, void *chooser_arg);
+    double calculateCost(Strategy *strategy, void *chooser_arg);
     Strategy *currentStrategy;
 };
 

@@ -5,7 +5,7 @@ ifeq ($(shell uname), Darwin)
 LDFLAGS+=-Wl,-flat_namespace,-undefined,dynamic_lookup
 endif
 
-TESTS=test_coin_flip.o external_estimator_test.o
+TESTS=test_coin_flip.o external_estimator_test.o test_chooser_arg.o
 
 all: run_tests
 

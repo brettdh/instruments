@@ -28,12 +28,12 @@ double eval_fn_estimators_range(instruments_context_t ctx, void *arg,
     }
     return sum;
 }
-double eval_fn_with_all_estimators(instruments_context_t ctx, void *arg)
+double eval_fn_with_all_estimators(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
-    return eval_fn_estimators_range(ctx, arg, 0, NUM_ESTIMATORS - 1);
+    return eval_fn_estimators_range(ctx, strategy_arg, 0, NUM_ESTIMATORS - 1);
 }
 
-double eval_fn_with_all_estimators_two_steps(instruments_context_t ctx, void *arg)
+double eval_fn_with_all_estimators_two_steps(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     static size_t step = 0;
     size_t first, last;
@@ -45,10 +45,10 @@ double eval_fn_with_all_estimators_two_steps(instruments_context_t ctx, void *ar
         last = NUM_ESTIMATORS - 1;
     }
     ++step;
-    return eval_fn_estimators_range(ctx, arg, first, last);
+    return eval_fn_estimators_range(ctx, strategy_arg, first, last);
 }
 
-double eval_fn_no_estimators(instruments_context_t ctx, void *arg)
+double eval_fn_no_estimators(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     return 0.0;
 }
@@ -63,7 +63,7 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredAtRegistration()
     Strategy *strategy = new Strategy(eval_fn_with_all_estimators,
                                       eval_fn_no_estimators,
                                       eval_fn_no_estimators,
-                                      estimators);
+                                      estimators, NULL);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1,
                                                              TRUSTED_ORACLE);
@@ -83,30 +83,30 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredUponLaterUse()
     Strategy *strategy = new Strategy(eval_fn_with_all_estimators_two_steps,
                                       eval_fn_no_estimators,
                                       eval_fn_no_estimators,
-                                      estimators);
+                                      estimators, NULL);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1,
                                                              TRUSTED_ORACLE);
     char msg[64];
     for (size_t i = 0; i <= NUM_ESTIMATORS / 2; ++i) {
-        snprintf(msg, 64, "strategy uses estimator %d", i);
+        snprintf(msg, 64, "strategy uses estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, strategy->usesEstimator(estimators[i]));
-        snprintf(msg, 64, "evaluator uses estimator %d", i);
+        snprintf(msg, 64, "evaluator uses estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, evaluator->usesEstimator(estimators[i]));
     }
     for (size_t i = NUM_ESTIMATORS / 2 + 1; i < NUM_ESTIMATORS; ++i) {
-        snprintf(msg, 64, "strategy doesn't use estimator %d", i);
+        snprintf(msg, 64, "strategy doesn't use estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, !strategy->usesEstimator(estimators[i]));
-        snprintf(msg, 64, "evaluator doesn't use estimator %d", i);
+        snprintf(msg, 64, "evaluator doesn't use estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, !evaluator->usesEstimator(estimators[i]));
     }
 
-    evaluator->chooseStrategy(); // invokes the time function again
+    evaluator->chooseStrategy(NULL); // invokes the time function again
     // the remaining estimators should now be used by both
     for (size_t i = 0; i < NUM_ESTIMATORS; ++i) {
-        snprintf(msg, 64, "later, strategy uses estimator %d", i);
+        snprintf(msg, 64, "later, strategy uses estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, strategy->usesEstimator(estimators[i]));
-        snprintf(msg, 64, "later, evaluator uses estimator %d", i);
+        snprintf(msg, 64, "later, evaluator uses estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, evaluator->usesEstimator(estimators[i]));
     }
 }

@@ -50,14 +50,8 @@ class GoalAdaptiveResourceWeight {
     
     double calculateNewWeight(double oldWeight, double supply, double spendingRate);
 
-    static const double VARIABLE_BUFFER_WEIGHT = 0.05;
-    //static const double CONSTANT_BUFFER_WEIGHT = 0.01;
-    
-    // trying a higher constant factor because of the artificially short experiment.
-    // This is based on taking 1% of a 2-hour experiment's starting supply.
-    //  If X is the 15-minute supply and 8X is the 2-hour supply,
-    //  then the fudge factor is 0.01 * 8X, or 0.08X.
-    static const double CONSTANT_BUFFER_WEIGHT = 0.08;
+    static const double VARIABLE_BUFFER_WEIGHT;
+    static const double CONSTANT_BUFFER_WEIGHT;
 
     // adjust the resource supply by an Odyssey-style "fudge factor" to 
     //  make it less likely we'll overshoot the budget.

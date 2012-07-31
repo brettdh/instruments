@@ -68,20 +68,20 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
 }
 
 double
-StrategyEvaluator::calculateTime(Strategy *strategy)
+StrategyEvaluator::calculateTime(Strategy *strategy, void *chooser_arg)
 {
-    return strategy->calculateTime(this);
+    return strategy->calculateTime(this, chooser_arg);
 }
 
 double
-StrategyEvaluator::calculateCost(Strategy *strategy)
+StrategyEvaluator::calculateCost(Strategy *strategy, void *chooser_arg)
 {
-    return strategy->calculateCost(this);
+    return strategy->calculateCost(this, chooser_arg);
 }
 
 
 instruments_strategy_t
-StrategyEvaluator::chooseStrategy()
+StrategyEvaluator::chooseStrategy(void *chooser_arg)
 {
     // TODO: error message about concurrent calls
     assert(currentStrategy == NULL);
@@ -93,7 +93,7 @@ StrategyEvaluator::chooseStrategy()
          it != strategies.end(); ++it) {
         currentStrategy = *it;
         if (!currentStrategy->isRedundant()) {
-            double time = calculateTime(currentStrategy);
+            double time = calculateTime(currentStrategy, chooser_arg);
             if (!best_singular || time < best_singular_time) {
                 best_singular = currentStrategy;
                 best_singular_time = time;
@@ -109,9 +109,9 @@ StrategyEvaluator::chooseStrategy()
          it != strategies.end(); ++it) {
         currentStrategy = *it;
         if (currentStrategy->isRedundant()) {
-            double benefit = best_singular_time - calculateTime(currentStrategy);
-            double net_benefit = benefit - (calculateCost(currentStrategy) -
-                                            calculateCost(best_singular));
+            double benefit = best_singular_time - calculateTime(currentStrategy, chooser_arg);
+            double net_benefit = benefit - (calculateCost(currentStrategy, chooser_arg) -
+                                            calculateCost(best_singular, chooser_arg));
             if (net_benefit > 0.0 && 
                 (best_redundant == NULL || net_benefit > best_redundant_net_benefit)) {
                 best_redundant = currentStrategy;
@@ -119,6 +119,7 @@ StrategyEvaluator::chooseStrategy()
             }
         }
     }
+    currentStrategy = NULL;
 
     // if any redundant strategy was better than the best singular strategy, use it.
     //  otherwise, just use the best singular strategy.

@@ -48,7 +48,8 @@ EmpiricalErrorStrategyEvaluator::observationAdded(Estimator *estimator, double v
 
 
 double
-EmpiricalErrorStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn, void *arg)
+EmpiricalErrorStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn, 
+                                               void *strategy_arg, void *chooser_arg)
 {
     double weightedSum = 0.0;
 
@@ -59,7 +60,7 @@ EmpiricalErrorStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn, void *arg)
     
     jointErrorIterator = new JointErrorIterator(this);
     while (!jointErrorIterator->isDone()) {
-        weightedSum += fn(this, arg) * jointErrorIterator->jointProbability();
+        weightedSum += fn(this, strategy_arg, chooser_arg) * jointErrorIterator->jointProbability();
         jointErrorIterator->advance();
     }
     delete jointErrorIterator;

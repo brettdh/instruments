@@ -24,8 +24,13 @@ OBJS := \
 	timeops.o \
 	trusted_oracle_strategy_evaluator.o
 
+
 CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic -pthread $(R_CXXFLAGS)
 LDFLAGS := -lpthread $(R_LDLIBS)
+
+ifeq ($(shell uname), Darwin)
+CXXFLAGS += -I/opt/local/include
+endif
 
 libinstruments.so: $(OBJS)
 	g++ $(LDFLAGS) -shared -o $@ $^
