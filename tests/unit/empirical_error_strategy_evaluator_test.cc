@@ -13,13 +13,13 @@
 
 CPPUNIT_TEST_SUITE_REGISTRATION(EmpiricalErrorStrategyEvaluatorTest);
 
-double get_time(instruments_context_t ctx, void *arg)
+double get_time(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
-    Estimator *estimator = (Estimator *) arg;
+    Estimator *estimator = (Estimator *) strategy_arg;
     return get_adjusted_estimator_value(ctx, estimator);
 }
 
-double get_cost(instruments_context_t ctx, void *arg)
+double get_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     return 0.0;
 }
