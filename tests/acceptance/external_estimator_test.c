@@ -21,14 +21,14 @@ CTEST_TEARDOWN(external_estimator)
 }
 
 static double
-estimator_value(instruments_context_t ctx, void *arg)
+estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     instruments_external_estimator_t estimator = 
-        (instruments_external_estimator_t) arg;
+        (instruments_external_estimator_t) strategy_arg;
     return get_external_estimator_value(ctx, estimator);
 }
 
-static double data_cost(instruments_context_t ctx, void *arg)
+static double data_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     return 4.0;
 }
@@ -40,13 +40,13 @@ CTEST2(external_estimator, value_observed)
     add_observation(data->low_estimator, 0.0, 0.0);
 
     instruments_strategy_t strategies[2];
-    strategies[0] = make_strategy(estimator_value, NULL, data_cost, (void*) data->high_estimator);
+    strategies[0] = make_strategy(estimator_value, NULL, data_cost, (void*) data->high_estimator, NULL);
     ASSERT_NOT_NULL(strategies[0]);
-    strategies[1] = make_strategy(estimator_value, NULL, data_cost, (void*) data->low_estimator);
+    strategies[1] = make_strategy(estimator_value, NULL, data_cost, (void*) data->low_estimator, NULL);
     ASSERT_NOT_NULL(strategies[1]);
     
     instruments_strategy_evaluator_t evaluator = register_strategy_set(strategies, 2);
-    instruments_strategy_t chosen = choose_strategy(evaluator);
+    instruments_strategy_t chosen = choose_strategy(evaluator, NULL);
     ASSERT_NOT_NULL(chosen);
     ASSERT_EQUAL((int)strategies[1], (int)chosen);
     // true if the external values were used.
@@ -58,9 +58,9 @@ run_test_with_oscillating_estimator(struct external_estimator_data *data,
                                     int correct_strategy)
 {
     instruments_strategy_t strategies[2];
-    strategies[0] = make_strategy(estimator_value, NULL, data_cost, (void*) data->high_estimator);
+    strategies[0] = make_strategy(estimator_value, NULL, data_cost, (void*) data->high_estimator, NULL);
     ASSERT_NOT_NULL(strategies[0]);
-    strategies[1] = make_strategy(estimator_value, NULL, data_cost, (void*) data->low_estimator);
+    strategies[1] = make_strategy(estimator_value, NULL, data_cost, (void*) data->low_estimator, NULL);
     ASSERT_NOT_NULL(strategies[1]);
     strategies[2] = make_redundant_strategy(strategies, 2);
     ASSERT_NOT_NULL(strategies[2]);
@@ -77,7 +77,7 @@ run_test_with_oscillating_estimator(struct external_estimator_data *data,
         add_observation(data->low_estimator, 5.0, 4.0);
     }
 
-    instruments_strategy_t chosen = choose_strategy(evaluator);
+    instruments_strategy_t chosen = choose_strategy(evaluator, NULL);
     ASSERT_NOT_NULL(chosen);
     ASSERT_EQUAL((int)strategies[correct_strategy], (int)chosen);
     // true if the error from the external strategies was used.

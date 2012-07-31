@@ -14,9 +14,9 @@
  *     If one is much more likely, pick that one.
  */
 
-static double coinflip_time(instruments_context_t ctx, void *arg)
+static double coinflip_time(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
-    int pick_heads = (int)arg;
+    int pick_heads = (int)strategy_arg;
     int flip_result = coin_flip_lands_heads(ctx);
     if ((pick_heads && flip_result) ||
         (!pick_heads && !flip_result)) {
@@ -26,7 +26,7 @@ static double coinflip_time(instruments_context_t ctx, void *arg)
     }
 }
 
-static double coinflip_data(instruments_context_t ctx, void *arg)
+static double coinflip_data(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     return 4.0;
 }
@@ -37,11 +37,11 @@ CTEST(coinflip, one_strategy)
     add_coin_flip_observation(0);
 
     instruments_strategy_t strategy =
-        make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
+        make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1, NULL);
     ASSERT_NOT_NULL(strategy);
     
     instruments_strategy_evaluator_t evaluator = register_strategy_set(&strategy, 1);
-    instruments_strategy_t chosen = choose_strategy(evaluator);
+    instruments_strategy_t chosen = choose_strategy(evaluator, NULL);
     ASSERT_NOT_NULL(chosen);
     ASSERT_EQUAL((int)strategy, (int)chosen);
 
@@ -58,15 +58,15 @@ CTEST(coinflip, two_strategies)
 
     int i, NUM_STRATEGIES = 2;
     instruments_strategy_t strategies[NUM_STRATEGIES];
-    strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0);
-    strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
+    strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0, NULL);
+    strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1, NULL);
     for (i = 0; i < NUM_STRATEGIES; ++i) {
         ASSERT_NOT_NULL(strategies[i]);
     }
 
     instruments_strategy_evaluator_t evaluator = register_strategy_set(strategies, 2);
     
-    instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
+    instruments_strategy_t chosen_strategy = choose_strategy(evaluator, NULL);
     ASSERT_EQUAL((int)strategies[1], (int)chosen_strategy);
 
     free_strategy_evaluator(evaluator);
@@ -87,8 +87,8 @@ CTEST_SETUP(coinflip)
     reset_coin_flip_estimator(RUNNING_MEAN);
     
     data->strategies = calloc(NUM_STRATEGIES, sizeof(*data));
-    data->strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1);
-    data->strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0);
+    data->strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1, NULL);
+    data->strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0, NULL);
     data->strategies[2] = make_redundant_strategy(data->strategies, 2);
     for (i = 0; i < NUM_STRATEGIES; ++i) {
         ASSERT_NOT_NULL(data->strategies[i]);
@@ -126,7 +126,7 @@ static void assert_correct_strategy(struct coinflip_data *data,
     instruments_strategy_t *strategies = data->strategies;
     instruments_strategy_evaluator_t evaluator = data->evaluator;
     
-    instruments_strategy_t chosen_strategy = choose_strategy(evaluator);
+    instruments_strategy_t chosen_strategy = choose_strategy(evaluator, NULL);
     int chosen_strategy_idx = -1, correct_strategy_idx = -1, i;
     for (i = 0; i < NUM_STRATEGIES; ++i) {
         if (correct_strategy == strategies[i]) {

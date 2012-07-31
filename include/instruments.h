@@ -62,14 +62,24 @@ typedef void * instruments_strategy_evaluator_t;
  *  3) data_cost_fn
  *     Returns the number of bytes to be sent on a cellular network.
  *  
- *  Callers may optionally specify an argument 'arg' that will be passed
+ *  Callers may optionally specify an argument 'strategy_arg' that will be passed
  *  to each evaluation function when it is invoked.
+ *  Further, when calling choose_strategy, its optional argument
+ *  will be passed as the last argument to the callbacks.
+ *  If the callbacks make use of chooser_arg (as passed into choose_strategy),
+ *  they should here supply an acceptable 'default' argument,
+ *  so the framework may call their callbacks (for introspection purposes)
+ *  without having a 'real' argument here.
+ *
+ *  (XXX: this awkwardness could perhaps be obsoleted by
+ *   reworking estimator discovery as static (rather than dynamic) analysis.)
  */
 CDECL instruments_strategy_t
 make_strategy(eval_fn_t time_fn, /* return seconds */
               eval_fn_t energy_cost_fn, /* return Joules */
               eval_fn_t data_cost_fn, /* return bytes */
-              void *strategy_arg);
+              void *strategy_arg,
+              void *default_chooser_arg);
 
 /** Create a *redundant* strategy by combining two or more
  *  single-option strategies.
@@ -101,7 +111,7 @@ CDECL void free_strategy_evaluator(instruments_strategy_evaluator_t evaluator);
 /** Choose and return the best strategy.
  */
 CDECL instruments_strategy_t
-choose_strategy(instruments_strategy_evaluator_t evaluator, void *arg);
+choose_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
 /* TODO: add 'excludes' for when a strategy is not possible? 
  *       or else the opposite? 
  *       or maybe a 'disable_strategy' function that prevents

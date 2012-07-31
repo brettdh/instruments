@@ -28,7 +28,7 @@ void
 EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
 {
     Estimator *estimator = Estimator::create(LAST_OBSERVATION);
-    Strategy *strategy = new Strategy(get_time, get_cost, get_cost, estimator);
+    Strategy *strategy = new Strategy(get_time, get_cost, get_cost, estimator, NULL);
     strategy->addEstimator(estimator);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1, 
@@ -42,6 +42,6 @@ EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
     estimator->addObservation(5.0);
     estimator->addObservation(4.0); // empirical error is +1
 
-    double value = evaluator->expectedValue(strategy->time_fn, strategy->fn_arg);
+    double value = evaluator->expectedValue(strategy->time_fn, strategy->strategy_arg, NULL);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(3.0, value, 0.001);
 }

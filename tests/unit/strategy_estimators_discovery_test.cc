@@ -63,7 +63,7 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredAtRegistration()
     Strategy *strategy = new Strategy(eval_fn_with_all_estimators,
                                       eval_fn_no_estimators,
                                       eval_fn_no_estimators,
-                                      estimators);
+                                      estimators, NULL);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1,
                                                              TRUSTED_ORACLE);
@@ -83,30 +83,30 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredUponLaterUse()
     Strategy *strategy = new Strategy(eval_fn_with_all_estimators_two_steps,
                                       eval_fn_no_estimators,
                                       eval_fn_no_estimators,
-                                      estimators);
+                                      estimators, NULL);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1,
                                                              TRUSTED_ORACLE);
     char msg[64];
     for (size_t i = 0; i <= NUM_ESTIMATORS / 2; ++i) {
-        snprintf(msg, 64, "strategy uses estimator %ld", i);
+        snprintf(msg, 64, "strategy uses estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, strategy->usesEstimator(estimators[i]));
-        snprintf(msg, 64, "evaluator uses estimator %ld", i);
+        snprintf(msg, 64, "evaluator uses estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, evaluator->usesEstimator(estimators[i]));
     }
     for (size_t i = NUM_ESTIMATORS / 2 + 1; i < NUM_ESTIMATORS; ++i) {
-        snprintf(msg, 64, "strategy doesn't use estimator %ld", i);
+        snprintf(msg, 64, "strategy doesn't use estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, !strategy->usesEstimator(estimators[i]));
-        snprintf(msg, 64, "evaluator doesn't use estimator %ld", i);
+        snprintf(msg, 64, "evaluator doesn't use estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, !evaluator->usesEstimator(estimators[i]));
     }
 
-    evaluator->chooseStrategy(); // invokes the time function again
+    evaluator->chooseStrategy(NULL); // invokes the time function again
     // the remaining estimators should now be used by both
     for (size_t i = 0; i < NUM_ESTIMATORS; ++i) {
-        snprintf(msg, 64, "later, strategy uses estimator %ld", i);
+        snprintf(msg, 64, "later, strategy uses estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, strategy->usesEstimator(estimators[i]));
-        snprintf(msg, 64, "later, evaluator uses estimator %ld", i);
+        snprintf(msg, 64, "later, evaluator uses estimator %zu", i);
         CPPUNIT_ASSERT_MESSAGE(msg, evaluator->usesEstimator(estimators[i]));
     }
 }

@@ -8,10 +8,11 @@ TrustedOracleStrategyEvaluator::observationAdded(Estimator *estimator, double va
 }
 
 double
-TrustedOracleStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn, void *arg)
+TrustedOracleStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn, 
+                                              void *strategy_arg, void *chooser_arg)
 {
     // no weighted sum; just trust the estimators and evaluate the function
-    return fn(this, arg);
+    return fn(this, strategy_arg, chooser_arg);
 }
 
 double
