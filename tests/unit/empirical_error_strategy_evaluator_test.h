@@ -8,10 +8,12 @@ class EmpiricalErrorStrategyEvaluatorTest : public CppUnit::TestFixture {
 
     CPPUNIT_TEST_SUITE(EmpiricalErrorStrategyEvaluatorTest);
     CPPUNIT_TEST(testSimpleExpectedValue);
+    CPPUNIT_TEST(testMultipleEstimators);
     CPPUNIT_TEST_SUITE_END();
 
   public:
     void testSimpleExpectedValue();
+    void testMultipleEstimators();
 };
 
 #endif

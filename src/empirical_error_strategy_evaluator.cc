@@ -65,13 +65,24 @@ EmpiricalErrorStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn,
         assert(0);
     }
     
+    fprintf(stderr, "Calculating expected value...");
     jointErrorIterator = new JointErrorIterator(this);
+    int iterations = 0;
     while (!jointErrorIterator->isDone()) {
-        weightedSum += fn(this, strategy_arg, chooser_arg) * jointErrorIterator->jointProbability();
+        double value = fn(this, strategy_arg, chooser_arg);
+        double probability = jointErrorIterator->jointProbability();
+        weightedSum += value * probability;
+
+        //fprintf(stderr, "value: %f  prob: %f  weightedSum: %f\n",
+        //        value, probability, weightedSum);
         jointErrorIterator->advance();
+        //sleep(5);
+        
+        iterations++;
     }
     delete jointErrorIterator;
     jointErrorIterator = NULL;
+    fprintf(stderr, "...done after %d iterations.\n", iterations);
     
     return weightedSum;
 }
