@@ -1,4 +1,5 @@
 #include "stats_distribution_all_samples.h"
+#include "debug.h"
 
 void 
 StatsDistributionAllSamples::addValue(double value)
@@ -9,7 +10,7 @@ StatsDistributionAllSamples::addValue(double value)
 double 
 StatsDistributionAllSamples::Iterator::probability()
 {
-    return 1.0 / distribution->values.size();
+    return cached_probability;
 }
 
 double
@@ -33,6 +34,8 @@ StatsDistributionAllSamples::Iterator::isDone()
 StatsDistributionAllSamples::Iterator::Iterator(StatsDistributionAllSamples *d)
     : distribution(d), real_iterator(d->values.begin())
 {
+    ASSERT(distribution->values.size() > 0);
+    cached_probability = 1.0 / distribution->values.size();
 }
 
 StatsDistribution::Iterator *

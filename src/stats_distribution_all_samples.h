@@ -20,6 +20,7 @@ class StatsDistributionAllSamples : public StatsDistribution {
         Iterator(StatsDistributionAllSamples *d);
         StatsDistributionAllSamples *distribution;
         std::vector<double>::const_iterator real_iterator;
+        double cached_probability;
     };
     
   protected:

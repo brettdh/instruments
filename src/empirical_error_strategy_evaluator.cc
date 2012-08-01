@@ -4,6 +4,9 @@
 #include "stats_distribution_all_samples.h"
 
 #include <assert.h>
+#include <stdio.h>
+#include <time.h>
+#include <unistd.h>
 
 class EmpiricalErrorStrategyEvaluator::JointErrorIterator {
 public:
@@ -37,13 +40,12 @@ EmpiricalErrorStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
 void 
 EmpiricalErrorStrategyEvaluator::observationAdded(Estimator *estimator, double value)
 {
-    if (jointError.count(estimator) > 0) {
-        double error = estimator->getEstimate() - value;
-        jointError[estimator]->addValue(error);
-    } else {
-        // TODO: move this to a factory method
+    if (jointError.count(estimator) == 0) {
+        // TODO: move this to a factory method (with the other methods)
         jointError[estimator] = new StatsDistributionAllSamples;
     }
+    double error = estimator->getEstimate() - value;
+    jointError[estimator]->addValue(error);
 }
 
 

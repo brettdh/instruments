@@ -1,6 +1,9 @@
 #ifndef DEBUG_H_INCL_OIUHFBOVSBWE
 #define DEBUG_H_INCL_OIUHFBOVSBWE
 
+#include <stdio.h>
+#include <unistd.h>
+
 #define ASSERT(cond)                                                    \
     do {                                                                \
         if (!(cond)) {                                                  \
