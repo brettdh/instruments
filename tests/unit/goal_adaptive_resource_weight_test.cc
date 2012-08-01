@@ -7,7 +7,7 @@
 #include "timeops.h"
 
 
-CPPUNIT_TEST_SUITE_REGISTRATION(GoalAdaptiveResourceWeightTest);
+CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(GoalAdaptiveResourceWeightTest, "slow");
 
 void 
 GoalAdaptiveResourceWeightTest::testWeight()

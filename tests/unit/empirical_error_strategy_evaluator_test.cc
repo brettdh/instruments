@@ -35,13 +35,12 @@ EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
                                                              EMPIRICAL_ERROR);
     // TODO: set it to the 'all samples' method
 
-    estimator->addObservation(9.0);
-    estimator->addObservation(8.0);
-    estimator->addObservation(7.0);
-    estimator->addObservation(6.0);
-    estimator->addObservation(5.0);
-    estimator->addObservation(4.0); // empirical error is +1
+    for (int i = 9; i >= 4; --i) {
+        estimator->addObservation((double) i);
+    }
+    // empirical error distribution is (0,1,1,1,1,1)
+    // expected value is (4+3+3+3+3+3)/6 = 19/6
 
     double value = evaluator->expectedValue(strategy->time_fn, strategy->strategy_arg, NULL);
-    CPPUNIT_ASSERT_DOUBLES_EQUAL(3.0, value, 0.001);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(19.0/6, value, 0.001);
 }

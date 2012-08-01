@@ -40,12 +40,17 @@ EmpiricalErrorStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
 void 
 EmpiricalErrorStrategyEvaluator::observationAdded(Estimator *estimator, double value)
 {
-    if (jointError.count(estimator) == 0) {
+    if (jointError.count(estimator) > 0) {
+        double error = estimator->getEstimate() - value;
+        jointError[estimator]->addValue(error);
+    } else {
         // TODO: move this to a factory method (with the other methods)
         jointError[estimator] = new StatsDistributionAllSamples;
+        
+        // don't add a real error value to the distribution.
+        // there's no error until we have at least two observations.
+        jointError[estimator]->addValue(0.0);
     }
-    double error = estimator->getEstimate() - value;
-    jointError[estimator]->addValue(error);
 }
 
 
