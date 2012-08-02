@@ -32,11 +32,12 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     void addEstimator(Estimator *estimator);
     bool usesEstimator(Estimator *estimator);
 
-    virtual double expectedValue(typesafe_eval_fn_t fn, 
+    virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg) = 0;
     virtual void observationAdded(Estimator *estimator, double value) = 0;
 
     virtual instruments_estimator_t getEstimatorContext(Estimator *estimator);
+
   protected:
     StrategyEvaluator();
     void setStrategies(const instruments_strategy_t *strategies,

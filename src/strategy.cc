@@ -79,14 +79,14 @@ Strategy::usesEstimator(Estimator *estimator)
 double
 Strategy::calculateTime(StrategyEvaluator *evaluator, void *chooser_arg)
 {
-    return evaluator->expectedValue(time_fn, strategy_arg, chooser_arg);
+    return evaluator->expectedValue(this, time_fn, strategy_arg, chooser_arg);
 }
 
 double
 Strategy::calculateCost(StrategyEvaluator *evaluator, void *chooser_arg)
 {
     // TODO: finish implementing.  e.g. energy, goal-directed adaptation
-    return evaluator->expectedValue(data_cost_fn, strategy_arg, chooser_arg);
+    return evaluator->expectedValue(this, data_cost_fn, strategy_arg, chooser_arg);
 }
 
 bool
@@ -117,8 +117,10 @@ redundant_strategy_total_energy_cost(StrategyEvaluationContext *ctx, void *arg, 
     double total_cost = 0.0;
     for (size_t i = 0; i < parent->child_strategies.size(); ++i) {
         Strategy *child = parent->child_strategies[i];
-        double cost = child->energy_cost_fn(ctx, child->strategy_arg, chooser_arg);
-        total_cost += cost;
+        if (child->energy_cost_fn) {
+            double cost = child->energy_cost_fn(ctx, child->strategy_arg, chooser_arg);
+            total_cost += cost;
+        }
     }
     return total_cost;
 }
@@ -130,8 +132,10 @@ redundant_strategy_total_data_cost(StrategyEvaluationContext *ctx, void *arg, vo
     double total_cost = 0.0;
     for (size_t i = 0; i < parent->child_strategies.size(); ++i) {
         Strategy *child = parent->child_strategies[i];
-        double cost = child->data_cost_fn(ctx, child->strategy_arg, chooser_arg);
-        total_cost += cost;
+        if (child->data_cost_fn) {
+            double cost = child->data_cost_fn(ctx, child->strategy_arg, chooser_arg);
+            total_cost += cost;
+        }
     }
     return total_cost;
 }
@@ -146,4 +150,5 @@ Strategy::Strategy(const instruments_strategy_t strategies[],
     for (size_t i = 0; i < num_strategies; ++i) {
         this->child_strategies.push_back((Strategy *) strategies[i]);
     }
+    collectEstimators();
 }

@@ -7,10 +7,11 @@
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
+using std::make_pair;
 
 class EmpiricalErrorStrategyEvaluator::JointErrorIterator {
 public:
-    JointErrorIterator(EmpiricalErrorStrategyEvaluator *e);
+    JointErrorIterator(EmpiricalErrorStrategyEvaluator *e, Strategy *s);
     ~JointErrorIterator();
     double getAdjustedEstimatorValue(Estimator *estimator);
     
@@ -18,8 +19,9 @@ public:
     void advance();
     bool isDone();
 private:
-    typedef std::stack<std::pair<Estimator*, StatsDistribution::Iterator *> > IteratorStack;
-    IteratorStack setupIteratorStack();
+    typedef std::deque<std::pair<Estimator*, StatsDistribution::Iterator *> > IteratorStack;
+    IteratorStack setupIteratorStack(Strategy *strategy);
+    IteratorStack iterator_stack;
     
     EmpiricalErrorStrategyEvaluator *evaluator;
     std::map<Estimator*, StatsDistribution::Iterator *> iterators;
@@ -55,7 +57,7 @@ EmpiricalErrorStrategyEvaluator::observationAdded(Estimator *estimator, double v
 
 
 double
-EmpiricalErrorStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn, 
+EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                                void *strategy_arg, void *chooser_arg)
 {
     double weightedSum = 0.0;
@@ -65,8 +67,8 @@ EmpiricalErrorStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn,
         assert(0);
     }
     
-    fprintf(stderr, "Calculating expected value...");
-    jointErrorIterator = new JointErrorIterator(this);
+    //fprintf(stderr, "Calculating expected value...");
+    jointErrorIterator = new JointErrorIterator(this, strategy);
     int iterations = 0;
     while (!jointErrorIterator->isDone()) {
         double value = fn(this, strategy_arg, chooser_arg);
@@ -82,13 +84,13 @@ EmpiricalErrorStrategyEvaluator::expectedValue(typesafe_eval_fn_t fn,
     }
     delete jointErrorIterator;
     jointErrorIterator = NULL;
-    fprintf(stderr, "...done after %d iterations.\n", iterations);
+    //fprintf(stderr, "...done after %d iterations.\n", iterations);
     
     return weightedSum;
 }
 
 EmpiricalErrorStrategyEvaluator::
-JointErrorIterator::JointErrorIterator(EmpiricalErrorStrategyEvaluator *e)
+JointErrorIterator::JointErrorIterator(EmpiricalErrorStrategyEvaluator *e, Strategy *strategy)
     : evaluator(e)
 {
     for (std::map<Estimator*, StatsDistribution *>::const_iterator it = evaluator->jointError.begin();
@@ -97,6 +99,7 @@ JointErrorIterator::JointErrorIterator(EmpiricalErrorStrategyEvaluator *e)
         StatsDistribution::Iterator *stats_iter = it->second->getIterator();
         iterators[estimator] = stats_iter;
     }
+    iterator_stack = setupIteratorStack(strategy);
 }
 
 EmpiricalErrorStrategyEvaluator::
@@ -133,12 +136,15 @@ EmpiricalErrorStrategyEvaluator::JointErrorIterator::jointProbability()
 }
 
 EmpiricalErrorStrategyEvaluator::JointErrorIterator::IteratorStack
-EmpiricalErrorStrategyEvaluator::JointErrorIterator::setupIteratorStack()
+EmpiricalErrorStrategyEvaluator::JointErrorIterator::setupIteratorStack(Strategy *strategy)
 {
     IteratorStack the_stack;
     for (std::map<Estimator*, StatsDistribution::Iterator *>::iterator it = iterators.begin();
          it != iterators.end(); ++it) {
-        the_stack.push(*it);
+        Estimator *estimator = it->first;
+        if (strategy->usesEstimator(estimator)) {
+            the_stack.push_back(*it);
+        }
     }
     return the_stack;
 }
@@ -146,9 +152,17 @@ EmpiricalErrorStrategyEvaluator::JointErrorIterator::setupIteratorStack()
 void
 EmpiricalErrorStrategyEvaluator::JointErrorIterator::advance()
 {
-    IteratorStack iterator_stack = setupIteratorStack();
+    // TODO: rework the iterator to not bother iterating over
+    // TODO:  estimator error distributions for estimators that 
+    // TODO:  the strategy doesn't even use.
+
+    if (isDone()) {
+        // no advancing to be done
+        return;
+    }
+    
     std::pair<Estimator*, StatsDistribution::Iterator *>* top_iter
-        = &iterator_stack.top();
+        = &iterator_stack.back();
 
     // loop until we actually increment the joint iterator,
     //  or until we realize that it's done.
@@ -158,11 +172,10 @@ EmpiricalErrorStrategyEvaluator::JointErrorIterator::advance()
         
     IteratorStack reset_iterators;
     while (top_iter && stats_iter->isDone()) {
-        reset_iterators.push(*top_iter);
-        iterator_stack.pop();
+        reset_iterators.push_back(*top_iter);
+        iterator_stack.pop_back();
         if (!iterator_stack.empty()) {
-            top_iter = &iterator_stack.top();
-            estimator = top_iter->first;
+            top_iter = &iterator_stack.back();
             stats_iter = top_iter->second;
 
             // we haven't actually advanced the joint iterator, 
@@ -179,14 +192,15 @@ EmpiricalErrorStrategyEvaluator::JointErrorIterator::advance()
         //  reset the 'less significant iterators'
         //  than the one that was actually advanced.
         while (!reset_iterators.empty()) {
-            top_iter = &reset_iterators.top();
+            top_iter = &reset_iterators.back();
             estimator = top_iter->first;
             stats_iter = top_iter->second;
             StatsDistribution *distribution = evaluator->jointError[estimator];
             distribution->finishIterator(stats_iter);
             iterators[estimator] = distribution->getIterator();
+            iterator_stack.push_back(make_pair(estimator, iterators[estimator]));
 
-            reset_iterators.pop();
+            reset_iterators.pop_back();
         }
     }
 }
@@ -194,8 +208,8 @@ EmpiricalErrorStrategyEvaluator::JointErrorIterator::advance()
 bool
 EmpiricalErrorStrategyEvaluator::JointErrorIterator::isDone()
 {
-    for (std::map<Estimator*, StatsDistribution::Iterator *>::iterator it = iterators.begin();
-         it != iterators.end(); ++it) {
+    for (IteratorStack::iterator it = iterator_stack.begin();
+         it != iterator_stack.end(); ++it) {
         StatsDistribution::Iterator *stats_iter = it->second;
         if (!stats_iter->isDone()) {
             return false;

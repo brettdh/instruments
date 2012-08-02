@@ -10,6 +10,7 @@
 #include "eval_method.h"
 
 #include "estimator.h"
+#include "last_observation_estimator.h"
 
 CPPUNIT_TEST_SUITE_REGISTRATION(EmpiricalErrorStrategyEvaluatorTest);
 
@@ -53,7 +54,7 @@ EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
     // empirical error distribution is (0,1,1,1,1,1)
     // expected value is (4+3+3+3+3+3)/6 = 19/6
 
-    double value = evaluator->expectedValue(strategy->time_fn, strategy->strategy_arg, NULL);
+    double value = evaluator->expectedValue(strategy, strategy->time_fn, strategy->strategy_arg, NULL);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(19.0/6, value, 0.001);
 }
 
@@ -83,6 +84,91 @@ EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimators()
     // sum of those, divided by 2^5.
     // expected value: -5.0
 
-    double value = evaluator->expectedValue(strategy->time_fn, strategy->strategy_arg, NULL);
+    double value = evaluator->expectedValue(strategy, strategy->time_fn, strategy->strategy_arg, NULL);
     CPPUNIT_ASSERT_DOUBLES_EQUAL(-5.0, value, 0.001);
+}
+
+void
+EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimatorsTwice()
+{
+    testMultipleEstimators();
+    testMultipleEstimators();
+}
+
+class CallCountEstimator : public LastObservationEstimator {
+  public:
+    CallCountEstimator() : count(0) {}
+    virtual double getEstimate() {
+        ++count;
+        return LastObservationEstimator::getEstimate();
+    }
+    int getCount() { return count; }
+  private:
+    int count;
+};
+
+void
+EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
+{
+    CallCountEstimator *estimator1 = new CallCountEstimator;
+    CallCountEstimator *estimator2 = new CallCountEstimator;
+
+    Strategy *strategies[3];
+    strategies[0] = new Strategy(get_time, get_cost, get_cost,
+                                 estimator1, NULL);
+    CPPUNIT_ASSERT_EQUAL(1, estimator1->getCount());
+
+    strategies[1] = new Strategy(get_time, get_cost, get_cost,
+                                 estimator2, NULL);
+    CPPUNIT_ASSERT_EQUAL(1, estimator2->getCount());
+
+    strategies[2] = new Strategy((instruments_strategy_t *) strategies, 2);
+    CPPUNIT_ASSERT_EQUAL(2, estimator1->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, estimator2->getCount());
+
+    StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)strategies, 3,
+                                                             EMPIRICAL_ERROR);
+    estimator1->addObservation(0.0);
+    estimator2->addObservation(0.0);
+    // first observation adds error of zero to distribution;
+    //  doesn't call getEstimate.
+    CPPUNIT_ASSERT_EQUAL(2, estimator1->getCount());
+    CPPUNIT_ASSERT_EQUAL(2, estimator2->getCount());
+
+    // chooseStrategy should not call getEstimate
+    //  when a strategy doesn't use the estimator.
+    // Total new calls here: 2 per estimator
+    (void)evaluator->chooseStrategy(NULL);
+    int estimator1_count = estimator1->getCount();
+    int estimator2_count = estimator2->getCount();
+    CPPUNIT_ASSERT(estimator1_count >= 3);
+    CPPUNIT_ASSERT(estimator1_count <= 4);
+    CPPUNIT_ASSERT(estimator2_count >= 3);
+    CPPUNIT_ASSERT(estimator2_count <= 4);
+
+    estimator1->addObservation(0.0);
+    estimator2->addObservation(0.0);
+    // second observation adds error based on last value of estimator,
+    //  so it does call getEstimate.
+    CPPUNIT_ASSERT_EQUAL(estimator1_count + 1, estimator1->getCount());
+    CPPUNIT_ASSERT_EQUAL(estimator2_count + 1, estimator2->getCount());
+    estimator1_count = estimator1->getCount();
+    estimator2_count = estimator2->getCount();
+
+    // chooseStrategy should not call getEstimate
+    //  when a strategy doesn't use the estimator.
+    // Total new calls here:
+    //  At least 4, due to the joint-distribution iteration: 2x2
+    //  With some caching, though, it could be just 4, maybe.
+    (void)evaluator->chooseStrategy(NULL);
+
+    int estimator1_new_calls = (estimator1->getCount() - estimator1_count);
+    int estimator2_new_calls = (estimator2->getCount() - estimator2_count);
+    fprintf(stderr, "Estimator 1, new calls: %d\n", estimator1_new_calls);
+    fprintf(stderr, "Estimator 2, new calls: %d\n", estimator2_new_calls);
+
+    CPPUNIT_ASSERT(estimator1_new_calls >= 4);
+    CPPUNIT_ASSERT(estimator1_new_calls <= 6);
+    CPPUNIT_ASSERT(estimator2_new_calls >= 4);
+    CPPUNIT_ASSERT(estimator2_new_calls <= 6);
 }

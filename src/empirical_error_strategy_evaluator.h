@@ -16,7 +16,7 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
     EmpiricalErrorStrategyEvaluator();
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
-    virtual double expectedValue(typesafe_eval_fn_t fn, 
+    virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg);
     
     class JointErrorIterator;
