@@ -1,7 +1,7 @@
 #ifndef STATS_DISTRIBUTION_ALL_SAMPLES_H_INCL
 #define STATS_DISTRIBUTION_ALL_SAMPLES_H_INCL
 
-#include <vector>
+#include <deque>
 #include "stats_distribution.h"
 
 class StatsDistributionAllSamples : public StatsDistribution {
@@ -19,14 +19,14 @@ class StatsDistributionAllSamples : public StatsDistribution {
         friend class StatsDistributionAllSamples;
         Iterator(StatsDistributionAllSamples *d);
         StatsDistributionAllSamples *distribution;
-        std::vector<double>::const_iterator real_iterator;
+        std::deque<double>::const_iterator real_iterator;
         double cached_probability;
     };
     
   protected:
     virtual StatsDistribution::Iterator *makeNewIterator();
   private:
-    std::vector<double> values;
+    std::deque<double> values;
 };
 
 #endif

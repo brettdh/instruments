@@ -1,6 +1,7 @@
 EXECUTABLES=run_unit_tests
 all: $(EXECUTABLES) ../../common/R_generated_vars.mk
 
+
 ../../common/R_generated_vars.mk: ../../common/Makefile
 	make -C ../../common
 
@@ -17,6 +18,26 @@ LDFLAGS += -L/opt/local/lib
 else
 CXXFLAGS += -pthread
 endif
+
+
+
+DEP_SRCS=$(wildcard *.cc)
+SUPPORT_DEP_SRCS=$(wildcard ../../src/*.cc)
+DEPS=$(DEP_SRCS:%.cc=.%.dep) $(SUPPORT_DEP_SRCS:../../src/%.cc=.%.dep)
+
+.%.dep: %.cc %.h
+	$(CXX) -MM $(CXXFLAGS) $< >$@
+
+.%.dep: ../../src/%.cc ../../src/%.h
+	$(CXX) -MM $(CXXFLAGS) $< >$@
+
+.%.dep: %.cc
+	$(CXX) -MM $(CXXFLAGS) $< >$@
+
+.%.dep: ../../src/%.cc
+	$(CXX) -MM $(CXXFLAGS) $< >$@
+
+include $(DEPS)
 
 
 %.o: %.cc %.h
@@ -66,4 +87,3 @@ run_unit_tests: run_all_tests.o $(TESTOBJS) $(SUPPORTOBJS)
 clean:
 	rm -f *.o *~ $(EXECUTABLES)
 
-include ../../deps.mk

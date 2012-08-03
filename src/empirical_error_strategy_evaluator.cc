@@ -2,6 +2,7 @@
 #include "estimator.h"
 #include "stats_distribution.h"
 #include "stats_distribution_all_samples.h"
+#include "stats_distribution_binned.h"
 
 #include <assert.h>
 #include <stdio.h>

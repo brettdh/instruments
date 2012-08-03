@@ -35,7 +35,6 @@ class StatsDistributionBinned : public StatsDistribution {
   protected:
     virtual StatsDistribution::Iterator *makeNewIterator();
   private:
-    // TODO: finish implementing.
     std::vector<double> breaks;  // size: number of bins + 1
     std::vector<double> mids;    // size: number of bins + 2 (left & right tail)
     std::vector<int> counts;     // size: number of bins + 2 (left & right tail)
@@ -48,7 +47,7 @@ class StatsDistributionBinned : public StatsDistribution {
     // used until we have "enough" samples to pick bins.
     StatsDistributionAllSamples all_samples;
 
-    std::set<double> all_samples_sorted;
+    std::multiset<double> all_samples_sorted;
     
     // TODO: set this in a principled way.
     static const size_t histogram_threshold = 30; // "enough" samples

@@ -204,7 +204,7 @@ StatsDistributionBinned::assertValidHistogram()
             total_counts += counts[i];
         }
 
-        assert(counts[0] == 0 || mids[0] < breaks[0]);
+        assert(counts[0] == 0 || mids[0] <= breaks[0]);
         assert(counts[counts.size()-1] == 0 ||
                mids[mids.size()-1] > breaks[breaks.size()-1]);
 
