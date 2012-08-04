@@ -1,4 +1,3 @@
-#include <set>
 #include <assert.h>
 #include "strategy_evaluator.h"
 #include "trusted_oracle_strategy_evaluator.h"
@@ -6,7 +5,7 @@
 #include "strategy.h"
 #include "estimator.h"
 
-using std::set;
+#include "small_set.h"
 
 StrategyEvaluator::StrategyEvaluator()
     : currentStrategy(NULL)
@@ -18,7 +17,7 @@ StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
                                  size_t num_strategies)
 {
     strategies.clear();
-    estimators.clear();
+    //estimators.clear();
     
     for (size_t i = 0; i < num_strategies; ++i) {
         Strategy *strategy = (Strategy *)new_strategies[i];
@@ -30,14 +29,20 @@ StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
 void
 StrategyEvaluator::addEstimator(Estimator *estimator)
 {
-    estimators.insert(estimator);
+    //estimators.insert(estimator);
     estimator->subscribe(this);
 }
 
 bool
 StrategyEvaluator::usesEstimator(Estimator *estimator)
 {
-    return (estimators.count(estimator) != 0);
+    for (small_set<Strategy*>::const_iterator it = strategies.begin();
+         it != strategies.end(); ++it) {
+        if ((*it)->usesEstimator(estimator)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 StrategyEvaluator *
@@ -89,7 +94,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
     // first, pick the singular strategy that takes the least time (expected)
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
-    for (set<Strategy *>::const_iterator it = strategies.begin();
+    for (small_set<Strategy *>::const_iterator it = strategies.begin();
          it != strategies.end(); ++it) {
         currentStrategy = *it;
         if (!currentStrategy->isRedundant()) {
@@ -105,7 +110,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
     //  over the best singular strategy (if any)
     Strategy *best_redundant = NULL;
     double best_redundant_net_benefit = 0.0;
-    for (set<Strategy *>::const_iterator it = strategies.begin();
+    for (small_set<Strategy *>::const_iterator it = strategies.begin();
          it != strategies.end(); ++it) {
         currentStrategy = *it;
         if (currentStrategy->isRedundant()) {
@@ -135,7 +140,6 @@ StrategyEvaluator::getEstimatorContext(Estimator *estimator)
 {
     if (currentStrategy) {
         currentStrategy->addEstimator(estimator);
-        this->addEstimator(estimator);
     }
     
     return this->StrategyEvaluationContext::getEstimatorContext(estimator);

@@ -1,11 +1,12 @@
 #ifndef STRATEGY_EVALUATOR_H_INCL
 #define STRATEGY_EVALUATOR_H_INCL
 
-#include <set>
 #include "instruments.h"
 #include "strategy.h"
 #include "strategy_evaluation_context.h"
 #include "eval_method.h"
+
+#include "small_set.h"
 
 class Estimator;
 class Strategy;
@@ -43,8 +44,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     void setStrategies(const instruments_strategy_t *strategies,
                        size_t num_strategies);
 
-    std::set<Strategy*> strategies;
-    std::set<Estimator*> estimators;
+    small_set<Strategy*> strategies;
 
     // TODO: change to a better default.
     const static EvalMethod DEFAULT_EVAL_METHOD = TRUSTED_ORACLE;

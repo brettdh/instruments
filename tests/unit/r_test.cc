@@ -44,9 +44,9 @@ void
 RTest::testHistogram()
 {
     mark_timepoint("Creating RInside instance");
-    RInside& R = get_rinside_instance();
+    RInside* R = get_rinside_instance();
     mark_timepoint("loading histogram library");
-    R.parseEvalQ("library(histogram)");
+    R->parseEvalQ("library(histogram)");
     mark_timepoint(NULL);
     
     const int COUNT = 10;
@@ -56,10 +56,10 @@ RTest::testHistogram()
     }
 
     mark_timepoint("assigning vector to R object");
-    R["numbers"] = numbers;
+    R->assign(numbers, "numbers");
     mark_timepoint("running histogram function");
     const char *str = "histogram::histogram(numbers, verbose=FALSE, plot=FALSE)";
-    Rcpp::List hist_result = R.parseEval(str);
+    Rcpp::List hist_result = R->parseEval(str);
     mark_timepoint(NULL);
     
     Language attr_fn("attr", wrap(hist_result), wrap("class"));

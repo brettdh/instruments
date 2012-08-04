@@ -2,12 +2,11 @@
 #define EMPIRICAL_ERROR_STRATEGY_EVALUATOR_H_INCL
 
 #include <vector>
-#include <map>
-#include <stack>
 #include "strategy.h"
 #include "strategy_evaluator.h"
 #include "strategy_evaluation_context.h"
 #include "stats_distribution.h"
+#include "small_map.h"
 
 class Estimator;
 
@@ -23,7 +22,8 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
   protected:
     virtual void observationAdded(Estimator *estimator, double value);
   private:
-    std::map<Estimator *, StatsDistribution *> jointError;
+    typedef small_map<Estimator *, StatsDistribution *> JointErrorMap;
+    JointErrorMap jointError;
 
     JointErrorIterator *jointErrorIterator;
 };

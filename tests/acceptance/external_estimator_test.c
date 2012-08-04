@@ -68,13 +68,16 @@ run_test_with_oscillating_estimator(struct external_estimator_data *data,
     instruments_strategy_evaluator_t evaluator = 
         register_strategy_set_with_method(strategies, 3, EMPIRICAL_ERROR);
 
+    add_observation(data->high_estimator, value2, value2);
+    add_observation(data->low_estimator, 5.0, 5.0);
+
     int i;
     for (i = 0; i < 25; ++i) {
-        add_observation(data->high_estimator, value1, value2);
-        add_observation(data->high_estimator, value2, value1);
+        add_observation(data->high_estimator, value1, value1);
+        add_observation(data->high_estimator, value2, value2);
 
-        add_observation(data->low_estimator, 4.0, 5.0);
-        add_observation(data->low_estimator, 5.0, 4.0);
+        add_observation(data->low_estimator, 4.0, 4.0);
+        add_observation(data->low_estimator, 5.0, 5.0);
     }
 
     instruments_strategy_t chosen = choose_strategy(evaluator, NULL);

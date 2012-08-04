@@ -7,14 +7,19 @@
 using std::ostringstream; using std::string; using std::hex;
 using std::vector;
 
+#include "small_set.h"
+
 #include <RInside.h>
 using Rcpp::as;
 
 #include "r_singleton.h"
 
 void
-StatsDistributionBinned::initRSamplesName()
+StatsDistributionBinned::initRInside()
 {
+    R = get_rinside_instance();
+    R->parseEvalQ("library(histogram)");
+
     ostringstream oss;
     oss << "samples_" << hex << this;
     r_samples_name = oss.str();
@@ -22,13 +27,13 @@ StatsDistributionBinned::initRSamplesName()
 
 StatsDistributionBinned::StatsDistributionBinned()
 {
-    initRSamplesName();
+    initRInside();
 }
 
 StatsDistributionBinned::StatsDistributionBinned(vector<double> breaks_)
 {
-    initRSamplesName();
-
+    initRInside();
+    
     breaks = breaks_;
     counts.resize(breaks.size() + 1, 0);
     mids.push_back(0.0);
@@ -94,24 +99,24 @@ StatsDistributionBinned::makeNewIterator()
     }
 }
 
-RInside& StatsDistributionBinned::R = get_rinside_instance();
-StatsDistributionBinned::initer StatsDistributionBinned::the_initer;
-
-StatsDistributionBinned::initer::initer()
-{
-    R.parseEvalQ("library(histogram)");
-}
-
 void StatsDistributionBinned::calculateBins()
 {
     assertValidHistogram();
 
     vector<double> samples(all_samples_sorted.begin(), all_samples_sorted.end());
-    R[r_samples_name] = samples;
+    small_set<double> unique_samples(samples.begin(), samples.end());
+    if (unique_samples.size() <= 1) {
+        // R's histogram function blows up if I pass a vector of one value
+        // try again next sample
+        return;
+    }
+
+    R->assign(samples, r_samples_name);
+    //R->parseEval(string("print(") + r_samples_name + string(")"));
 
     ostringstream oss;
     oss << "histogram::histogram(" << r_samples_name << ", verbose=FALSE, plot=FALSE)";
-    Rcpp::List hist_result = R.parseEval(oss.str());
+    Rcpp::List hist_result = R->parseEval(oss.str());
 
     breaks = as<vector<double> >(hist_result["breaks"]);
     vector<double> tmp_mids = as<vector<double> >(hist_result["mids"]);
@@ -129,9 +134,33 @@ void StatsDistributionBinned::calculateBins()
 
     oss.str("");
     oss << "remove(" << r_samples_name << ")";
-    R.parseEvalQ(oss.str());
+    R->parseEvalQ(oss.str());
 
     assertValidHistogram();
+    
+    //printHistogram();
+}
+
+void
+StatsDistributionBinned::printHistogram()
+{
+    fprintf(stderr, "breaks   ltail  |");
+    for (size_t i = 0; i < breaks.size(); ++i) {
+        fprintf(stderr, "%-8.3f|", breaks[i]);
+    }
+    fprintf(stderr, "rtail\n");
+    
+    fprintf(stderr, "counts   %5d   ", counts[0]);
+    for (size_t i = 1; i < counts.size(); ++i) {
+        fprintf(stderr, "%8d ", counts[i]);
+    }
+    fprintf(stderr, "\n");
+    
+    fprintf(stderr, "mids     %5f   ", mids[0]);
+    for (size_t i = 1; i < mids.size(); ++i) {
+        fprintf(stderr, "%8f ", mids[i]);
+    }
+    fprintf(stderr, "\n");
 }
 
 bool

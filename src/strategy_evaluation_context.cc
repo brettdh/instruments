@@ -12,7 +12,6 @@ StrategyEvaluationContext::getEstimatorContext(Estimator *estimator)
 
 StrategyEvaluationContext::~StrategyEvaluationContext()
 {
-    typedef std::map<Estimator *, EstimatorContext *> EstimatorMap;
     for (EstimatorMap::iterator it = estimators.begin(); 
          it != estimators.end(); ++it) {
         EstimatorContext *ctx = it->second;

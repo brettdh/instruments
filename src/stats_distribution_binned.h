@@ -50,7 +50,7 @@ class StatsDistributionBinned : public StatsDistribution {
     std::multiset<double> all_samples_sorted;
     
     // TODO: set this in a principled way.
-    static const size_t histogram_threshold = 30; // "enough" samples
+    static const size_t histogram_threshold = 15; // "enough" samples
 
     void addToHistogram(double value);
     void addToTail(int& count, double& mid, double value);
@@ -61,17 +61,12 @@ class StatsDistributionBinned : public StatsDistribution {
     void updateBin(int index, double value);
 
     std::string r_samples_name;
-    void initRSamplesName();
+    void initRInside();
 
-    static RInside& R;
-
-    class initer {
-      public:
-        initer();
-    };
-    static initer the_initer;
+    RInside* R;
 
     void assertValidHistogram();
+    void printHistogram();
 };
 
 #endif

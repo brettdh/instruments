@@ -5,8 +5,6 @@
 #include "running_mean_estimator.h"
 #include "strategy_evaluator.h"
 
-using std::set;
-
 Estimator *
 Estimator::create()
 {
@@ -30,7 +28,7 @@ Estimator::create(EstimatorType type)
 void
 Estimator::addObservation(double value)
 {
-    for (set<StrategyEvaluator*>::const_iterator it = subscribers.begin();
+    for (small_set<StrategyEvaluator*>::const_iterator it = subscribers.begin();
          it != subscribers.end(); ++it) {
         StrategyEvaluator *subscriber = *it;
         subscriber->observationAdded(this, value);

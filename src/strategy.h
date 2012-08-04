@@ -1,9 +1,9 @@
 #ifndef STRATEGY_H_INCL
 #define STRATEGY_H_INCL
 
-#include <set>
 #include <vector>
 #include "instruments.h"
+#include "small_set.h"
 
 class Estimator;
 class EstimatorSet;
@@ -51,7 +51,7 @@ class Strategy {
 
     void collectEstimators();
 
-    std::set<Estimator*> estimators;
+    small_set<Estimator*> estimators;
 
     std::vector<Strategy *> child_strategies;
 };

@@ -1,7 +1,7 @@
 #ifndef STATS_DISTRIBUTION
 #define STATS_DISTRIBUTION
 
-#include <set>
+#include "small_set.h"
 
 class StatsDistribution {
   public:
@@ -22,7 +22,7 @@ class StatsDistribution {
   protected:
     virtual Iterator *makeNewIterator() = 0;
   private:
-    std::set<Iterator *> iterators;
+    small_set<Iterator *> iterators;
 };
 
 #endif

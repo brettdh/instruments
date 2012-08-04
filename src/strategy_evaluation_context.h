@@ -1,8 +1,8 @@
 #ifndef STRATEGY_EVALUATION_CONTEXT_H_INCL
 #define STRATEGY_EVALUATION_CONTEXT_H_INCL
 
-#include <map>
 #include "instruments.h"
+#include "small_map.h"
 
 class Estimator;
 struct EstimatorContext;
@@ -14,7 +14,8 @@ class StrategyEvaluationContext {
     virtual instruments_estimator_t getEstimatorContext(Estimator *estimator);
     virtual ~StrategyEvaluationContext();
   private:
-    std::map<Estimator *, EstimatorContext *> estimators;
+    typedef small_map<Estimator *, EstimatorContext *> EstimatorMap;
+    EstimatorMap estimators;
 };
 
 #endif

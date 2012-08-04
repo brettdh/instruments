@@ -21,11 +21,14 @@ public:
     bool isDone();
 private:
     typedef std::deque<std::pair<Estimator*, StatsDistribution::Iterator *> > IteratorStack;
-    IteratorStack setupIteratorStack(Strategy *strategy);
-    IteratorStack iterator_stack;
+    void setupIteratorStack(Strategy *strategy);
+    IteratorStack iterator_stack;// TODO: the deque is slow.  make it faster.
+    IteratorStack reset_iterators;
     
     EmpiricalErrorStrategyEvaluator *evaluator;
-    std::map<Estimator*, StatsDistribution::Iterator *> iterators;
+
+    typedef small_map<Estimator*, StatsDistribution::Iterator *> ErrorIteratorMap;
+    ErrorIteratorMap iterators;
 };
 
 EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator()
@@ -49,6 +52,7 @@ EmpiricalErrorStrategyEvaluator::observationAdded(Estimator *estimator, double v
     } else {
         // TODO: move this to a factory method (with the other methods)
         jointError[estimator] = new StatsDistributionAllSamples;
+        //jointError[estimator] = new StatsDistributionBinned;
         
         // don't add a real error value to the distribution.
         // there's no error until we have at least two observations.
@@ -94,19 +98,20 @@ EmpiricalErrorStrategyEvaluator::
 JointErrorIterator::JointErrorIterator(EmpiricalErrorStrategyEvaluator *e, Strategy *strategy)
     : evaluator(e)
 {
-    for (std::map<Estimator*, StatsDistribution *>::const_iterator it = evaluator->jointError.begin();
+    for (JointErrorMap::const_iterator it = evaluator->jointError.begin();
          it != evaluator->jointError.end(); ++it) {
         Estimator *estimator = it->first;
         StatsDistribution::Iterator *stats_iter = it->second->getIterator();
         iterators[estimator] = stats_iter;
     }
-    iterator_stack = setupIteratorStack(strategy);
+    setupIteratorStack(strategy);
+    //fprintf(stderr, "Evaluating strategy with %zu estimators\n", iterator_stack.size());
 }
 
 EmpiricalErrorStrategyEvaluator::
 JointErrorIterator::~JointErrorIterator()
 {
-    for (std::map<Estimator*, StatsDistribution::Iterator *>::iterator it = iterators.begin();
+    for (ErrorIteratorMap::iterator it = iterators.begin();
          it != iterators.end(); ++it) {
         Estimator *estimator = it->first;
         StatsDistribution::Iterator *stats_iter = it->second;
@@ -128,7 +133,7 @@ double
 EmpiricalErrorStrategyEvaluator::JointErrorIterator::jointProbability()
 {
     double probability = 1.0;
-    for (std::map<Estimator*, StatsDistribution::Iterator *>::iterator it = iterators.begin();
+    for (ErrorIteratorMap::iterator it = iterators.begin();
          it != iterators.end(); ++it) {
         StatsDistribution::Iterator *stats_iter = it->second;
         probability *= stats_iter->probability();
@@ -136,18 +141,17 @@ EmpiricalErrorStrategyEvaluator::JointErrorIterator::jointProbability()
     return probability;
 }
 
-EmpiricalErrorStrategyEvaluator::JointErrorIterator::IteratorStack
+void
 EmpiricalErrorStrategyEvaluator::JointErrorIterator::setupIteratorStack(Strategy *strategy)
 {
-    IteratorStack the_stack;
-    for (std::map<Estimator*, StatsDistribution::Iterator *>::iterator it = iterators.begin();
+    iterator_stack.clear();
+    for (ErrorIteratorMap::iterator it = iterators.begin();
          it != iterators.end(); ++it) {
         Estimator *estimator = it->first;
         if (strategy->usesEstimator(estimator)) {
-            the_stack.push_back(*it);
+            iterator_stack.push_back(*it);
         }
     }
-    return the_stack;
 }
 
 void
@@ -171,7 +175,7 @@ EmpiricalErrorStrategyEvaluator::JointErrorIterator::advance()
     StatsDistribution::Iterator *stats_iter = top_iter->second;
     stats_iter->advance();
         
-    IteratorStack reset_iterators;
+    reset_iterators.clear();
     while (top_iter && stats_iter->isDone()) {
         reset_iterators.push_back(*top_iter);
         iterator_stack.pop_back();

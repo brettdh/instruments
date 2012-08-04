@@ -1,9 +1,16 @@
 #include "stats_distribution_all_samples.h"
 #include "debug.h"
 
+static const size_t MAX_SAMPLES = 1500;
+
 void 
 StatsDistributionAllSamples::addValue(double value)
 {
+    // TODO: think more about this.
+    if (values.size() == MAX_SAMPLES) {
+        values.pop_front();
+    }
+
     values.push_back(value);
 }
 
