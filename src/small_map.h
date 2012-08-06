@@ -1,14 +1,22 @@
 #ifndef SMALL_MAP_H_INCL
 #define SMALL_MAP_H_INCL
 
-//#include <tr1/unordered_map>
-//#define small_map std::tr1::unordered_map
+#define SMALL_VECTOR_SMALL_MAP
+
+#ifndef SMALL_VECTOR_SMALL_MAP
+
+#include <tr1/unordered_map>
+#define small_map std::tr1::unordered_map
+
+#else
 
 #include <vector>
 #include <functional>
 
 template <typename KeyType, typename ValueType>
 class small_map {
+    static const int DEFAULT_RESERVED_SPACE = 32;
+
   public:
     ValueType& operator[](const KeyType& key);
     void erase(KeyType& key);
@@ -26,7 +34,9 @@ class small_map {
     iterator begin();
     iterator end();
 
-    small_map() {}
+    small_map() {
+        items.reserve(DEFAULT_RESERVED_SPACE);
+    }
 
   private:
     bool contains(const KeyType& key) const;
@@ -116,5 +126,7 @@ typename small_map<KeyType,ValueType>::iterator small_map<KeyType,ValueType>::en
 {
     return items.end();
 }
+
+#endif
 
 #endif

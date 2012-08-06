@@ -144,3 +144,4 @@ StrategyEvaluator::getEstimatorContext(Estimator *estimator)
     
     return this->StrategyEvaluationContext::getEstimatorContext(estimator);
 }
+

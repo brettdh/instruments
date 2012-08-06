@@ -1,13 +1,20 @@
 #ifndef SMALL_SET_H_INCL
 #define SMALL_SET_H_INCL
 
-//#include <tr1/unordered_set>
-//#define small_set std::tr1::unordered_set
+#define SMALL_VECTOR_SMALL_SET
+
+#ifndef SMALL_VECTOR_SMALL_SET
+
+#include <tr1/unordered_set>
+#define small_set std::tr1::unordered_set
+
+#else
 
 #include <vector>
 
 template <typename T>
 class small_set {
+    static const int DEFAULT_RESERVED_SPACE = 32;
   public:
     void insert(T& val);
     void erase(T& val);
@@ -19,7 +26,9 @@ class small_set {
     const_iterator begin() const;
     const_iterator end() const;
 
-    small_set() {}
+    small_set() {
+        items.reserve(DEFAULT_RESERVED_SPACE);
+    }
 
     template <typename InputIterator>
     small_set(InputIterator first, InputIterator last)
@@ -96,5 +105,7 @@ typename small_set<T>::const_iterator small_set<T>::end() const
     return items.end();
 }
 
+
+#endif
 
 #endif

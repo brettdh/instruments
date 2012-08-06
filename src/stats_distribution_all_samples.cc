@@ -14,28 +14,34 @@ StatsDistributionAllSamples::addValue(double value)
     values.push_back(value);
 }
 
-double 
+inline double 
 StatsDistributionAllSamples::Iterator::probability()
 {
     return cached_probability;
 }
 
-double
+inline double
 StatsDistributionAllSamples::Iterator::value()
 {
     return *real_iterator;
 }
 
-void
+inline void
 StatsDistributionAllSamples::Iterator::advance()
 {
     ++real_iterator;
 }
 
-bool
+inline bool
 StatsDistributionAllSamples::Iterator::isDone()
 {
     return (real_iterator == distribution->values.end());
+}
+
+inline void
+StatsDistributionAllSamples::Iterator::reset()
+{
+    real_iterator = distribution->values.begin();
 }
 
 StatsDistributionAllSamples::Iterator::Iterator(StatsDistributionAllSamples *d)

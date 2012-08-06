@@ -14,6 +14,7 @@ class StatsDistributionAllSamples : public StatsDistribution {
         virtual double value();
         virtual void advance();
         virtual bool isDone();
+        virtual void reset();
         
       private:
         friend class StatsDistributionAllSamples;

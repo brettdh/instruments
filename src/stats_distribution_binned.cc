@@ -63,13 +63,13 @@ StatsDistributionBinned::Iterator::probability()
             distribution->all_samples_sorted.size());
 }
 
-double
+inline double
 StatsDistributionBinned::Iterator::value()
 {
     return distribution->mids[index];
 }
 
-void
+inline void
 StatsDistributionBinned::Iterator::advance()
 {
     if (index < (int) distribution->mids.size()) {
@@ -77,10 +77,16 @@ StatsDistributionBinned::Iterator::advance()
     }
 }
 
-bool
+inline bool
 StatsDistributionBinned::Iterator::isDone()
 {
     return (index == (int) distribution->mids.size());
+}
+
+inline void
+StatsDistributionBinned::Iterator::reset()
+{
+    index = 0;
 }
 
 StatsDistributionBinned::Iterator::Iterator(StatsDistributionBinned *d)

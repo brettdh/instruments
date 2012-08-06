@@ -1,0 +1,40 @@
+Initial results:
+1) Got rid of extra setupIteratorStack
+   deque construction/destruction.
+2) Replaced sets and maps with unordered_ variants
+   (hash-based instead of tree-based).
+   It didn't help much, so I tried replacing them
+   with vector-based small_set/small_map wrappers,
+   since iteration is cheaper that way.
+   (However, see 1 below.)
+3) -O3 helps a lot, but it's still about an order of
+   magnitude off the simple 4-way loop.
+
+Possible further sources for optimization:
+1) Separate out the data structures by which ones are:
+    a) mostly-lookup (hash-map)
+    b) mostly-iteration (small_set/map)
+2) Figure out how to stop punishing the common case where
+   the strategy uses all of its estimators in every call.
+   (Should still cover the case where it doesn't. 
+    Right now we cover it, but doing so makes it slow,
+    because I'm constantly calling insert for an 
+    element that's already in the set.)
+    (getEstimatorContext)
+    (This can save about 18% overhead.)
+    (May be able to skirt around this with faster lookup, 
+     but maybe not.)
+
+3) Memoize the multiplications in the weighted sum,
+   especially those related to probability.
+   Should be able to get rid of 75% of them or so.
+   (jointProbability)
+   (Turns out this is at most 13% of the overhead.)
+   (Might try to memoize the entire weighted sum, though.)
+   
+   The only way to do this is to be smarter about how we
+   evaluate redundant strategies.
+   We can't memoize the inside of an arbitrary function,        
+   but we can memoize the inside of the redundant_{foo}
+   functions when we are doing (essentially) marginalization
+   in the joint distribution.  (see strategy.cc)
