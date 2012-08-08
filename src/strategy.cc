@@ -1,9 +1,12 @@
+#include <stdlib.h>
+#include <assert.h>
 #include <float.h>
 #include "strategy.h"
 #include "strategy_evaluator.h"
 #include "strategy_evaluation_context.h"
 #include "estimator.h"
 
+#include <set>
 #include "small_set.h"
 
 Strategy::Strategy(eval_fn_t time_fn_, 
@@ -150,4 +153,41 @@ Strategy::Strategy(const instruments_strategy_t strategies[],
         this->child_strategies.push_back((Strategy *) strategies[i]);
     }
     collectEstimators();
+}
+
+std::vector<Strategy *> 
+Strategy::getChildStrategies()
+{
+    return child_strategies;
+}
+
+bool
+Strategy::childrenAreDisjoint()
+{
+    std::set<Estimator *> all_estimators;
+    for (size_t i = 0; i < child_strategies.size(); ++i) {
+        Strategy *child = child_strategies[i];
+        for (small_set<Estimator*>::const_iterator it = child->estimators.begin();
+             it != child->estimators.end(); ++it) {
+            if (all_estimators.count(*it) > 0) {
+                return false;
+            }
+            all_estimators.insert(*it);
+        }
+    }
+    return true;
+}
+
+typesafe_eval_fn_t 
+Strategy::getEvalFn(eval_fn_type_t type)
+{
+    switch (type) {
+    case TIME_FN:
+        return time_fn;
+    case ENERGY_FN:
+        return energy_cost_fn;
+    case DATA_FN:
+        return data_cost_fn;
+    }
+    abort();
 }

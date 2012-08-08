@@ -27,7 +27,8 @@ OBJS := \
 
 CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic -pthread $(R_CXXFLAGS)
 #CXXFLAGS := $(subst -O3,-O0,$(CXXFLAGS))
-CXXFLAGS += -O3
+CXXFLAGS += -O3 -DNDEBUG
+#CXXFLAGS += -fno-inline
 LDFLAGS := -lpthread $(R_LDLIBS)
 
 ifeq ($(shell uname), Darwin)

@@ -10,6 +10,9 @@
 
 class Estimator;
 
+class JointErrorIterator;
+typedef small_map<Estimator *, StatsDistribution *> JointErrorMap;
+
 class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
   public:
     EmpiricalErrorStrategyEvaluator();
@@ -18,11 +21,11 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg);
     
-    class JointErrorIterator;
   protected:
     virtual void observationAdded(Estimator *estimator, double value);
   private:
-    typedef small_map<Estimator *, StatsDistribution *> JointErrorMap;
+    friend class SingleStrategyJointErrorIterator;
+    
     JointErrorMap jointError;
 
     JointErrorIterator *jointErrorIterator;

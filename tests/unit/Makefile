@@ -56,14 +56,16 @@ include $(DEPS)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 TESTOBJS := \
+	empirical_error_strategy_evaluator_test.o \
 	r_test.o \
 	stats_distribution_test.o \
-	empirical_error_strategy_evaluator_test.o \
 	goal_adaptive_resource_weight_test.o \
+	multi_dimension_array_test.o \
 	running_mean_estimator_test.o \
 	strategy_estimators_discovery_test.o
 
 SUPPORTOBJS := \
+	empirical_error_strategy_evaluator.o \
 	estimator.o \
 	estimator_registry.o \
 	external_estimator.o \
@@ -74,7 +76,6 @@ SUPPORTOBJS := \
 	strategy.o \
 	strategy_evaluator.o \
 	strategy_evaluation_context.o \
-	empirical_error_strategy_evaluator.o \
 	stats_distribution.o \
 	stats_distribution_all_samples.o \
 	stats_distribution_binned.o \

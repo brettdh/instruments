@@ -30,6 +30,7 @@ inline void
 StatsDistributionAllSamples::Iterator::advance()
 {
     ++real_iterator;
+    ++cur_position;
 }
 
 inline bool
@@ -42,10 +43,23 @@ inline void
 StatsDistributionAllSamples::Iterator::reset()
 {
     real_iterator = distribution->values.begin();
+    cur_position = 0;
+}
+
+inline int
+StatsDistributionAllSamples::Iterator::position()
+{
+    return cur_position;
+}
+
+inline int 
+StatsDistributionAllSamples::Iterator::totalCount()
+{
+    return (int) distribution->values.size();
 }
 
 StatsDistributionAllSamples::Iterator::Iterator(StatsDistributionAllSamples *d)
-    : distribution(d), real_iterator(d->values.begin())
+    : distribution(d), real_iterator(d->values.begin()), cur_position(0)
 {
     ASSERT(distribution->values.size() > 0);
     cached_probability = 1.0 / distribution->values.size();

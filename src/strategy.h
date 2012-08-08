@@ -16,6 +16,10 @@ class StrategyEvaluationContext;
 //  which must manage its own type casting.)
 typedef double (*typesafe_eval_fn_t)(StrategyEvaluationContext *, void *strategy_arg, void *chooser_arg);
 
+enum eval_fn_type_t {
+    TIME_FN, ENERGY_FN, DATA_FN
+};
+
 class Strategy {
   public:
     Strategy(eval_fn_t time_fn_, 
@@ -33,8 +37,13 @@ class Strategy {
 
     void getAllEstimators(StrategyEvaluator *evaluator);
     bool usesEstimator(Estimator *estimator);
+
+    std::vector<Strategy *> getChildStrategies();
+    bool childrenAreDisjoint();
+    typesafe_eval_fn_t getEvalFn(eval_fn_type_t type);
   private:
     friend class EmpiricalErrorStrategyEvaluatorTest;
+    friend class MultiStrategyJointErrorIterator;
 
     friend double redundant_strategy_minimum_time(StrategyEvaluationContext *ctx,
                                                   void *strategy_arg, void *chooser_arg);
@@ -55,5 +64,12 @@ class Strategy {
 
     std::vector<Strategy *> child_strategies;
 };
+
+double redundant_strategy_minimum_time(StrategyEvaluationContext *ctx,
+                                       void *strategy_arg, void *chooser_arg);
+double redundant_strategy_total_energy_cost(StrategyEvaluationContext *ctx, 
+                                            void *strategy_arg, void *chooser_arg);
+double redundant_strategy_total_data_cost(StrategyEvaluationContext *ctx, 
+                                          void *strategy_arg, void *chooser_arg);
 
 #endif

@@ -21,7 +21,7 @@ Estimator::create(EstimatorType type)
         return new RunningMeanEstimator();
     default:
         // TODO: implement more types
-        assert(0);
+        abort();
     }
 }
 

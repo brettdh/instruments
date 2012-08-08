@@ -24,6 +24,8 @@ class StatsDistributionBinned : public StatsDistribution {
         virtual void advance();
         virtual bool isDone();
         virtual void reset();
+        virtual int position();
+        virtual int totalCount();
         
       private:
         friend class StatsDistributionBinned;

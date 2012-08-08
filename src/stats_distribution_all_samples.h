@@ -15,6 +15,8 @@ class StatsDistributionAllSamples : public StatsDistribution {
         virtual void advance();
         virtual bool isDone();
         virtual void reset();
+        virtual int position();
+        virtual int totalCount();
         
       private:
         friend class StatsDistributionAllSamples;
@@ -22,6 +24,7 @@ class StatsDistributionAllSamples : public StatsDistribution {
         StatsDistributionAllSamples *distribution;
         std::deque<double>::const_iterator real_iterator;
         double cached_probability;
+        int cur_position;
     };
     
   protected:

@@ -89,6 +89,18 @@ StatsDistributionBinned::Iterator::reset()
     index = 0;
 }
 
+inline int
+StatsDistributionBinned::Iterator::position()
+{
+    return index;
+}
+
+inline int
+StatsDistributionBinned::Iterator::totalCount()
+{
+    return (int) distribution->mids.size();
+}
+
 StatsDistributionBinned::Iterator::Iterator(StatsDistributionBinned *d)
 {
     distribution = d;
