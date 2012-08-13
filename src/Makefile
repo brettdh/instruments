@@ -20,7 +20,6 @@ OBJS := \
 	stats_distribution_binned.o \
 	strategy.o \
 	strategy_evaluator.o \
-	strategy_evaluation_context.o \
 	timeops.o \
 	trusted_oracle_strategy_evaluator.o
 

@@ -37,8 +37,6 @@ class StrategyEvaluator : public StrategyEvaluationContext {
                                  void *strategy_arg, void *chooser_arg) = 0;
     virtual void observationAdded(Estimator *estimator, double value) = 0;
 
-    virtual instruments_estimator_t getEstimatorContext(Estimator *estimator);
-
   protected:
     StrategyEvaluator();
     void setStrategies(const instruments_strategy_t *strategies,

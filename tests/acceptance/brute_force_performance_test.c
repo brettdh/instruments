@@ -67,8 +67,8 @@ estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg
     struct strategy_args *args = (struct strategy_args *) strategy_arg;
     int bytes = (int) chooser_arg;
     
-    double bw = get_external_estimator_value(ctx, args->estimators[0]);
-    double latency = get_external_estimator_value(ctx, args->estimators[1]);
+    double bw = get_estimator_value(ctx, args->estimators[0]);
+    double latency = get_estimator_value(ctx, args->estimators[1]);
     return bytes/bw + latency;
 }
 
@@ -103,8 +103,8 @@ CTEST2(brute_force_perf, value_observed)
                                                                                    EMPIRICAL_ERROR);
 
     int bytelen = 4096;
-    int max_samples = 30;
-    //int max_samples = 60;
+    //int max_samples = 30;
+    int max_samples = 60;
     int num_new_samples = 5;
     int k;
 

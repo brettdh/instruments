@@ -30,12 +30,8 @@ class EstimatorCollector : public StrategyEvaluationContext {
   public:
     EstimatorCollector(Strategy *s) : strategy(s) {}
     virtual double getAdjustedEstimatorValue(Estimator *estimator) {
-        return estimator->getEstimate();
-    }
-    
-    virtual instruments_estimator_t getEstimatorContext(Estimator *estimator) {
         strategy->addEstimator(estimator);
-        return this->StrategyEvaluationContext::getEstimatorContext(estimator);
+        return estimator->getEstimate();
     }
 };
 

@@ -134,14 +134,3 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
         return best_singular;
     }
 }
-
-instruments_estimator_t 
-StrategyEvaluator::getEstimatorContext(Estimator *estimator)
-{
-    if (currentStrategy) {
-        currentStrategy->addEstimator(estimator);
-    }
-    
-    return this->StrategyEvaluationContext::getEstimatorContext(estimator);
-}
-

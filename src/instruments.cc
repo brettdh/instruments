@@ -6,7 +6,6 @@
 #include "strategy.h"
 #include "estimator.h"
 #include "external_estimator.h"
-#include "estimator_context.h"
 #include "estimator_registry.h"
 #include "strategy_evaluator.h"
 #include "strategy_evaluation_context.h"
@@ -33,37 +32,36 @@ void free_strategy(instruments_strategy_t strategy)
     delete ((Strategy *) strategy);
 }
 
-double get_estimator_value(instruments_estimator_t handle)
+double get_adjusted_estimator_value(instruments_context_t ctx, Estimator *estimator)
 {
-    EstimatorContext *estimatorCtx = static_cast<EstimatorContext*>(handle);
-    Estimator *estimator = estimatorCtx->estimator;
-    StrategyEvaluationContext *context = estimatorCtx->context;
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext *>(ctx);
     return context->getAdjustedEstimatorValue(estimator);
 }
 
-static instruments_estimator_t
-get_estimator_context(instruments_context_t ctx, Estimator *estimator)
+double get_estimator_value(instruments_context_t ctx,
+                           instruments_estimator_t est_handle)
 {
-    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext*>(ctx);
-    return context->getEstimatorContext(estimator);
+    Estimator *estimator = static_cast<Estimator*>(est_handle);
+    return get_adjusted_estimator_value(ctx, estimator);
+}
+
+
+instruments_estimator_t
+get_network_bandwidth_down_estimator(const char *iface)
+{
+    return EstimatorRegistry::getNetworkBandwidthDownEstimator(iface);
 }
 
 instruments_estimator_t
-get_network_bandwidth_down_estimator(instruments_context_t ctx, const char *iface)
+get_network_bandwidth_up_estimator(const char *iface)
 {
-    return get_estimator_context(ctx, EstimatorRegistry::getNetworkBandwidthDownEstimator(iface));
+    return EstimatorRegistry::getNetworkBandwidthUpEstimator(iface);
 }
 
 instruments_estimator_t
-get_network_bandwidth_up_estimator(instruments_context_t ctx, const char *iface)
+get_network_rtt_estimator(const char *iface)
 {
-    return get_estimator_context(ctx, EstimatorRegistry::getNetworkBandwidthUpEstimator(iface));
-}
-
-instruments_estimator_t
-get_network_rtt_estimator(instruments_context_t ctx, const char *iface)
-{
-    return get_estimator_context(ctx, EstimatorRegistry::getNetworkRttEstimator(iface));
+    return EstimatorRegistry::getNetworkRttEstimator(iface);
 }
 
 instruments_strategy_evaluator_t
@@ -103,16 +101,16 @@ get_retry_time(instruments_strategy_evaluator_t evaluator_handle)
     return now;
 }
 
-instruments_estimator_t
-get_coin_flip_heads_estimator(instruments_context_t ctx)
+static instruments_estimator_t
+get_coin_flip_heads_estimator()
 {
-    return get_estimator_context(ctx, EstimatorRegistry::getCoinFlipEstimator());
+    return EstimatorRegistry::getCoinFlipEstimator();
 }
 
 int coin_flip_lands_heads(instruments_context_t ctx)
 {
-    instruments_estimator_t estimator = get_coin_flip_heads_estimator(ctx);
-    double value = get_estimator_value(estimator);
+    instruments_estimator_t estimator = get_coin_flip_heads_estimator();
+    double value = get_estimator_value(ctx, estimator);
     
     return (value >= 0.5);
 }
@@ -127,20 +125,13 @@ void add_coin_flip_observation(int heads)
     EstimatorRegistry::getCoinFlipEstimator()->addObservation(heads ? 1.0 : 0.0);
 }
 
-double get_adjusted_estimator_value(instruments_context_t ctx, Estimator *estimator)
-{
-    instruments_estimator_t estimatorContext = get_estimator_context(ctx, estimator);
-    return get_estimator_value(estimatorContext);
-}
-
-
 instruments_external_estimator_t
 create_external_estimator()
 {
     return new ExternalEstimator();
 }
 
-void free_external_estimator(instruments_external_estimator_t est_handle)
+void free_external_estimator(instruments_estimator_t est_handle)
 {
     Estimator *estimator = static_cast<Estimator *>(est_handle);
     delete estimator;
@@ -153,10 +144,3 @@ void add_observation(instruments_external_estimator_t est_handle,
     estimator->addObservation(observation, new_estimate);
 }
 
-double get_external_estimator_value(instruments_context_t ctx,
-                                    instruments_external_estimator_t est_handle)
-{
-    Estimator *estimator = static_cast<Estimator*>(est_handle);
-    instruments_estimator_t estimatorContext = get_estimator_context(ctx, estimator);
-    return get_estimator_value(estimatorContext);
-}

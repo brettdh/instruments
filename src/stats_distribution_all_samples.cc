@@ -1,5 +1,5 @@
 #include "stats_distribution_all_samples.h"
-#include "debug.h"
+#include <assert.h>
 
 void 
 StatsDistributionAllSamples::addValue(double value)
@@ -52,7 +52,7 @@ StatsDistributionAllSamples::Iterator::totalCount()
 StatsDistributionAllSamples::Iterator::Iterator(StatsDistributionAllSamples *d)
     : distribution(d), cur_position(0)
 {
-    ASSERT(distribution->values.size() > 0);
+    assert(distribution->values.size() > 0);
     total_count = distribution->values.size();
     cached_probability = 1.0 / total_count;
 }

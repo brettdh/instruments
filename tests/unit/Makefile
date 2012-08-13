@@ -75,7 +75,6 @@ SUPPORTOBJS := \
 	running_mean_estimator.o \
 	strategy.o \
 	strategy_evaluator.o \
-	strategy_evaluation_context.o \
 	stats_distribution.o \
 	stats_distribution_all_samples.o \
 	stats_distribution_binned.o \

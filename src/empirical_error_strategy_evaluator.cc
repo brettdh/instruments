@@ -58,6 +58,11 @@ class SingleStrategyJointErrorIterator : public JointErrorIterator {
     EmpiricalErrorStrategyEvaluator *evaluator;
 
     ErrorIteratorMap iterators;
+
+    double cached_probability;
+    bool cached_probability_is_valid;
+
+    double computedProbability();
 };
 
 class MemoTable;
@@ -122,13 +127,16 @@ class MemoTable {
   public:
     MemoTable(const vector<Iterator *>& iterators_);
     ~MemoTable();
-    bool valueIsMemoized(const vector<size_t>& indices);
-    double memoizedValue(const vector<size_t>& indices);
-    void saveValue(const vector<size_t>& indices, double value);
 
+    struct Entry {
+        bool valid;
+        double value;
+        Entry() : valid(false), value(0.0) {}
+        Entry(bool valid_, double value_) : valid(valid_), value(value_) {}
+    };
+    Entry *getPosition(const vector<size_t>& indices);
   private:
-    double *getPosition(const vector<size_t>& indices);
-    MultiDimensionArray<double> *array;
+    MultiDimensionArray<Entry> *array;
 };
 
 IteratorStack::IteratorStack(const vector<Iterator *>& iterators_)
@@ -161,19 +169,19 @@ IteratorStack::advance()
 
     // loop until we actually increment the joint iterator,
     //  or until we realize that it's done.
-    Iterator *stats_iter = iterators[stack_top];
-    stats_iter->advance();
+    Iterator *cur_iter = iterators[stack_top];
+    cur_iter->advance();
     ++position[stack_top];
     
-    while (stats_iter->isDone()) {
+    while (cur_iter->isDone()) {
         --stack_top;
         if (stack_top >= 0) {
-            stats_iter = iterators[stack_top];
+            cur_iter = iterators[stack_top];
 
             // we haven't actually advanced the joint iterator, 
             //  so try advancing the next most significant
             //  estimator error iterator.
-            stats_iter->advance();
+            cur_iter->advance();
             ++position[stack_top];
         } else {
             // all iterators are done; the joint iterator is done too.
@@ -321,7 +329,8 @@ MultiStrategyJointErrorIterator::~MultiStrategyJointErrorIterator()
         delete energyMemos[i];
         delete dataMemos[i];
     }
-    //fprintf(stderr, "%d memo hits of %d iterations\n", memo_hits, total_iterations);
+    //fprintf(stderr, "%d memo hits of %d iterations (%.2f%%)\n", 
+    //        memo_hits, total_iterations, ((double)memo_hits) / total_iterations * 100);
 }
 
 double
@@ -338,14 +347,16 @@ MultiStrategyJointErrorIterator::combineStrategyValues(const vector<MemoTable *>
             (SingleStrategyJointErrorIterator *) jointIterators[i];
         IteratorStack *childStack = it->getIteratorStack();
         const vector<size_t>& position = childStack->getPosition();
-        if (memo->valueIsMemoized(position)) {
+        MemoTable::Entry *memoEntry = memo->getPosition(position);
+        if (memoEntry->valid) {
             ++memo_hits;
-            new_value = memo->memoizedValue(position);
+            new_value = memoEntry->value;
         } else {
             Strategy *child = children[i];
             typesafe_eval_fn_t eval_fn = child->getEvalFn(eval_fn_type);
             new_value = eval_fn(jointIterators[i], child->strategy_arg, chooser_arg);
-            memo->saveValue(position, new_value);
+            memoEntry->valid = true;
+            memoEntry->value = new_value;
         }
         cur_value = combiner(cur_value, new_value);
         ++total_iterations;
@@ -365,19 +376,19 @@ my_fsum(double a, double b)
     return a + b;
 }
 
-double
+inline double
 MultiStrategyJointErrorIterator::minimumTime(void *chooser_arg)
 {
     return combineStrategyValues(timeMemos, TIME_FN, my_fmin, DBL_MAX, chooser_arg);
 }
 
-double
+inline double
 MultiStrategyJointErrorIterator::totalEnergy(void *chooser_arg)
 {
     return combineStrategyValues(energyMemos, ENERGY_FN, my_fsum, 0.0, chooser_arg);
 }
 
-double
+inline double
 MultiStrategyJointErrorIterator::totalData(void *chooser_arg)
 {
     return combineStrategyValues(dataMemos, DATA_FN, my_fsum, 0.0, chooser_arg);
@@ -433,7 +444,7 @@ MemoTable::MemoTable(const vector<Iterator *>& iterators)
     for (size_t i = 0; i < iterators.size(); ++i) {
         dimensions.push_back(iterators[i]->totalCount());
     }
-    array = new MultiDimensionArray<double>(dimensions, DBL_MAX);
+    array = new MultiDimensionArray<Entry>(dimensions, Entry(false, 0.0));
 }
 
 MemoTable::~MemoTable()
@@ -441,30 +452,11 @@ MemoTable::~MemoTable()
     delete array;
 }
 
-inline double *
+inline MemoTable::Entry *
 MemoTable::getPosition(const vector<size_t>& position)
 {
     return &array->at(position);
 }
-
-inline bool 
-MemoTable::valueIsMemoized(const vector<size_t>& position)
-{
-    return (memoizedValue(position) != DBL_MAX);
-}
-
-inline double 
-MemoTable::memoizedValue(const vector<size_t>& position)
-{
-    return *getPosition(position);
-}
-
-void 
-MemoTable::saveValue(const vector<size_t>& position, double value)
-{
-    *getPosition(position) = value;
-}
-
 
 double
 EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
@@ -476,7 +468,7 @@ EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval
         assert(0);
     }
 
-    if (false) {//strategy->isRedundant() && strategy->childrenAreDisjoint()) {
+    if (strategy->isRedundant() && strategy->childrenAreDisjoint()) {
         MultiStrategyJointErrorIterator *it =
             new MultiStrategyJointErrorIterator(this, strategy);
         jointErrorIterator = it;
@@ -503,7 +495,7 @@ EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval
 }
 
 SingleStrategyJointErrorIterator::SingleStrategyJointErrorIterator(EmpiricalErrorStrategyEvaluator *e, Strategy *strategy)
-    : evaluator(e)
+    : evaluator(e), cached_probability(0.0), cached_probability_is_valid(false)
 {
     vector<Iterator *> tmp_iters;
     for (JointErrorMap::const_iterator it = evaluator->jointError.begin();
@@ -540,21 +532,36 @@ SingleStrategyJointErrorIterator::getAdjustedEstimatorValue(Estimator *estimator
     return estimator->getEstimate() - error;
 }
 
-double
+inline double
 SingleStrategyJointErrorIterator::probability()
 {
-    double probability = 1.0;
-    for (ErrorIteratorMap::iterator it = iterators.begin();
-         it != iterators.end(); ++it) {
-        StatsDistribution::Iterator *stats_iter = it->second;
+    return cached_probability_is_valid ? cached_probability : computedProbability();
+}
+
+double
+SingleStrategyJointErrorIterator::computedProbability()
+{
+    assert(iterators.size() > 0);
+    
+    ErrorIteratorMap::iterator it = iterators.begin();
+    StatsDistribution::Iterator *stats_iter = it->second;
+    double probability = stats_iter->probability();
+
+    ++it;
+    for (; it != iterators.end(); ++it) {
+        stats_iter = it->second;
         probability *= stats_iter->probability();
     }
+    cached_probability = probability;
+    cached_probability_is_valid = true;
+    
     return probability;
 }
 
 inline void
 SingleStrategyJointErrorIterator::advance()
 {
+    cached_probability_is_valid = false;
     if (!isDone()) {
         iterator_stack->advance();
         ++cur_position;

@@ -25,7 +25,7 @@ estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg
 {
     instruments_external_estimator_t estimator = 
         (instruments_external_estimator_t) strategy_arg;
-    return get_external_estimator_value(ctx, estimator);
+    return get_estimator_value(ctx, estimator);
 }
 
 static double data_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
