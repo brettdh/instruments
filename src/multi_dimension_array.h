@@ -16,8 +16,8 @@ class MultiDimensionArray {
     void *the_array;
     std::vector<size_t> dimensions;
     
-    void *initializeArray(const T& initial_value, size_t next);
-    void destroyArray(void *array, size_t next);
+    void *initializeArray(const T& initial_value, size_t next=0);
+    void destroyArray(void *array, size_t next=0);
     T& at(void *array, const std::vector<size_t>& indices, size_t next);
 };
 
@@ -38,7 +38,7 @@ MultiDimensionArray<T>::~MultiDimensionArray()
 
 template <typename T>
 void *
-MultiDimensionArray<T>::initializeArray(const T& initial_value, size_t next=0)
+MultiDimensionArray<T>::initializeArray(const T& initial_value, size_t next)
 {
     if (next + 1 == dimensions.size()) {
         T *values = new T[dimensions[next]];
@@ -56,7 +56,7 @@ MultiDimensionArray<T>::initializeArray(const T& initial_value, size_t next=0)
 
 template <typename T>
 void 
-MultiDimensionArray<T>::destroyArray(void *array, size_t next=0)
+MultiDimensionArray<T>::destroyArray(void *array, size_t next)
 {
     if (next + 1 == dimensions.size()) {
         T *valueArray = (T*) array;

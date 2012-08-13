@@ -14,6 +14,7 @@
  */
 
 #include <sys/types.h>
+#include <sys/time.h>
 
 /* Functions to specify and manipulate strategies */
 

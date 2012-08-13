@@ -21,7 +21,7 @@ class IteratorStack;
 
 class UnimplementedError : public std::exception {
 public:
-    virtual const char *what() {
+    virtual const char *what() const throw() {
         static const char *msg = "Shouldn't be called!!";
         return msg;
     }
@@ -110,6 +110,7 @@ class IteratorStack {
     virtual void advance();
     bool isDone();
     virtual void reset();
+    virtual ~IteratorStack() {}
     
     const vector<size_t>& getPosition();
   protected:
