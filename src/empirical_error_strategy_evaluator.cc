@@ -51,16 +51,16 @@ class SingleStrategyJointErrorIterator : public JointErrorIterator {
     virtual void reset();
 
     vector<Iterator *> getIterators();
-
+    IteratorStack *getIteratorStack() { return iterator_stack; }
   private:
-    IteratorStack *iterator_stack;// TODO: the deque is slow.  make it faster.
+    IteratorStack *iterator_stack;
     
     EmpiricalErrorStrategyEvaluator *evaluator;
 
     ErrorIteratorMap iterators;
 };
 
-class MemoizingIteratorStack;
+class MemoTable;
 
 class MultiStrategyJointErrorIterator : public JointErrorIterator {
   public:
@@ -81,42 +81,19 @@ class MultiStrategyJointErrorIterator : public JointErrorIterator {
     EmpiricalErrorStrategyEvaluator *evaluator;
     Strategy *parent;
     std::vector<Strategy *> children;
+    size_t num_children;
 
     IteratorStack *iterator_stack;
-
-    class ProxyIterator : public JointErrorIterator {
-      public:
-        ProxyIterator(JointErrorIterator *errorIterator_,
-                      MemoizingIteratorStack *timeMemo_,
-                      MemoizingIteratorStack *energyMemo_,
-                      MemoizingIteratorStack *dataMemo_)
-            : errorIterator(errorIterator_),
-              timeMemo(timeMemo_),
-              energyMemo(energyMemo_),
-              dataMemo(dataMemo_) {
-            total_count = errorIterator->totalCount();
-        }
-        virtual void advance();
-        virtual double probability() { throw UnimplementedError(); }
-        virtual double getAdjustedEstimatorValue(Estimator *est) { throw UnimplementedError(); }
-        virtual bool isDone();
-        virtual void reset();
-      private:
-        JointErrorIterator *errorIterator;
-        MemoizingIteratorStack *timeMemo;
-        MemoizingIteratorStack *energyMemo;
-        MemoizingIteratorStack *dataMemo;
-    };
-    vector<Iterator *> proxyIterators;
-
     vector<JointErrorIterator *> jointIterators;
-    vector<MemoizingIteratorStack *> timeMemos;
-    vector<MemoizingIteratorStack *> energyMemos;
-    vector<MemoizingIteratorStack *> dataMemos;
+    vector<MemoTable *> timeMemos;
+    vector<MemoTable *> energyMemos;
+    vector<MemoTable *> dataMemos;
+    size_t num_iterators;
+
     int memo_hits;
     int total_iterations;
 
-    double combineStrategyValues(const vector<MemoizingIteratorStack *>& memos,
+    double combineStrategyValues(const vector<MemoTable *>& memos,
                                  eval_fn_type_t eval_fn_type, 
                                  double (*combiner)(double, double), double init_value,
                                  void *chooser_arg);
@@ -128,8 +105,12 @@ class IteratorStack {
     virtual void advance();
     bool isDone();
     virtual void reset();
+    
+    const vector<size_t>& getPosition();
   protected:
     vector<Iterator *> iterators;
+    size_t num_iterators;
+    vector<size_t> position;
 
   private:
     bool done;
@@ -137,25 +118,25 @@ class IteratorStack {
     void resetIteratorsAbove(int stack_top);
 };
 
-class MemoizingIteratorStack : public IteratorStack {
+class MemoTable {
   public:
-    MemoizingIteratorStack(const vector<Iterator *>& iterators_);
-    ~MemoizingIteratorStack();
-    bool currentValueIsMemoized();
-    double memoizedCurrentValue();
-    void saveCurrentValue(double value);
+    MemoTable(const vector<Iterator *>& iterators_);
+    ~MemoTable();
+    bool valueIsMemoized(const vector<size_t>& indices);
+    double memoizedValue(const vector<size_t>& indices);
+    void saveValue(const vector<size_t>& indices, double value);
 
-    virtual void advance();
-    virtual void reset();
   private:
-    double *getCurrentPosition();
+    double *getPosition(const vector<size_t>& indices);
     MultiDimensionArray<double> *array;
-    vector<size_t> current_indices;
 };
 
 IteratorStack::IteratorStack(const vector<Iterator *>& iterators_)
     : iterators(iterators_), done(false)
 {
+    num_iterators = iterators.size();
+    position.resize(iterators.size(), 0);
+    
     if (iterators.empty()) {
         // unlikely corner case.
         done = true;
@@ -175,13 +156,14 @@ IteratorStack::advance()
         return;
     }
 
-    assert(iterators.size() > 0);
-    int stack_top = iterators.size() - 1;
+    assert(num_iterators > 0);
+    int stack_top = num_iterators - 1;
 
     // loop until we actually increment the joint iterator,
     //  or until we realize that it's done.
     Iterator *stats_iter = iterators[stack_top];
     stats_iter->advance();
+    ++position[stack_top];
     
     while (stats_iter->isDone()) {
         --stack_top;
@@ -192,6 +174,7 @@ IteratorStack::advance()
             //  so try advancing the next most significant
             //  estimator error iterator.
             stats_iter->advance();
+            ++position[stack_top];
         } else {
             // all iterators are done; the joint iterator is done too.
             done = true;
@@ -212,8 +195,9 @@ IteratorStack::resetIteratorsAbove(int stack_top)
 {
     assert(stack_top >= 0);
     size_t next_reset = stack_top + 1;
-    while (next_reset < iterators.size()) {
+    while (next_reset < num_iterators) {
         iterators[next_reset]->reset();
+        position[next_reset] = 0;
         ++next_reset;
     }
 }
@@ -221,11 +205,19 @@ IteratorStack::resetIteratorsAbove(int stack_top)
 void
 IteratorStack::reset()
 {
-    for (size_t i = 0; i < iterators.size(); ++i) {
+    for (size_t i = 0; i < num_iterators; ++i) {
         iterators[i]->reset();
+        position[i] = 0;
     }
     done = false;
 }
+
+inline const vector<size_t>& 
+IteratorStack::getPosition()
+{
+    return position;
+}
+
 
 EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator()
     : jointErrorIterator(NULL)
@@ -298,7 +290,8 @@ MultiStrategyJointErrorIterator::MultiStrategyJointErrorIterator(EmpiricalErrorS
     : evaluator(e), parent(parent_), memo_hits(0), total_iterations(0)
 {
     children = parent->getChildStrategies();
-    for (size_t i = 0; i < children.size(); ++i) {
+    num_children = children.size();
+    for (size_t i = 0; i < num_children; ++i) {
         SingleStrategyJointErrorIterator *child_joint_iter = 
             new SingleStrategyJointErrorIterator(evaluator, children[i]);
         jointIterators.push_back(child_joint_iter);
@@ -306,50 +299,53 @@ MultiStrategyJointErrorIterator::MultiStrategyJointErrorIterator(EmpiricalErrorS
             child_joint_iter->getIterators();
         total_count += child_joint_iter->totalCount();
         
-        MemoizingIteratorStack *timeMemo = new MemoizingIteratorStack(child_iters);
-        MemoizingIteratorStack *energyMemo = new MemoizingIteratorStack(child_iters);
-        MemoizingIteratorStack *dataMemo = new MemoizingIteratorStack(child_iters);
+        MemoTable *timeMemo = new MemoTable(child_iters);
+        MemoTable *energyMemo = new MemoTable(child_iters);
+        MemoTable *dataMemo = new MemoTable(child_iters);
         timeMemos.push_back(timeMemo);
         energyMemos.push_back(energyMemo);
         dataMemos.push_back(dataMemo);
         
-        proxyIterators.push_back(new ProxyIterator(child_joint_iter, 
-                                                   timeMemo, energyMemo, dataMemo));
     }
-    iterator_stack = new IteratorStack(proxyIterators);
+    num_iterators = jointIterators.size();
+    iterator_stack = new IteratorStack(vector<Iterator*>(jointIterators.begin(),
+                                                         jointIterators.end()));
 }
 
 MultiStrategyJointErrorIterator::~MultiStrategyJointErrorIterator()
 {
     delete iterator_stack;
-    for (size_t i = 0; i < jointIterators.size(); ++i) {
+    for (size_t i = 0; i < num_iterators; ++i) {
         delete jointIterators[i];
         delete timeMemos[i];
         delete energyMemos[i];
         delete dataMemos[i];
-        delete proxyIterators[i];
     }
     //fprintf(stderr, "%d memo hits of %d iterations\n", memo_hits, total_iterations);
 }
 
 double
-MultiStrategyJointErrorIterator::combineStrategyValues(const vector<MemoizingIteratorStack *>& memos,
+MultiStrategyJointErrorIterator::combineStrategyValues(const vector<MemoTable *>& memos,
                                                        eval_fn_type_t eval_fn_type, 
                                                        double (*combiner)(double, double), double init_value,
                                                        void *chooser_arg)
 {
     double cur_value = init_value;
-    for (size_t i = 0; i < children.size(); ++i) {
+    for (size_t i = 0; i < num_children; ++i) {
         double new_value = 0.0;
-        MemoizingIteratorStack *memo = memos[i];
-        if (memo->currentValueIsMemoized()) {
+        MemoTable *memo = memos[i];
+        SingleStrategyJointErrorIterator *it = 
+            (SingleStrategyJointErrorIterator *) jointIterators[i];
+        IteratorStack *childStack = it->getIteratorStack();
+        const vector<size_t>& position = childStack->getPosition();
+        if (memo->valueIsMemoized(position)) {
             ++memo_hits;
-            new_value = memo->memoizedCurrentValue();
+            new_value = memo->memoizedValue(position);
         } else {
             Strategy *child = children[i];
             typesafe_eval_fn_t eval_fn = child->getEvalFn(eval_fn_type);
             new_value = eval_fn(jointIterators[i], child->strategy_arg, chooser_arg);
-            memo->saveCurrentValue(new_value);
+            memo->saveValue(position, new_value);
         }
         cur_value = combiner(cur_value, new_value);
         ++total_iterations;
@@ -402,7 +398,7 @@ MultiStrategyJointErrorIterator::probability()
 {
     // TODO: memoize this further?
     double prob = 1.0;
-    for (size_t i = 0; i < jointIterators.size(); ++i) {
+    for (size_t i = 0; i < num_iterators; ++i) {
         prob *= jointIterators[i]->probability();
     }
     return prob;
@@ -430,93 +426,43 @@ MultiStrategyJointErrorIterator::reset()
     cur_position = 0;
 }
 
-inline void
-MultiStrategyJointErrorIterator::ProxyIterator::advance()
-{
-    if (!isDone()) {
-        errorIterator->advance();
-        timeMemo->advance();
-        energyMemo->advance();
-        dataMemo->advance();
-        cur_position++;
-    }
-}
 
-inline void
-MultiStrategyJointErrorIterator::ProxyIterator::reset()
-{
-    errorIterator->reset();
-    timeMemo->reset();
-    energyMemo->reset();
-    dataMemo->reset();
-    cur_position = 0;
-}
-
-inline bool
-MultiStrategyJointErrorIterator::ProxyIterator::isDone()
-{
-    return errorIterator->isDone();
-}
-
-MemoizingIteratorStack::MemoizingIteratorStack(const vector<Iterator *>& iterators_)
-    : IteratorStack(iterators_)
+MemoTable::MemoTable(const vector<Iterator *>& iterators)
 {
     vector<size_t> dimensions;
     for (size_t i = 0; i < iterators.size(); ++i) {
         dimensions.push_back(iterators[i]->totalCount());
-        current_indices.push_back(0);
     }
     array = new MultiDimensionArray<double>(dimensions, DBL_MAX);
 }
 
-MemoizingIteratorStack::~MemoizingIteratorStack()
+MemoTable::~MemoTable()
 {
     delete array;
 }
 
-inline void
-MemoizingIteratorStack::advance()
-{
-    //IteratorStack::advance();
-    // Don't advance the stack here.
-    // This subclass really just observes a set of iterators.
-    // TODO: rename/reorg it to reflect that.
-    for (size_t i = 0; i < iterators.size(); ++i) {
-        current_indices[i] = iterators[i]->position();
-    }
-}
-
-inline void
-MemoizingIteratorStack::reset()
-{
-    //IteratorStack::reset();
-    for (size_t i = 0; i < iterators.size(); ++i) {
-        current_indices[i] = 0;
-    }
-}
-
 inline double *
-MemoizingIteratorStack::getCurrentPosition()
+MemoTable::getPosition(const vector<size_t>& position)
 {
-    return &array->at(current_indices);
+    return &array->at(position);
 }
 
 inline bool 
-MemoizingIteratorStack::currentValueIsMemoized()
+MemoTable::valueIsMemoized(const vector<size_t>& position)
 {
-    return (memoizedCurrentValue() != DBL_MAX);
+    return (memoizedValue(position) != DBL_MAX);
 }
 
 inline double 
-MemoizingIteratorStack::memoizedCurrentValue()
+MemoTable::memoizedValue(const vector<size_t>& position)
 {
-    return *getCurrentPosition();
+    return *getPosition(position);
 }
 
 void 
-MemoizingIteratorStack::saveCurrentValue(double value)
+MemoTable::saveValue(const vector<size_t>& position, double value)
 {
-    *getCurrentPosition() = value;
+    *getPosition(position) = value;
 }
 
 

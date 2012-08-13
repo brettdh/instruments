@@ -53,7 +53,7 @@ class StatsDistributionBinned : public StatsDistribution {
     std::multiset<double> all_samples_sorted;
     
     // TODO: set this in a principled way.
-    static const size_t histogram_threshold = 15; // "enough" samples
+    static const size_t histogram_threshold = 50; // "enough" samples
 
     void addToHistogram(double value);
     void addToTail(int& count, double& mid, double value);

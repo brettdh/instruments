@@ -122,7 +122,7 @@ void StatsDistributionBinned::calculateBins()
     assertValidHistogram();
 
     vector<double> samples(all_samples_sorted.begin(), all_samples_sorted.end());
-    small_set<double> unique_samples(samples.begin(), samples.end());
+    std::set<double> unique_samples(samples.begin(), samples.end());
     if (unique_samples.size() <= 1) {
         // R's histogram function blows up if I pass a vector of one value
         // try again next sample
@@ -190,9 +190,7 @@ StatsDistributionBinned::binsAreSet()
 bool
 StatsDistributionBinned::shouldRebin()
 {
-    // TODO: periodic rebinning?
-    return (all_samples_sorted.size() >= histogram_threshold &&
-            !binsAreSet());
+    return ((all_samples_sorted.size() % histogram_threshold) == 0);
 }
 
 void
