@@ -218,7 +218,9 @@ IteratorStack::advance()
 
     if (!isDone()) {
         ++(*position_it);
-        setCachedProbabilities(position.rend() - position_it);
+        size_t offset = position.rend() - position_it;
+        assert(offset > 0);
+        setCachedProbabilities(offset - 1);
     }
 }
 
