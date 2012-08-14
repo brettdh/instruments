@@ -22,9 +22,6 @@ RCPPLIBS = 		$(shell echo 'Rcpp:::LdFlags()'  | $(R_HOME)/bin/R --vanilla --slav
 ## include headers and libraries for RInside embedding classes
 RINSIDEINCL = 		$(shell echo 'RInside:::CxxFlags()' | $(R_HOME)/bin/R --vanilla --slave)
 RINSIDELIBS = 		$(shell echo 'RInside:::LdFlags()'  | $(R_HOME)/bin/R --vanilla --slave)
-ifeq ($(shell uname), Darwin)
-RINSIDELIBS := $(R_HOME)/$(RINSIDELIBS)
-endif
 endif
 
 # (mine)

@@ -29,14 +29,14 @@ public:
 
 class JointErrorIterator : public Iterator, public StrategyEvaluationContext {
   protected:
-    int cur_position;
-    int total_count;
+    //int cur_position;
+    //int total_count;
   public:
-    JointErrorIterator() : cur_position(0), total_count(0) {}
+    JointErrorIterator() /*: cur_position(0), total_count(0)*/ {}
     virtual double value() { throw UnimplementedError(); }
-    virtual void reset() { cur_position = 0; }
-    virtual int position() { assert(cur_position <= total_count); return cur_position; }
-    virtual int totalCount() { return total_count; }
+    virtual void reset() { throw UnimplementedError(); /*cur_position = 0;*/ }
+    virtual int position() { throw UnimplementedError(); /*assert(cur_position <= total_count); return cur_position;*/ }
+    virtual int totalCount() { throw UnimplementedError(); /*return total_count;*/ }
 };
 
 class SingleStrategyJointErrorIterator : public JointErrorIterator {
@@ -109,19 +109,21 @@ class IteratorStack {
     IteratorStack(const vector<Iterator *>& iterators_);
     virtual void advance();
     bool isDone();
+    double probability();
     virtual void reset();
     virtual ~IteratorStack() {}
     
     const vector<size_t>& getPosition();
-  protected:
+
+  private:
     vector<Iterator *> iterators;
     size_t num_iterators;
     vector<size_t> position;
 
-  private:
-    bool done;
+    vector<double> cached_probabilities;
+    void setCachedProbabilities(size_t first_index);
 
-    void resetIteratorsAbove(int stack_top);
+    bool done;
 };
 
 class MemoTable {
@@ -150,6 +152,27 @@ IteratorStack::IteratorStack(const vector<Iterator *>& iterators_)
         // unlikely corner case.
         done = true;
     }
+
+    cached_probabilities.resize(iterators.size(), 0.0);
+    setCachedProbabilities(0);
+}
+
+void
+IteratorStack::setCachedProbabilities(size_t first_index)
+{
+    for (size_t i = first_index; i < cached_probabilities.size(); ++i) {
+        if (i > 0) {
+            cached_probabilities[i] = cached_probabilities[i-1] * iterators[i]->probability();
+        } else {
+            cached_probabilities[i] = iterators[i]->probability();
+        }
+    }
+}
+
+double
+IteratorStack::probability()
+{
+    return *cached_probabilities.rbegin();
 }
 
 inline bool
@@ -166,24 +189,26 @@ IteratorStack::advance()
     }
 
     assert(num_iterators > 0);
-    int stack_top = num_iterators - 1;
+    vector<Iterator*>::reverse_iterator iter_it = iterators.rbegin();
+    vector<size_t>::reverse_iterator position_it = position.rbegin();
 
     // loop until we actually increment the joint iterator,
     //  or until we realize that it's done.
-    Iterator *cur_iter = iterators[stack_top];
+    Iterator *cur_iter = *iter_it;
     cur_iter->advance();
-    ++position[stack_top];
-    
+
     while (cur_iter->isDone()) {
-        --stack_top;
-        if (stack_top >= 0) {
-            cur_iter = iterators[stack_top];
+        cur_iter->reset();
+        *position_it = 0;
+        
+        if (++iter_it != iterators.rend()) {
+            cur_iter = *iter_it;
+            ++position_it;
 
             // we haven't actually advanced the joint iterator, 
             //  so try advancing the next most significant
             //  estimator error iterator.
             cur_iter->advance();
-            ++position[stack_top];
         } else {
             // all iterators are done; the joint iterator is done too.
             done = true;
@@ -191,23 +216,9 @@ IteratorStack::advance()
         }
     }
 
-    if (stack_top >= 0) {
-        // if the joint iteration isn't done yet, 
-        //  reset the 'less significant iterators'
-        //  than the one that was actually advanced.
-        resetIteratorsAbove(stack_top);
-    }
-}
-
-void
-IteratorStack::resetIteratorsAbove(int stack_top)
-{
-    assert(stack_top >= 0);
-    size_t next_reset = stack_top + 1;
-    while (next_reset < num_iterators) {
-        iterators[next_reset]->reset();
-        position[next_reset] = 0;
-        ++next_reset;
+    if (!isDone()) {
+        ++(*position_it);
+        setCachedProbabilities(position.rend() - position_it);
     }
 }
 
@@ -306,7 +317,7 @@ MultiStrategyJointErrorIterator::MultiStrategyJointErrorIterator(EmpiricalErrorS
         jointIterators.push_back(child_joint_iter);
         vector<Iterator *> child_iters =
             child_joint_iter->getIterators();
-        total_count += child_joint_iter->totalCount();
+        //total_count += child_joint_iter->totalCount();
         
         MemoTable *timeMemo = new MemoTable(child_iters);
         MemoTable *energyMemo = new MemoTable(child_iters);
@@ -350,7 +361,7 @@ MultiStrategyJointErrorIterator::combineStrategyValues(const vector<MemoTable *>
         const vector<size_t>& position = childStack->getPosition();
         MemoTable::Entry *memoEntry = memo->getPosition(position);
         if (memoEntry->valid) {
-            ++memo_hits;
+            //++memo_hits;
             new_value = memoEntry->value;
         } else {
             Strategy *child = children[i];
@@ -360,7 +371,7 @@ MultiStrategyJointErrorIterator::combineStrategyValues(const vector<MemoTable *>
             memoEntry->value = new_value;
         }
         cur_value = combiner(cur_value, new_value);
-        ++total_iterations;
+        //++total_iterations;
     }
     return cur_value;
 }
@@ -405,15 +416,18 @@ MultiStrategyJointErrorIterator::getAdjustedEstimatorValue(Estimator *estimator)
     abort();
 }
 
-double 
+inline double 
 MultiStrategyJointErrorIterator::probability()
 {
+    return iterator_stack->probability();
+    
     // TODO: memoize this further?
     double prob = 1.0;
     for (size_t i = 0; i < num_iterators; ++i) {
         prob *= jointIterators[i]->probability();
     }
     return prob;
+    
 }
 
 inline void 
@@ -421,7 +435,7 @@ MultiStrategyJointErrorIterator::advance()
 {
     if (!isDone()) {
         iterator_stack->advance();
-        ++cur_position;
+        //++cur_position;
     }
 }
 
@@ -435,7 +449,7 @@ inline void
 MultiStrategyJointErrorIterator::reset()
 {
     iterator_stack->reset();
-    cur_position = 0;
+    //cur_position = 0;
 }
 
 
@@ -469,7 +483,7 @@ EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval
         assert(0);
     }
 
-    if (strategy->isRedundant() && strategy->childrenAreDisjoint()) {
+    if (false) {//strategy->isRedundant() && strategy->childrenAreDisjoint()) {
         MultiStrategyJointErrorIterator *it =
             new MultiStrategyJointErrorIterator(this, strategy);
         jointErrorIterator = it;
@@ -505,7 +519,7 @@ SingleStrategyJointErrorIterator::SingleStrategyJointErrorIterator(EmpiricalErro
         if (strategy->usesEstimator(estimator)) {
             StatsDistribution::Iterator *stats_iter = it->second->getIterator();
             iterators[estimator] = stats_iter;
-            total_count += stats_iter->totalCount();
+            //total_count += stats_iter->totalCount();
             tmp_iters.push_back(stats_iter);
         }
     }
@@ -536,14 +550,21 @@ SingleStrategyJointErrorIterator::getAdjustedEstimatorValue(Estimator *estimator
 inline double
 SingleStrategyJointErrorIterator::probability()
 {
-    return cached_probability_is_valid ? cached_probability : computedProbability();
+    //return cached_probability_is_valid ? cached_probability : computedProbability();
+    if (cached_probability_is_valid) {
+        return cached_probability;
+    }
+    return computedProbability();
 }
 
 double
 SingleStrategyJointErrorIterator::computedProbability()
 {
-    assert(iterators.size() > 0);
+    return iterator_stack->probability();
+
     
+    assert(iterators.size() > 0);
+
     ErrorIteratorMap::iterator it = iterators.begin();
     StatsDistribution::Iterator *stats_iter = it->second;
     double probability = stats_iter->probability();
@@ -557,6 +578,7 @@ SingleStrategyJointErrorIterator::computedProbability()
     cached_probability_is_valid = true;
     
     return probability;
+    
 }
 
 inline void
@@ -565,7 +587,7 @@ SingleStrategyJointErrorIterator::advance()
     cached_probability_is_valid = false;
     if (!isDone()) {
         iterator_stack->advance();
-        ++cur_position;
+        //++cur_position;
     }
 }
 
@@ -579,7 +601,7 @@ inline void
 SingleStrategyJointErrorIterator::reset()
 {
     iterator_stack->reset();
-    cur_position = 0;
+    //cur_position = 0;
 }
 
 vector<Iterator *> 
