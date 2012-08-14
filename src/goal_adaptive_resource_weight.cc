@@ -114,7 +114,7 @@ GoalAdaptiveResourceWeight::getWeight()
 // return the resource cost weight assuming I incur 'cost' over 'duration' seconds.
 // the values passed in here are for current cost, not delta cost.
 double 
-GoalAdaptiveResourceWeight::getWeight(std::string type, double cost, double duration) 
+GoalAdaptiveResourceWeight::getWeight(double cost, double duration) 
 {
     PthreadScopedLock lock(&mutex);
 
