@@ -14,6 +14,8 @@ using Rcpp::as;
 
 #include "r_singleton.h"
 
+#include "timeops.h"
+
 void
 StatsDistributionBinned::initRInside()
 {
@@ -117,6 +119,28 @@ StatsDistributionBinned::makeNewIterator()
     }
 }
 
+void mark_timepoint(const char *msg)
+{
+    static std::string last_msg;
+    static struct timeval last_timestamp = {0, 0};
+
+    struct timeval now;
+    TIME(now);
+    
+    if (last_msg.length() > 0) {
+        struct timeval diff;
+        TIMEDIFF(last_timestamp, now, diff);
+        fprintf(stderr, "%s took %lu.%06lu seconds\n",
+                last_msg.c_str(), diff.tv_sec, diff.tv_usec);
+    }
+    if (msg) {
+        last_msg.assign(msg);
+    } else {
+        last_msg.assign("");
+    }
+    last_timestamp = now;
+}
+
 void StatsDistributionBinned::calculateBins()
 {
     assertValidHistogram();
@@ -132,13 +156,16 @@ void StatsDistributionBinned::calculateBins()
     R->assign(samples, r_samples_name);
     //R->parseEval(string("print(") + r_samples_name + string(")"));
 
+    //mark_timepoint("calling histogram()");
     ostringstream oss;
     oss << "histogram::histogram(" << r_samples_name << ", verbose=FALSE, plot=FALSE)";
     Rcpp::List hist_result = R->parseEval(oss.str());
+    //mark_timepoint(NULL);
 
     breaks = as<vector<double> >(hist_result["breaks"]);
     vector<double> tmp_mids = as<vector<double> >(hist_result["mids"]);
     vector<int> tmp_counts = as<vector<int> >(hist_result["counts"]);
+    //fprintf(stderr, "histogram with %zu bins\n", tmp_counts.size());
 
     mids.assign(1, 0.0);
     mids.insert(mids.end(), tmp_mids.begin(), tmp_mids.end());

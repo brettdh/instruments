@@ -104,7 +104,7 @@ CTEST2(brute_force_perf, value_observed)
 
     int bytelen = 4096;
     //int max_samples = 30;
-    int max_samples = 50;
+    int max_samples = 500;
     int num_new_samples = 5;
     int k;
 

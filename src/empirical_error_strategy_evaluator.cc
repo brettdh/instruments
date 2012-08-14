@@ -259,8 +259,8 @@ EmpiricalErrorStrategyEvaluator::observationAdded(Estimator *estimator, double v
         jointError[estimator]->addValue(error);
     } else {
         // TODO: move this to a factory method (with the other methods)
-        jointError[estimator] = new StatsDistributionAllSamples;
-        //jointError[estimator] = new StatsDistributionBinned;
+        //jointError[estimator] = new StatsDistributionAllSamples;
+        jointError[estimator] = new StatsDistributionBinned;
         
         // don't add a real error value to the distribution.
         // there's no error until we have at least two observations.
