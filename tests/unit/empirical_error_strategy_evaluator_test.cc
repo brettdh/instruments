@@ -172,5 +172,5 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     CPPUNIT_ASSERT(estimator1_new_calls >= 4);
     CPPUNIT_ASSERT(estimator1_new_calls <= 6);
     CPPUNIT_ASSERT(estimator2_new_calls >= 4);
-    CPPUNIT_ASSERT(estimator2_new_calls <= 4);
+    CPPUNIT_ASSERT(estimator2_new_calls <= 6);
 }
