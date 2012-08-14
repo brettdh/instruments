@@ -1,6 +1,7 @@
 EXECUTABLES=run_unit_tests
 all: $(EXECUTABLES) ../../common/R_generated_vars.mk
 
+
 ../../common/R_generated_vars.mk: ../../common/Makefile
 	make -C ../../common
 
@@ -19,6 +20,26 @@ CXXFLAGS += -pthread
 endif
 
 
+
+DEP_SRCS=$(wildcard *.cc)
+SUPPORT_DEP_SRCS=$(wildcard ../../src/*.cc)
+DEPS=$(DEP_SRCS:%.cc=.%.dep) $(SUPPORT_DEP_SRCS:../../src/%.cc=.%.dep)
+
+.%.dep: %.cc %.h
+	$(CXX) -MM $(CXXFLAGS) $< >$@
+
+.%.dep: ../../src/%.cc ../../src/%.h
+	$(CXX) -MM $(CXXFLAGS) $< >$@
+
+.%.dep: %.cc
+	$(CXX) -MM $(CXXFLAGS) $< >$@
+
+.%.dep: ../../src/%.cc
+	$(CXX) -MM $(CXXFLAGS) $< >$@
+
+include $(DEPS)
+
+
 %.o: %.cc %.h
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
@@ -35,14 +56,16 @@ endif
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 TESTOBJS := \
+	empirical_error_strategy_evaluator_test.o \
 	r_test.o \
 	stats_distribution_test.o \
-	empirical_error_strategy_evaluator_test.o \
 	goal_adaptive_resource_weight_test.o \
+	multi_dimension_array_test.o \
 	running_mean_estimator_test.o \
 	strategy_estimators_discovery_test.o
 
 SUPPORTOBJS := \
+	empirical_error_strategy_evaluator.o \
 	estimator.o \
 	estimator_registry.o \
 	external_estimator.o \
@@ -52,8 +75,6 @@ SUPPORTOBJS := \
 	running_mean_estimator.o \
 	strategy.o \
 	strategy_evaluator.o \
-	strategy_evaluation_context.o \
-	empirical_error_strategy_evaluator.o \
 	stats_distribution.o \
 	stats_distribution_all_samples.o \
 	stats_distribution_binned.o \
@@ -66,4 +87,3 @@ run_unit_tests: run_all_tests.o $(TESTOBJS) $(SUPPORTOBJS)
 clean:
 	rm -f *.o *~ $(EXECUTABLES)
 
-include ../../deps.mk

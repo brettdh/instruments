@@ -1,8 +1,8 @@
 #ifndef ESTIMATOR_H_INCL
 #define ESTIMATOR_H_INCL
 
-#include <set>
 #include "estimator_type.h"
+#include "small_set.h"
 
 class StrategyEvaluator;
 
@@ -32,7 +32,7 @@ class Estimator {
     virtual void storeNewObservation(double value) = 0;
     
   private:
-    std::set<StrategyEvaluator*> subscribers;
+    small_set<StrategyEvaluator*> subscribers;
     const static EstimatorType DEFAULT_TYPE = RUNNING_MEAN;
 };
 

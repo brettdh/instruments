@@ -5,8 +5,6 @@
 #include "running_mean_estimator.h"
 #include "strategy_evaluator.h"
 
-using std::set;
-
 Estimator *
 Estimator::create()
 {
@@ -23,14 +21,14 @@ Estimator::create(EstimatorType type)
         return new RunningMeanEstimator();
     default:
         // TODO: implement more types
-        assert(0);
+        abort();
     }
 }
 
 void
 Estimator::addObservation(double value)
 {
-    for (set<StrategyEvaluator*>::const_iterator it = subscribers.begin();
+    for (small_set<StrategyEvaluator*>::const_iterator it = subscribers.begin();
          it != subscribers.end(); ++it) {
         StrategyEvaluator *subscriber = *it;
         subscriber->observationAdded(this, value);

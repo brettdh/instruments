@@ -1,11 +1,12 @@
 #ifndef STRATEGY_EVALUATOR_H_INCL
 #define STRATEGY_EVALUATOR_H_INCL
 
-#include <set>
 #include "instruments.h"
 #include "strategy.h"
 #include "strategy_evaluation_context.h"
 #include "eval_method.h"
+
+#include "small_set.h"
 
 class Estimator;
 class Strategy;
@@ -32,18 +33,17 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     void addEstimator(Estimator *estimator);
     bool usesEstimator(Estimator *estimator);
 
-    virtual double expectedValue(typesafe_eval_fn_t fn, 
+    virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg) = 0;
     virtual void observationAdded(Estimator *estimator, double value) = 0;
 
-    virtual instruments_estimator_t getEstimatorContext(Estimator *estimator);
+    virtual ~StrategyEvaluator() {}
   protected:
     StrategyEvaluator();
     void setStrategies(const instruments_strategy_t *strategies,
                        size_t num_strategies);
 
-    std::set<Strategy*> strategies;
-    std::set<Estimator*> estimators;
+    small_set<Strategy*> strategies;
 
     // TODO: change to a better default.
     const static EvalMethod DEFAULT_EVAL_METHOD = TRUSTED_ORACLE;

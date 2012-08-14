@@ -1,5 +1,5 @@
 #include "stats_distribution_all_samples.h"
-#include "debug.h"
+#include <assert.h>
 
 void 
 StatsDistributionAllSamples::addValue(double value)
@@ -7,35 +7,54 @@ StatsDistributionAllSamples::addValue(double value)
     values.push_back(value);
 }
 
-double 
+inline double 
 StatsDistributionAllSamples::Iterator::probability()
 {
     return cached_probability;
 }
 
-double
+inline double
 StatsDistributionAllSamples::Iterator::value()
 {
-    return *real_iterator;
+    return distribution->values[cur_position];
 }
 
-void
+inline void
 StatsDistributionAllSamples::Iterator::advance()
 {
-    ++real_iterator;
+    ++cur_position;
 }
 
-bool
+inline bool
 StatsDistributionAllSamples::Iterator::isDone()
 {
-    return (real_iterator == distribution->values.end());
+    return (cur_position == total_count);
+}
+
+inline void
+StatsDistributionAllSamples::Iterator::reset()
+{
+    cur_position = 0;
+}
+
+inline int
+StatsDistributionAllSamples::Iterator::position()
+{
+    return cur_position;
+}
+
+inline int 
+StatsDistributionAllSamples::Iterator::totalCount()
+{
+    return total_count;
 }
 
 StatsDistributionAllSamples::Iterator::Iterator(StatsDistributionAllSamples *d)
-    : distribution(d), real_iterator(d->values.begin())
+    : distribution(d), cur_position(0)
 {
-    ASSERT(distribution->values.size() > 0);
-    cached_probability = 1.0 / distribution->values.size();
+    assert(distribution->values.size() > 0);
+    total_count = distribution->values.size();
+    cached_probability = 1.0 / total_count;
 }
 
 StatsDistribution::Iterator *

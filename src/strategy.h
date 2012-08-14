@@ -1,9 +1,9 @@
 #ifndef STRATEGY_H_INCL
 #define STRATEGY_H_INCL
 
-#include <set>
 #include <vector>
 #include "instruments.h"
+#include "small_set.h"
 
 class Estimator;
 class EstimatorSet;
@@ -15,6 +15,10 @@ class StrategyEvaluationContext;
 // (We don't care about the type of arg; it's from the application,
 //  which must manage its own type casting.)
 typedef double (*typesafe_eval_fn_t)(StrategyEvaluationContext *, void *strategy_arg, void *chooser_arg);
+
+enum eval_fn_type_t {
+    TIME_FN, ENERGY_FN, DATA_FN
+};
 
 class Strategy {
   public:
@@ -33,8 +37,13 @@ class Strategy {
 
     void getAllEstimators(StrategyEvaluator *evaluator);
     bool usesEstimator(Estimator *estimator);
+
+    std::vector<Strategy *> getChildStrategies();
+    bool childrenAreDisjoint();
+    typesafe_eval_fn_t getEvalFn(eval_fn_type_t type);
   private:
     friend class EmpiricalErrorStrategyEvaluatorTest;
+    friend class MultiStrategyJointErrorIterator;
 
     friend double redundant_strategy_minimum_time(StrategyEvaluationContext *ctx,
                                                   void *strategy_arg, void *chooser_arg);
@@ -51,9 +60,16 @@ class Strategy {
 
     void collectEstimators();
 
-    std::set<Estimator*> estimators;
+    small_set<Estimator*> estimators;
 
     std::vector<Strategy *> child_strategies;
 };
+
+double redundant_strategy_minimum_time(StrategyEvaluationContext *ctx,
+                                       void *strategy_arg, void *chooser_arg);
+double redundant_strategy_total_energy_cost(StrategyEvaluationContext *ctx, 
+                                            void *strategy_arg, void *chooser_arg);
+double redundant_strategy_total_data_cost(StrategyEvaluationContext *ctx, 
+                                          void *strategy_arg, void *chooser_arg);
 
 #endif

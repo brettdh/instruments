@@ -23,6 +23,9 @@ class StatsDistributionBinned : public StatsDistribution {
         virtual double value();
         virtual void advance();
         virtual bool isDone();
+        virtual void reset();
+        virtual int position();
+        virtual int totalCount();
         
       private:
         friend class StatsDistributionBinned;
@@ -35,7 +38,6 @@ class StatsDistributionBinned : public StatsDistribution {
   protected:
     virtual StatsDistribution::Iterator *makeNewIterator();
   private:
-    // TODO: finish implementing.
     std::vector<double> breaks;  // size: number of bins + 1
     std::vector<double> mids;    // size: number of bins + 2 (left & right tail)
     std::vector<int> counts;     // size: number of bins + 2 (left & right tail)
@@ -48,10 +50,10 @@ class StatsDistributionBinned : public StatsDistribution {
     // used until we have "enough" samples to pick bins.
     StatsDistributionAllSamples all_samples;
 
-    std::set<double> all_samples_sorted;
+    std::multiset<double> all_samples_sorted;
     
     // TODO: set this in a principled way.
-    static const size_t histogram_threshold = 30; // "enough" samples
+    static const size_t histogram_threshold = 50; // "enough" samples
 
     void addToHistogram(double value);
     void addToTail(int& count, double& mid, double value);
@@ -62,17 +64,12 @@ class StatsDistributionBinned : public StatsDistribution {
     void updateBin(int index, double value);
 
     std::string r_samples_name;
-    void initRSamplesName();
+    void initRInside();
 
-    static RInside& R;
-
-    class initer {
-      public:
-        initer();
-    };
-    static initer the_initer;
+    RInside* R;
 
     void assertValidHistogram();
+    void printHistogram();
 };
 
 #endif

@@ -14,13 +14,17 @@ class StatsDistributionAllSamples : public StatsDistribution {
         virtual double value();
         virtual void advance();
         virtual bool isDone();
+        virtual void reset();
+        virtual int position();
+        virtual int totalCount();
         
       private:
         friend class StatsDistributionAllSamples;
         Iterator(StatsDistributionAllSamples *d);
         StatsDistributionAllSamples *distribution;
-        std::vector<double>::const_iterator real_iterator;
         double cached_probability;
+        int cur_position;
+        int total_count;
     };
     
   protected:

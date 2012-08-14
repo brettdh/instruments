@@ -20,12 +20,14 @@ OBJS := \
 	stats_distribution_binned.o \
 	strategy.o \
 	strategy_evaluator.o \
-	strategy_evaluation_context.o \
 	timeops.o \
 	trusted_oracle_strategy_evaluator.o
 
 
 CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic -pthread $(R_CXXFLAGS)
+#CXXFLAGS := $(subst -O3,-O0,$(CXXFLAGS))
+#CXXFLAGS += -fno-inline
+CXXFLAGS += -O3 -DNDEBUG
 LDFLAGS := -lpthread $(R_LDLIBS)
 
 ifeq ($(shell uname), Darwin)

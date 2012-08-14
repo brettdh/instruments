@@ -2,6 +2,6 @@
 #define r_singleton_h_incl
 
 class RInside;
-RInside& get_rinside_instance();
+RInside* get_rinside_instance();
 
 #endif
