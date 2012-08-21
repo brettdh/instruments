@@ -6,6 +6,10 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#if (defined(ANDROID) && defined(PROFILING_BUILD))
+#include "prof.h"
+#endif
+
 #define TIMEDIFF(tvb,tve,tvr)                                    \
 do {                                                             \
     assert(((tve).tv_sec > (tvb).tv_sec)                         \
@@ -59,6 +63,9 @@ static double no_cost(instruments_context_t ctx, void *strategy_arg, void *choos
 
 int main()
 {
+#if (defined(ANDROID) && defined(PROFILING_BUILD))
+    monstartup("libinstruments.so");
+#endif
     instruments_external_estimator_t estimators[NUM_ESTIMATORS];
     int i;
     for (i = 0; i < NUM_ESTIMATORS; ++i) {
@@ -85,8 +92,8 @@ int main()
                                                                                    EMPIRICAL_ERROR);
 
     int bytelen = 4096;
-    //int max_samples = 30;
-    int max_samples = 500;
+    int max_samples = 50;
+    //int max_samples = 500;
     int num_new_samples = 5;
     int k;
 
@@ -107,5 +114,8 @@ int main()
         free_external_estimator(estimators[i]);
     }
 
+#if (defined(ANDROID) && defined(PROFILING_BUILD))
+    moncleanup();
+#endif
     return 0;
 }
