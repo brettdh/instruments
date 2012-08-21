@@ -121,7 +121,7 @@ class IteratorStack {
   private:
     vector<Iterator *> iterators;
     size_t num_iterators;
-    vector<size_t> position;
+    //vector<size_t> position;
 
     vector<double> cached_probabilities;
     void setCachedProbabilities(size_t first_index);
@@ -149,7 +149,7 @@ IteratorStack::IteratorStack(const vector<Iterator *>& iterators_)
     : iterators(iterators_), done(false)
 {
     num_iterators = iterators.size();
-    position.resize(iterators.size(), 0);
+    //position.resize(iterators.size(), 0);
     
     if (iterators.empty()) {
         // unlikely corner case.
@@ -193,7 +193,7 @@ IteratorStack::advance()
 
     assert(num_iterators > 0);
     vector<Iterator*>::reverse_iterator iter_it = iterators.rbegin();
-    vector<size_t>::reverse_iterator position_it = position.rbegin();
+    //vector<size_t>::reverse_iterator position_it = position.rbegin();
 
     // loop until we actually increment the joint iterator,
     //  or until we realize that it's done.
@@ -202,11 +202,11 @@ IteratorStack::advance()
 
     while (cur_iter->isDone()) {
         cur_iter->reset();
-        *position_it = 0;
+        //*position_it = 0;
         
         if (++iter_it != iterators.rend()) {
             cur_iter = *iter_it;
-            ++position_it;
+            //++position_it;
 
             // we haven't actually advanced the joint iterator, 
             //  so try advancing the next most significant
@@ -220,8 +220,9 @@ IteratorStack::advance()
     }
 
     if (!isDone()) {
-        ++(*position_it);
-        size_t offset = position.rend() - position_it;
+        //++(*position_it);
+        //size_t offset = position.rend() - position_it;
+        size_t offset = iterators.rend() - iter_it;
         assert(offset > 0);
         setCachedProbabilities(offset - 1);
     }
@@ -230,17 +231,18 @@ IteratorStack::advance()
 void
 IteratorStack::reset()
 {
-    for (size_t i = 0; i < num_iterators; ++i) {
-        iterators[i]->reset();
-        position[i] = 0;
-    }
+    // for (size_t i = 0; i < num_iterators; ++i) {
+    //     iterators[i]->reset();
+    //     position[i] = 0;
+    // }
     done = false;
 }
 
 inline const vector<size_t>& 
 IteratorStack::getPosition()
 {
-    return position;
+    throw UnimplementedError();
+    //return position;
 }
 
 
