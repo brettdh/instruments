@@ -11,6 +11,7 @@
 #else
 
 #include <vector>
+#include <sys/types.h>
 
 template <typename T>
 class small_set {
