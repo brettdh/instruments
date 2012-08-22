@@ -38,7 +38,7 @@ class Strategy {
     void getAllEstimators(StrategyEvaluator *evaluator);
     bool usesEstimator(Estimator *estimator);
 
-    std::vector<Strategy *> getChildStrategies();
+    const std::vector<Strategy *>& getChildStrategies();
     bool childrenAreDisjoint();
     typesafe_eval_fn_t getEvalFn(eval_fn_type_t type);
   private:

@@ -1,17 +1,11 @@
 #ifndef EMPIRICAL_ERROR_STRATEGY_EVALUATOR_H_INCL
 #define EMPIRICAL_ERROR_STRATEGY_EVALUATOR_H_INCL
 
-#include <vector>
 #include "strategy.h"
 #include "strategy_evaluator.h"
-#include "strategy_evaluation_context.h"
-#include "stats_distribution.h"
-#include "small_map.h"
 
 class Estimator;
-
-class JointErrorIterator;
-typedef small_map<Estimator *, StatsDistribution *> JointErrorMap;
+class JointDistribution;
 
 class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
   public:
@@ -24,11 +18,7 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
   protected:
     virtual void observationAdded(Estimator *estimator, double value);
   private:
-    friend class SingleStrategyJointErrorIterator;
-    
-    JointErrorMap jointError;
-
-    JointErrorIterator *jointErrorIterator;
+    JointDistribution *jointDistribution;
 };
 
 #endif
