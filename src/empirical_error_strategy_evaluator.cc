@@ -40,6 +40,7 @@ class JointErrorIterator : public Iterator, public StrategyEvaluationContext {
     virtual void reset() { throw UnimplementedError(); /*cur_position = 0;*/ }
     virtual int position() { throw UnimplementedError(); /*assert(cur_position <= total_count); return cur_position;*/ }
     virtual int totalCount() { throw UnimplementedError(); /*return total_count;*/ }
+    virtual double at(int pos) { throw UnimplementedError(); }
 };
 
 class SingleStrategyJointErrorIterator : public JointErrorIterator {
@@ -49,6 +50,7 @@ class SingleStrategyJointErrorIterator : public JointErrorIterator {
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
     
     virtual double probability();
+    virtual double probability(int pos) { throw UnimplementedError(); }
     virtual void advance();
     virtual bool isDone();
     virtual void reset();
@@ -61,6 +63,7 @@ class SingleStrategyJointErrorIterator : public JointErrorIterator {
     EmpiricalErrorStrategyEvaluator *evaluator;
 
     ErrorIteratorMap iterators;
+    small_map<Estimator *, int> iterator_indices;
 
     double cached_probability;
     bool cached_probability_is_valid;
@@ -77,6 +80,8 @@ class MultiStrategyJointErrorIterator : public JointErrorIterator {
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
     
     virtual double probability();
+    virtual double probability(int pos) { throw UnimplementedError(); }
+
     virtual void advance();
     virtual bool isDone();
     virtual void reset();
@@ -115,18 +120,26 @@ class IteratorStack {
     double probability();
     virtual void reset();
     virtual ~IteratorStack() {}
+
+    double iteratorValue(int index);
     
     const vector<size_t>& getPosition();
+    
+    void setPosition();
 
   private:
     vector<Iterator *> iterators;
     size_t num_iterators;
-    //vector<size_t> position;
+    vector<size_t> position;
+    vector<size_t> end_position;
 
     vector<double> cached_probabilities;
     void setCachedProbabilities(size_t first_index);
 
     bool done;
+
+    size_t pos;
+    size_t total_size;
 };
 
 class MemoTable {
@@ -146,14 +159,21 @@ class MemoTable {
 };
 
 IteratorStack::IteratorStack(const vector<Iterator *>& iterators_)
-    : iterators(iterators_), done(false)
+    : iterators(iterators_), done(false), pos(0), total_size(1)
 {
     num_iterators = iterators.size();
-    //position.resize(iterators.size(), 0);
+    position.resize(iterators.size(), 0);
+    end_position.resize(iterators.size(), 0);
     
     if (iterators.empty()) {
         // unlikely corner case.
         done = true;
+    }
+
+    for (size_t i = 0; i < iterators.size(); ++i) {
+        int iter_size = iterators[i]->totalCount();
+        total_size *= iter_size;
+        end_position[i] = iter_size;
     }
 
     cached_probabilities.resize(iterators.size(), 0.0);
@@ -165,9 +185,9 @@ IteratorStack::setCachedProbabilities(size_t first_index)
 {
     for (size_t i = first_index; i < cached_probabilities.size(); ++i) {
         if (i > 0) {
-            cached_probabilities[i] = cached_probabilities[i-1] * iterators[i]->probability();
+            cached_probabilities[i] = cached_probabilities[i-1] * iterators[i]->probability(position[i]);
         } else {
-            cached_probabilities[i] = iterators[i]->probability();
+            cached_probabilities[i] = iterators[i]->probability(position[i]);
         }
     }
 }
@@ -176,12 +196,48 @@ double
 IteratorStack::probability()
 {
     return *cached_probabilities.rbegin();
+    /*
+    double prob = 1.0;
+    for (size_t i = 0; i < iterators.size(); ++i) {
+        prob *= iterators[i]->probability(position[i]);
+    }
+    return prob;
+    */
 }
 
 inline bool
 IteratorStack::isDone()
 {
     return done;
+}
+
+inline double 
+IteratorStack::iteratorValue(int index)
+{
+    /*
+    int cur_pos = pos;
+    for (int i = end_position.size() - 1; i >= index; --i) {
+        if (i == index) {
+            cur_pos = cur_pos % end_position[i];
+            //assert(cur_pos < end_position[i]);
+            break;
+        } else {
+            cur_pos /= end_position[i];
+        }
+    }
+    */
+    return iterators[index]->at(position[index]);
+    //return iterators[index]->at(cur_pos);
+}
+
+void
+IteratorStack::setPosition()
+{
+    int cur_pos = pos;
+    for (int i = end_position.size() - 1; i >= 0; --i) {
+        position[i] = cur_pos % end_position[i];
+        cur_pos /= end_position[i];
+    }
 }
 
 void
@@ -191,27 +247,39 @@ IteratorStack::advance()
         return;
     }
 
+    /*
+    if (++pos == total_size) {
+        done = true;
+    }
+    //setPosition();
+    return;
+    */
+
     assert(num_iterators > 0);
-    vector<Iterator*>::reverse_iterator iter_it = iterators.rbegin();
+    //vector<Iterator*>::reverse_iterator iter_it = iterators.rbegin();
+    int iter_pos = num_iterators - 1;
     //vector<size_t>::reverse_iterator position_it = position.rbegin();
 
     // loop until we actually increment the joint iterator,
     //  or until we realize that it's done.
-    Iterator *cur_iter = *iter_it;
-    cur_iter->advance();
+    //Iterator *cur_iter = iterators[iter_pos];//*iter_it;
+    //cur_iter->advance();
+    ++position[iter_pos];
 
-    while (cur_iter->isDone()) {
-        cur_iter->reset();
+    while (position[iter_pos] == end_position[iter_pos]) {
+        //cur_iter->reset();
+        position[iter_pos] = 0;
         //*position_it = 0;
         
-        if (++iter_it != iterators.rend()) {
-            cur_iter = *iter_it;
+        if (--iter_pos >= 0) {
+            //cur_iter = iterators[iter_pos];
             //++position_it;
 
             // we haven't actually advanced the joint iterator, 
             //  so try advancing the next most significant
             //  estimator error iterator.
-            cur_iter->advance();
+            //cur_iter->advance();
+            ++position[iter_pos];
         } else {
             // all iterators are done; the joint iterator is done too.
             done = true;
@@ -220,29 +288,25 @@ IteratorStack::advance()
     }
 
     if (!isDone()) {
-        //++(*position_it);
-        //size_t offset = position.rend() - position_it;
-        size_t offset = iterators.rend() - iter_it;
-        assert(offset > 0);
-        setCachedProbabilities(offset - 1);
+        assert(iter_pos >= 0);
+        setCachedProbabilities(iter_pos);
     }
 }
 
 void
 IteratorStack::reset()
 {
-    // for (size_t i = 0; i < num_iterators; ++i) {
-    //     iterators[i]->reset();
-    //     position[i] = 0;
-    // }
+    for (size_t i = 0; i < num_iterators; ++i) {
+        //iterators[i]->reset();
+        position[i] = 0;
+    }
     done = false;
 }
 
 inline const vector<size_t>& 
 IteratorStack::getPosition()
 {
-    throw UnimplementedError();
-    //return position;
+    return position;
 }
 
 
@@ -526,6 +590,7 @@ SingleStrategyJointErrorIterator::SingleStrategyJointErrorIterator(EmpiricalErro
         if (strategy->usesEstimator(estimator)) {
             StatsDistribution::Iterator *stats_iter = it->second->getIterator();
             iterators[estimator] = stats_iter;
+            iterator_indices[estimator] = tmp_iters.size();
             //total_count += stats_iter->totalCount();
             tmp_iters.push_back(stats_iter);
         }
@@ -549,8 +614,9 @@ SingleStrategyJointErrorIterator::~SingleStrategyJointErrorIterator()
 double
 SingleStrategyJointErrorIterator::getAdjustedEstimatorValue(Estimator *estimator)
 {
-    StatsDistribution::Iterator *it = iterators[estimator];
-    double error = it->value();
+    size_t index = iterator_indices[estimator];
+    //StatsDistribution::Iterator *it = 
+    double error = iterator_stack->iteratorValue(index); //it->value();
     return estimator->getEstimate() - error;
 }
 
@@ -569,7 +635,7 @@ SingleStrategyJointErrorIterator::computedProbability()
 {
     return iterator_stack->probability();
 
-    
+    /*
     assert(iterators.size() > 0);
 
     ErrorIteratorMap::iterator it = iterators.begin();
@@ -585,7 +651,7 @@ SingleStrategyJointErrorIterator::computedProbability()
     cached_probability_is_valid = true;
     
     return probability;
-    
+    */
 }
 
 inline void
