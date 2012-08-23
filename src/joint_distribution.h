@@ -1,47 +1,94 @@
 #ifndef _JOINT_DISTRIBUTION_H_
 #define _JOINT_DISTRIBUTION_H_
 
+#include "strategy_evaluation_context.h"
 #include "strategy.h"
-#include "small_set.h"
+#include "stats_distribution.h"
+#include "small_map.h"
+#include <vector>
+#include "multi_dimension_array.h"
 
 class Estimator;
-class StatsDistribution;
-class MultiDimensionArray;
+
 
 typedef small_map<Estimator *, StatsDistribution *> EstimatorErrorMap;
 
 class JointDistribution : public StrategyEvaluationContext {
   public:
-    JointDistribution(const small_set<Strategy *>& strategies);
+    JointDistribution(const std::vector<Strategy *>& strategies);
 
-    double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                         void *strategy_arg, void *chooser_arg);
+    void setEvalArgs(void *strategy_arg_, void *chooser_arg_);
+    double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
 
     double getAdjustedEstimatorValue(Estimator *estimator);
     void observationAdded(Estimator *estimator, double value);
   private:
     EstimatorErrorMap estimatorError;
+    void *strategy_arg;
+    void *chooser_arg;
 
     std::vector<Strategy *> singular_strategies;
 
-    std::vector<MultiDimensionArray *> time_memos;
-    std::vector<MultiDimensionArray *> energy_memos;
-    std::vector<MultiDimensionArray *> data_memos;
+    std::vector<MultiDimensionArray<double> *> time_memos;
+    std::vector<MultiDimensionArray<double> *> energy_memos;
+    std::vector<MultiDimensionArray<double> *> data_memos;
+
+    void setEmptyMemos(Strategy *strategy, const std::vector<size_t>& dimensions);
+    void clearMemos();
+
+    double getMemoizedValue(Strategy *strategy, typesafe_eval_fn_t fn);
+    bool hasAllMemoizedValues(typesafe_eval_fn_t memoized_eval_fn);
+    void saveMemoizedValue(Strategy *strategy, typesafe_eval_fn_t fn,
+                           double value);
+
+    int getStrategyIndex(Strategy *strategy);
+    MultiDimensionArray<double> *getMemo(size_t strategy_index, typesafe_eval_fn_t fn);
+
+    StatsDistribution *createErrorDistribution();
+    
+    friend double memoized_min_time(StrategyEvaluationContext *ctx, 
+                                    void *strategy_arg, void *chooser_arg);
+    friend double memoized_total_energy_cost(StrategyEvaluationContext *ctx,
+                                             void *strategy_arg, void *chooser_arg);
+    friend double memoized_total_data_cost(StrategyEvaluationContext *ctx,
+                                           void *strategy_arg, void *chooser_arg);
+    friend double memo_saving_fn(StrategyEvaluationContext *ctx,
+                                 void *strategy_arg, void *chooser_arg);
+
+
 
     class Iterator {
       public:
-        Iterator(JointDistribution *distribution, Strategy *strategy);
+        Iterator(JointDistribution *distribution_, Strategy *strategy);
         ~Iterator();
         bool isDone();
-        double probability();
+        double jointProbability();
         void advance();
 
         double currentEstimatorError(Estimator *estimator);
-        const vector<size_t>& strategyPosition(size_t strategy_index);
+        const std::vector<size_t>& strategyPosition(Strategy *strategy);
         
       private:
-        
+        void setStrategyPositions(size_t index, size_t value);
+        void advancePosition(size_t index);
+        void resetPosition(size_t index);
+
+        JointDistribution *distribution;
+
+        std::vector<size_t> position;
+        std::vector<size_t> end_position;
+        bool done;
+
+        std::vector<Strategy *> strategies;
+        std::vector<std::vector<size_t> > strategy_positions;
+        std::vector<std::vector<size_t*> > strategy_positions_for_estimator_position;
+
+        std::vector<StatsDistribution::Iterator *> iterators;
+        small_map<Estimator *, StatsDistribution::Iterator *> errorIterators;
+        small_map<Estimator *, size_t> iteratorIndices;
     };
+
+    Iterator *iterator;
 };
 
 #endif /* _JOINT_DISTRIBUTION_H_ */

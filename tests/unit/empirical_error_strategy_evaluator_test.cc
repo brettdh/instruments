@@ -20,7 +20,12 @@ double get_time(instruments_context_t ctx, void *strategy_arg, void *chooser_arg
     return get_adjusted_estimator_value(ctx, estimator);
 }
 
-double get_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
+double get_energy_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
+{
+    return 0.0;
+}
+
+double get_data_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     return 0.0;
 }
@@ -41,7 +46,7 @@ void
 EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
 {
     Estimator *estimator = Estimator::create(LAST_OBSERVATION);
-    Strategy *strategy = new Strategy(get_time, get_cost, get_cost, estimator, NULL);
+    Strategy *strategy = new Strategy(get_time, get_energy_cost, get_data_cost, estimator, NULL);
     strategy->addEstimator(estimator);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1, 
@@ -66,7 +71,7 @@ EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimators()
         estimators[i] = Estimator::create(LAST_OBSERVATION);
     }
     Strategy *strategy = new Strategy(get_time_all_estimators, 
-                                      get_cost, get_cost, estimators, NULL);
+                                      get_energy_cost, get_data_cost, estimators, NULL);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1, 
                                                              EMPIRICAL_ERROR);
@@ -114,11 +119,11 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     CallCountEstimator *estimator2 = new CallCountEstimator;
 
     Strategy *strategies[3];
-    strategies[0] = new Strategy(get_time, get_cost, get_cost,
+    strategies[0] = new Strategy(get_time, get_energy_cost, get_data_cost,
                                  estimator1, NULL);
     CPPUNIT_ASSERT_EQUAL(1, estimator1->getCount());
 
-    strategies[1] = new Strategy(get_time, get_cost, get_cost,
+    strategies[1] = new Strategy(get_time, get_energy_cost, get_data_cost,
                                  estimator2, NULL);
     CPPUNIT_ASSERT_EQUAL(1, estimator2->getCount());
 

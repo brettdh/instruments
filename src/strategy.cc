@@ -151,7 +151,7 @@ Strategy::Strategy(const instruments_strategy_t strategies[],
     collectEstimators();
 }
 
-std::vector<Strategy *> 
+const std::vector<Strategy *>&
 Strategy::getChildStrategies()
 {
     return child_strategies;

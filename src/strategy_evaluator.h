@@ -6,7 +6,7 @@
 #include "strategy_evaluation_context.h"
 #include "eval_method.h"
 
-#include "small_set.h"
+#include <vector>
 
 class Estimator;
 class Strategy;
@@ -40,10 +40,10 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     virtual ~StrategyEvaluator() {}
   protected:
     StrategyEvaluator();
-    void setStrategies(const instruments_strategy_t *strategies,
-                       size_t num_strategies);
+    virtual void setStrategies(const instruments_strategy_t *strategies,
+                               size_t num_strategies);
 
-    small_set<Strategy*> strategies;
+    std::vector<Strategy*> strategies;
 
     // TODO: change to a better default.
     const static EvalMethod DEFAULT_EVAL_METHOD = TRUSTED_ORACLE;

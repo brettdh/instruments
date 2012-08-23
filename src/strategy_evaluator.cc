@@ -7,6 +7,9 @@
 
 #include "small_set.h"
 
+#include <vector>
+using std::vector;
+
 StrategyEvaluator::StrategyEvaluator()
     : currentStrategy(NULL)
 {
@@ -22,7 +25,7 @@ StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
     for (size_t i = 0; i < num_strategies; ++i) {
         Strategy *strategy = (Strategy *)new_strategies[i];
         strategy->getAllEstimators(this);
-        strategies.insert(strategy);
+        strategies.push_back(strategy);
     }
 }
 
@@ -36,7 +39,7 @@ StrategyEvaluator::addEstimator(Estimator *estimator)
 bool
 StrategyEvaluator::usesEstimator(Estimator *estimator)
 {
-    for (small_set<Strategy*>::const_iterator it = strategies.begin();
+    for (vector<Strategy*>::const_iterator it = strategies.begin();
          it != strategies.end(); ++it) {
         if ((*it)->usesEstimator(estimator)) {
             return true;
@@ -94,11 +97,20 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
     // first, pick the singular strategy that takes the least time (expected)
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
-    for (small_set<Strategy *>::const_iterator it = strategies.begin();
+    for (vector<Strategy *>::const_iterator it = strategies.begin();
          it != strategies.end(); ++it) {
         currentStrategy = *it;
         if (!currentStrategy->isRedundant()) {
             double time = calculateTime(currentStrategy, chooser_arg);
+
+            // calculate the singular-strategy cost so I don't have to do it
+            //  later when calculating redundant-strategy costs.
+            // XXX: HACK.  This is a caching decision that belongs inside
+            // XXX:  the class that does the caching.
+            double cost = calculateCost(currentStrategy, chooser_arg);
+            (void)cost;
+
+            
             if (!best_singular || time < best_singular_time) {
                 best_singular = currentStrategy;
                 best_singular_time = time;
@@ -110,13 +122,14 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
     //  over the best singular strategy (if any)
     Strategy *best_redundant = NULL;
     double best_redundant_net_benefit = 0.0;
-    for (small_set<Strategy *>::const_iterator it = strategies.begin();
+    for (vector<Strategy *>::const_iterator it = strategies.begin();
          it != strategies.end(); ++it) {
         currentStrategy = *it;
         if (currentStrategy->isRedundant()) {
             double benefit = best_singular_time - calculateTime(currentStrategy, chooser_arg);
-            double net_benefit = benefit - (calculateCost(currentStrategy, chooser_arg) -
-                                            calculateCost(best_singular, chooser_arg));
+            double singular_cost = calculateCost(best_singular, chooser_arg);
+            double redundant_cost = calculateCost(currentStrategy, chooser_arg);
+            double net_benefit = benefit - (redundant_cost - singular_cost);
             if (net_benefit > 0.0 && 
                 (best_redundant == NULL || net_benefit > best_redundant_net_benefit)) {
                 best_redundant = currentStrategy;
