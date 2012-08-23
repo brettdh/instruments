@@ -1,6 +1,7 @@
 #ifndef MULTI_DIMENSION_ARRAY_H_INCL
 #define MULTI_DIMENSION_ARRAY_H_INCL
 
+#include <vector>
 #include <assert.h>
 
 template <typename T>
@@ -15,6 +16,7 @@ class MultiDimensionArray {
   private:
     void *the_array;
     std::vector<size_t> dimensions;
+    size_t num_dimensions;
     
     void *initializeArray(const T& initial_value, size_t next=0);
     void destroyArray(void *array, size_t next=0);
@@ -27,6 +29,7 @@ MultiDimensionArray<T>::MultiDimensionArray(const std::vector<size_t>& dimension
 {
     assert(dimensions_.size() > 0);
     dimensions = dimensions_;
+    num_dimensions = dimensions.size();
     the_array = initializeArray(initial_value);
 }
 
@@ -40,7 +43,7 @@ template <typename T>
 void *
 MultiDimensionArray<T>::initializeArray(const T& initial_value, size_t next)
 {
-    if (next + 1 == dimensions.size()) {
+    if (next + 1 == num_dimensions) {
         T *values = new T[dimensions[next]];
         for (size_t i = 0; i < dimensions[next]; ++i) {
             values[i] = initial_value;
@@ -58,7 +61,7 @@ template <typename T>
 void 
 MultiDimensionArray<T>::destroyArray(void *array, size_t next)
 {
-    if (next + 1 == dimensions.size()) {
+    if (next + 1 == num_dimensions) {
         T *valueArray = (T*) array;
         delete [] valueArray;
         return;
@@ -85,20 +88,20 @@ T& MultiDimensionArray<T>::at(const std::vector<size_t>& indices)
 template <typename T>
 T& MultiDimensionArray<T>::at(void *array, const std::vector<size_t>& indices, size_t next)
 {
-    assert(indices.size() == dimensions.size());
+    assert(indices.size() == num_dimensions);
     assert(indices[next] >= 0);
     assert(indices[next] < dimensions[next]);
     
-#define RECURSIVE
+//#define RECURSIVE
 #ifdef RECURSIVE
-    if (next + 1 == indices.size()) {
+    if (next + 1 == num_dimensions) {
         T *valuesArray = (T*) array;
         return valuesArray[indices[next]];
     }
     void **bridges = (void **)array;
     return at(bridges[indices[next]], indices, next + 1);
 #else
-    while (next + 1 < indices.size()) {
+    while (next + 1 < num_dimensions) {
         void **bridges = (void **)array;
         array = bridges[indices[next]];
         ++next;

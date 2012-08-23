@@ -36,13 +36,12 @@ class JointDistribution : public StrategyEvaluationContext {
     void setEmptyMemos(Strategy *strategy, const std::vector<size_t>& dimensions);
     void clearMemos();
 
-    double getMemoizedValue(Strategy *strategy, typesafe_eval_fn_t fn);
-    bool hasAllMemoizedValues(typesafe_eval_fn_t memoized_eval_fn);
-    void saveMemoizedValue(Strategy *strategy, typesafe_eval_fn_t fn,
-                           double value);
+    double getMemoizedValue(MultiDimensionArray<double> *memo, size_t strategy_index);
+    void saveMemoizedValue(MultiDimensionArray<double> *memo, double value);
 
     int getStrategyIndex(Strategy *strategy);
-    MultiDimensionArray<double> *getMemo(size_t strategy_index, typesafe_eval_fn_t fn);
+    std::vector<MultiDimensionArray<double> *>& 
+        getMemoList(Strategy *strategy, typesafe_eval_fn_t fn);
 
     StatsDistribution *createErrorDistribution();
     
@@ -67,7 +66,9 @@ class JointDistribution : public StrategyEvaluationContext {
 
         double currentEstimatorError(Estimator *estimator);
         const std::vector<size_t>& strategyPosition(Strategy *strategy);
-        
+        const std::vector<size_t>& strategyPosition(size_t strategy_index);
+        size_t getStrategyIndex(Strategy *strategy);
+        size_t numStrategies();
       private:
         void setStrategyPositions(size_t index, size_t value);
         void advancePosition(size_t index);
@@ -86,6 +87,9 @@ class JointDistribution : public StrategyEvaluationContext {
         std::vector<StatsDistribution::Iterator *> iterators;
         small_map<Estimator *, StatsDistribution::Iterator *> errorIterators;
         small_map<Estimator *, size_t> iteratorIndices;
+
+        void setCachedProbabilities(size_t index);
+        std::vector<double> cached_probabilities;
     };
 
     Iterator *iterator;

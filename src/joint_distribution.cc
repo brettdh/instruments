@@ -34,18 +34,13 @@ JointDistribution::JointDistribution(const vector<Strategy *>& strategies)
 
 struct memoized_strategy_args {
     Strategy *parent_strategy;
-    const vector<Strategy *>& singular_strategies;
+    const vector<Strategy *> *singular_strategies;
     typesafe_eval_fn_t real_fn;
     void *real_strategy_arg;
+    vector<MultiDimensionArray<double> *> *memos;
     
-    memoized_strategy_args(Strategy *parent,
-                           const vector<Strategy *>& ss,
-                           typesafe_eval_fn_t real_fn_,
-                           void *real_strategy_arg_)
-        : parent_strategy(parent),
-          singular_strategies(ss),
-          real_fn(real_fn_),
-          real_strategy_arg(real_strategy_arg_) {}
+    // only used for singular strategies.
+    size_t strategy_index;
 };
 
 double
@@ -55,14 +50,16 @@ memoized_min_time(StrategyEvaluationContext *ctx,
     JointDistribution *jointDistribution = (JointDistribution *) ctx;
     struct memoized_strategy_args *args =
         (struct memoized_strategy_args *) strategy_arg;
-    const vector<Strategy *>& singular_strategies = args->singular_strategies;
+    const vector<Strategy *>& singular_strategies = *args->singular_strategies;
+    vector<MultiDimensionArray<double> *>& memos = *args->memos;
 
     // valid because singular strategies are always evaluated before redundant strategies.
-    assert(jointDistribution->hasAllMemoizedValues(memoized_min_time));
     double minValue = DBL_MAX;
-    for (size_t i = 0; i < singular_strategies.size(); ++i) {
-        Strategy *strategy = singular_strategies[i];
-        minValue = min(minValue, jointDistribution->getMemoizedValue(strategy, strategy->getEvalFn(TIME_FN)));
+    size_t num_strategies = singular_strategies.size();
+    for (size_t i = 0; i < num_strategies; ++i) {
+        double value = jointDistribution->getMemoizedValue(memos[i], i);
+        assert(value != DBL_MAX);
+        minValue = min(minValue, value);
     }
     return minValue;
 }
@@ -74,14 +71,15 @@ memoized_total_energy_cost(StrategyEvaluationContext *ctx,
     JointDistribution *jointDistribution = (JointDistribution *) ctx;
     struct memoized_strategy_args *args =
         (struct memoized_strategy_args *) strategy_arg;
-    const vector<Strategy *>& singular_strategies = args->singular_strategies;
+    const vector<Strategy *>& singular_strategies = *args->singular_strategies;
+    vector<MultiDimensionArray<double> *>& memos = *args->memos;
 
     // valid because singular strategies are always evaluated before redundant strategies.
-    assert(jointDistribution->hasAllMemoizedValues(memoized_total_energy_cost));
     double sum = 0.0;
     for (size_t i = 0; i < singular_strategies.size(); ++i) {
-        Strategy *strategy = singular_strategies[i];
-        sum += jointDistribution->getMemoizedValue(strategy, strategy->getEvalFn(ENERGY_FN));
+        double value = jointDistribution->getMemoizedValue(memos[i], i);
+        assert(value != DBL_MAX);
+        sum += value;
     }
     return sum;
 }
@@ -93,14 +91,15 @@ memoized_total_data_cost(StrategyEvaluationContext *ctx,
     JointDistribution *jointDistribution = (JointDistribution *) ctx;
     struct memoized_strategy_args *args =
         (struct memoized_strategy_args *) strategy_arg;
-    const vector<Strategy *>& singular_strategies = args->singular_strategies;
+    const vector<Strategy *>& singular_strategies = *args->singular_strategies;
+    vector<MultiDimensionArray<double> *>& memos = *args->memos;
 
     // valid because singular strategies are always evaluated before redundant strategies.
-    assert(jointDistribution->hasAllMemoizedValues(memoized_total_data_cost));
     double sum = 0.0;
     for (size_t i = 0; i < singular_strategies.size(); ++i) {
-        Strategy *strategy = singular_strategies[i];
-        sum += jointDistribution->getMemoizedValue(strategy, strategy->getEvalFn(DATA_FN));
+        double value = jointDistribution->getMemoizedValue(memos[i], i);
+        assert(value != DBL_MAX);
+        sum += value;
     }
     return sum;
 }
@@ -112,13 +111,17 @@ memo_saving_fn(StrategyEvaluationContext *ctx,
     JointDistribution *jointDistribution = (JointDistribution *) ctx;
     struct memoized_strategy_args *args =
         (struct memoized_strategy_args *) strategy_arg;
-    Strategy *strategy = args->parent_strategy;
+    vector<MultiDimensionArray<double> *>& memos = *args->memos;
+    MultiDimensionArray<double> *memo = memos[args->strategy_index];
 
     // only called with singular strategies.
+#ifndef NDEBUG
+    Strategy *strategy = args->parent_strategy;
+#endif
     assert(!strategy->isRedundant());
 
     double value = args->real_fn(ctx, args->real_strategy_arg, chooser_arg);
-    jointDistribution->saveMemoizedValue(strategy, args->real_fn, value);
+    jointDistribution->saveMemoizedValue(memo, value);
     return value;
 }
 
@@ -154,8 +157,20 @@ JointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
            strategy->getEvalFn(TIME_FN) != strategy->getEvalFn(DATA_FN) &&
            strategy->getEvalFn(ENERGY_FN) != strategy->getEvalFn(DATA_FN));
     
-    struct memoized_strategy_args args(strategy, strategy->getChildStrategies(), fn, strategy_arg);
+    struct memoized_strategy_args args;
+    args.parent_strategy = strategy;
+    args.singular_strategies = &strategy->getChildStrategies();
+    args.real_fn = fn;
+    args.real_strategy_arg = strategy_arg;
+    args.memos = NULL;
+
     fn = memoized_fn(fn);
+    if (fn == memo_saving_fn) {
+        args.memos = &getMemoList(strategy, args.real_fn);
+        args.strategy_index = getStrategyIndex(strategy);
+    } else {
+        args.memos = &getMemoList(strategy, fn);
+    }
     
     double weightedSum = 0.0;
     iterator = new Iterator(this, strategy);
@@ -207,16 +222,15 @@ JointDistribution::createErrorDistribution()
     //return new StatsDistributionBinned;
 }
 
-MultiDimensionArray<double> *
-JointDistribution::getMemo(size_t strategy_index, typesafe_eval_fn_t fn)
+vector<MultiDimensionArray<double> *>&
+JointDistribution::getMemoList(Strategy *strategy, typesafe_eval_fn_t fn)
 {
-    Strategy *strategy = singular_strategies[strategy_index];
     if (fn == memoized_min_time || fn == strategy->getEvalFn(TIME_FN)) {
-        return time_memos[strategy_index];
+        return time_memos;
     } else if (fn == memoized_total_energy_cost || fn == strategy->getEvalFn(ENERGY_FN)) {
-        return energy_memos[strategy_index];
+        return energy_memos;
     } else if (fn == memoized_total_data_cost || fn == strategy->getEvalFn(DATA_FN)) {
-        return data_memos[strategy_index];
+        return data_memos;
     } else abort();
 }
 
@@ -255,7 +269,7 @@ JointDistribution::clearMemos()
     }
 }
 
-int
+inline int
 JointDistribution::getStrategyIndex(Strategy *strategy)
 {
     int strategy_index = -1;
@@ -270,36 +284,20 @@ JointDistribution::getStrategyIndex(Strategy *strategy)
 }
 
 double
-JointDistribution::getMemoizedValue(Strategy *strategy, typesafe_eval_fn_t fn)
+JointDistribution::getMemoizedValue(MultiDimensionArray<double> *memo, size_t strategy_index)
 {
     assert(iterator);
-    int strategy_index = getStrategyIndex(strategy);
-
-    MultiDimensionArray<double> *memo = getMemo(strategy_index, fn);
-    return memo->at(iterator->strategyPosition(strategy));
+    return memo->at(iterator->strategyPosition(strategy_index));
 }
 
 void
-JointDistribution::saveMemoizedValue(Strategy *strategy, typesafe_eval_fn_t fn,
+JointDistribution::saveMemoizedValue(MultiDimensionArray<double> *memo,
                                      double value)
 {
     assert(iterator);
-    int strategy_index = getStrategyIndex(strategy);
-    MultiDimensionArray<double> *memo = getMemo(strategy_index, fn);
-    memo->at(iterator->strategyPosition(strategy)) = value;
-}
-
-bool
-JointDistribution::hasAllMemoizedValues(typesafe_eval_fn_t memoized_eval_fn)
-{
-    assert(iterator);
-    for (size_t i = 0; i < singular_strategies.size(); ++i) {
-        MultiDimensionArray<double> *memo = getMemo(i, memoized_eval_fn);
-        if (memo->at(iterator->strategyPosition(singular_strategies[i])) == DBL_MAX) {
-            return false;
-        }
-    }
-    return true;
+    assert(iterator->numStrategies() == 1);
+    size_t strategy_index = 0;
+    memo->at(iterator->strategyPosition(strategy_index)) = value;
 }
 
 JointDistribution::Iterator::Iterator(JointDistribution *distribution_, Strategy *strategy)
@@ -329,6 +327,7 @@ JointDistribution::Iterator::Iterator(JointDistribution *distribution_, Strategy
             StatsDistribution::Iterator *iter = dist->getIterator();
             iterators.push_back(iter);
             errorIterators[estimator] = iter;
+            iteratorIndices[estimator] = iterators.size() - 1;
             position.push_back(0);
             end_position.push_back(iter->totalCount());
             strategy_positions_for_estimator_position.push_back(vector<size_t*>());
@@ -354,6 +353,8 @@ JointDistribution::Iterator::Iterator(JointDistribution *distribution_, Strategy
         distribution->setEmptyMemos(strategy, end_position);
     }
     done = false;
+    cached_probabilities.resize(iterators.size());
+    setCachedProbabilities(0);
 }
 
 bool
@@ -362,14 +363,22 @@ JointDistribution::Iterator::isDone()
     return done;
 }
 
-double
+void
+JointDistribution::Iterator::setCachedProbabilities(size_t index)
+{
+    for (size_t i = index; i < iterators.size(); ++i) {
+        if (i == 0) {
+            cached_probabilities[i] = iterators[i]->probability();
+        } else {
+            cached_probabilities[i] = cached_probabilities[i-1] * iterators[i]->probability();
+        }
+    }
+}
+
+inline double
 JointDistribution::Iterator::jointProbability()
 {
-    double prob = 1.0;
-    for (size_t i = 0; i < iterators.size(); ++i) {
-        prob *= iterators[i]->probability();
-    }
-    return prob;
+    return cached_probabilities.back();
 }
 
 void
@@ -391,6 +400,10 @@ JointDistribution::Iterator::advance()
             done = true;
             break;
         }
+    }
+
+    if (index >= 0) {
+        setCachedProbabilities(index);
     }
 }
 
@@ -435,13 +448,31 @@ JointDistribution::Iterator::currentEstimatorError(Estimator *estimator)
     return iterators[index]->at(position[index]);
 }
 
-const vector<size_t>&
+inline const vector<size_t>&
 JointDistribution::Iterator::strategyPosition(Strategy *strategy)
+{
+    return strategyPosition(getStrategyIndex(strategy));
+}
+
+inline const vector<size_t>&
+JointDistribution::Iterator::strategyPosition(size_t index)
+{
+    return strategy_positions[index];
+}
+
+inline size_t
+JointDistribution::Iterator::getStrategyIndex(Strategy *strategy)
 {
     for (size_t i = 0; i < strategies.size(); ++i) {
         if (strategies[i] == strategy) {
-            return strategy_positions[i];
+            return i;
         }
     }
     abort();
+}
+
+inline size_t
+JointDistribution::Iterator::numStrategies()
+{
+    return strategies.size();
 }
