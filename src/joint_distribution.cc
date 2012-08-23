@@ -34,7 +34,7 @@ JointDistribution::JointDistribution(const vector<Strategy *>& strategies)
 
 struct memoized_strategy_args {
     Strategy *parent_strategy;
-    const vector<Strategy *> *singular_strategies;
+    size_t num_strategies;
     typesafe_eval_fn_t real_fn;
     void *real_strategy_arg;
     vector<MultiDimensionArray<double> *> *memos;
@@ -50,13 +50,11 @@ memoized_min_time(StrategyEvaluationContext *ctx,
     JointDistribution *jointDistribution = (JointDistribution *) ctx;
     struct memoized_strategy_args *args =
         (struct memoized_strategy_args *) strategy_arg;
-    const vector<Strategy *>& singular_strategies = *args->singular_strategies;
     vector<MultiDimensionArray<double> *>& memos = *args->memos;
 
     // valid because singular strategies are always evaluated before redundant strategies.
     double minValue = DBL_MAX;
-    size_t num_strategies = singular_strategies.size();
-    for (size_t i = 0; i < num_strategies; ++i) {
+    for (size_t i = 0; i < args->num_strategies; ++i) {
         double value = jointDistribution->getMemoizedValue(memos[i], i);
         assert(value != DBL_MAX);
         minValue = min(minValue, value);
@@ -71,12 +69,11 @@ memoized_total_energy_cost(StrategyEvaluationContext *ctx,
     JointDistribution *jointDistribution = (JointDistribution *) ctx;
     struct memoized_strategy_args *args =
         (struct memoized_strategy_args *) strategy_arg;
-    const vector<Strategy *>& singular_strategies = *args->singular_strategies;
     vector<MultiDimensionArray<double> *>& memos = *args->memos;
 
     // valid because singular strategies are always evaluated before redundant strategies.
     double sum = 0.0;
-    for (size_t i = 0; i < singular_strategies.size(); ++i) {
+    for (size_t i = 0; i < args->num_strategies; ++i) {
         double value = jointDistribution->getMemoizedValue(memos[i], i);
         assert(value != DBL_MAX);
         sum += value;
@@ -91,12 +88,11 @@ memoized_total_data_cost(StrategyEvaluationContext *ctx,
     JointDistribution *jointDistribution = (JointDistribution *) ctx;
     struct memoized_strategy_args *args =
         (struct memoized_strategy_args *) strategy_arg;
-    const vector<Strategy *>& singular_strategies = *args->singular_strategies;
     vector<MultiDimensionArray<double> *>& memos = *args->memos;
 
     // valid because singular strategies are always evaluated before redundant strategies.
     double sum = 0.0;
-    for (size_t i = 0; i < singular_strategies.size(); ++i) {
+    for (size_t i = 0; i < args->num_strategies; ++i) {
         double value = jointDistribution->getMemoizedValue(memos[i], i);
         assert(value != DBL_MAX);
         sum += value;
@@ -159,7 +155,7 @@ JointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
     
     struct memoized_strategy_args args;
     args.parent_strategy = strategy;
-    args.singular_strategies = &strategy->getChildStrategies();
+    args.num_strategies = strategy->getChildStrategies().size();
     args.real_fn = fn;
     args.real_strategy_arg = strategy_arg;
     args.memos = NULL;
@@ -283,7 +279,7 @@ JointDistribution::getStrategyIndex(Strategy *strategy)
     return strategy_index;
 }
 
-double
+inline double
 JointDistribution::getMemoizedValue(MultiDimensionArray<double> *memo, size_t strategy_index)
 {
     assert(iterator);
@@ -353,20 +349,21 @@ JointDistribution::Iterator::Iterator(JointDistribution *distribution_, Strategy
         distribution->setEmptyMemos(strategy, end_position);
     }
     done = false;
-    cached_probabilities.resize(iterators.size());
+    num_iterators = iterators.size();
+    cached_probabilities.resize(num_iterators);
     setCachedProbabilities(0);
 }
 
-bool
+inline bool
 JointDistribution::Iterator::isDone()
 {
     return done;
 }
 
-void
+inline void
 JointDistribution::Iterator::setCachedProbabilities(size_t index)
 {
-    for (size_t i = index; i < iterators.size(); ++i) {
+    for (size_t i = index; i < num_iterators; ++i) {
         if (i == 0) {
             cached_probabilities[i] = iterators[i]->probability();
         } else {
@@ -441,7 +438,7 @@ JointDistribution::Iterator::~Iterator()
     }
 }
 
-double
+inline double
 JointDistribution::Iterator::currentEstimatorError(Estimator *estimator)
 {
     size_t index = iteratorIndices[estimator];

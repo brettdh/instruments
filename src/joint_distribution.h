@@ -84,6 +84,7 @@ class JointDistribution : public StrategyEvaluationContext {
         std::vector<std::vector<size_t> > strategy_positions;
         std::vector<std::vector<size_t*> > strategy_positions_for_estimator_position;
 
+        size_t num_iterators;
         std::vector<StatsDistribution::Iterator *> iterators;
         small_map<Estimator *, StatsDistribution::Iterator *> errorIterators;
         small_map<Estimator *, size_t> iteratorIndices;
