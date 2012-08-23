@@ -1,4 +1,4 @@
-EXECUTABLES=run_unit_tests multi_array_perf_test
+EXECUTABLES=run_unit_tests multi_array_perf_test multi_array_perf_test_deeper
 all: $(EXECUTABLES) ../../common/R_generated_vars.mk
 
 
@@ -86,7 +86,10 @@ run_unit_tests: run_all_tests.o $(TESTOBJS) $(SUPPORTOBJS)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS)
 
 multi_array_perf_test: multi_array_perf_test.o
-	$(CXX) -o $@ $^ $(CXXFLAGS) -DNDEBUG $(LDFLAGS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) -DNDEBUG -O3
+
+multi_array_perf_test_deeper: multi_array_perf_test_deeper.o
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) -DNDEBUG -O3
 
 clean:
 	rm -f *.o *~ $(EXECUTABLES)
