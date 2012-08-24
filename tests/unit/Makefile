@@ -85,11 +85,13 @@ SUPPORTOBJS := \
 run_unit_tests: run_all_tests.o $(TESTOBJS) $(SUPPORTOBJS)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS)
 
+#OPTI_FLAGS := -march=native -mtune-native -ffast-math
+
 multi_array_perf_test: multi_array_perf_test.o
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) -DNDEBUG -O3
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) -DNDEBUG -O3 $(OPTI_FLAGS)
 
 multi_array_perf_test_deeper: multi_array_perf_test_deeper.o
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) -DNDEBUG -O3
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) -DNDEBUG -O3 $(OPTI_FLAGS)
 
 clean:
 	rm -f *.o *~ $(EXECUTABLES)
