@@ -13,7 +13,16 @@ class Estimator;
 
 typedef small_map<Estimator *, StatsDistribution *> EstimatorErrorMap;
 
-class JointDistribution : public StrategyEvaluationContext {
+class AbstractJointDistribution : public StrategyEvaluationContext {
+  public:
+    virtual void setEvalArgs(void *strategy_arg_, void *chooser_arg_) = 0;
+    virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn) = 0;
+
+    virtual double getAdjustedEstimatorValue(Estimator *estimator) = 0;
+    virtual void observationAdded(Estimator *estimator, double value) = 0;
+};
+
+class JointDistribution : public AbstractJointDistribution {
   public:
     JointDistribution(const std::vector<Strategy *>& strategies);
 
