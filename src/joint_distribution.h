@@ -22,6 +22,7 @@ class AbstractJointDistribution : public StrategyEvaluationContext {
     virtual void observationAdded(Estimator *estimator, double value) = 0;
 };
 
+#if 0
 class JointDistribution : public AbstractJointDistribution {
   public:
     JointDistribution(const std::vector<Strategy *>& strategies);
@@ -104,5 +105,6 @@ class JointDistribution : public AbstractJointDistribution {
 
     Iterator *iterator;
 };
+#endif
 
 #endif /* _JOINT_DISTRIBUTION_H_ */

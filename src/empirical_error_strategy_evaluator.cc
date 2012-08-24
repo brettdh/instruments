@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include "joint_distributions/intnw_joint_distribution.h"
+
 EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator()
 {
 }
@@ -19,7 +21,7 @@ EmpiricalErrorStrategyEvaluator::setStrategies(const instruments_strategy_t *str
 {
     // TODO: refactor.
     StrategyEvaluator::setStrategies(strategies_, num_strategies_);
-    jointDistribution = new JointDistribution(strategies);
+    jointDistribution = new IntNWJointDistribution(strategies);
 }
 
 double 

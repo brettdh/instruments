@@ -6,7 +6,7 @@
 #include "strategy_evaluator.h"
 
 class Estimator;
-class JointDistribution;
+class AbstractJointDistribution;
 
 class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
   public:
@@ -21,7 +21,7 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
     virtual void setStrategies(const instruments_strategy_t *strategies_,
                                size_t num_strategies_);
   private:
-    JointDistribution *jointDistribution;
+    AbstractJointDistribution *jointDistribution;
 };
 
 #endif
