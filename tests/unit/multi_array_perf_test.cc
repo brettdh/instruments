@@ -5,6 +5,8 @@ using std::vector;
 #include <stdio.h>
 #include <sys/time.h>
 
+#include <boost/multi_array.hpp>
+
 int main()
 {
     size_t size = 2;
@@ -17,12 +19,13 @@ int main()
     
     double **raw_array = new double*[rowlen];
     double *flat_array = new double[rowlen * rowlen];
+    boost::multi_array<double, 2> boost_array(boost::extents[rowlen][rowlen]);
     for (size_t i = 0; i < rowlen; ++i) {
         raw_array[i] = new double[rowlen];
         for (size_t j = 0; j < rowlen; ++j) {
             raw_array[i][j] = 42.0;
-
             flat_array[i * rowlen + j] = 42.0;
+            boost_array[i][j] = 42.0;
         }
     }
     MultiDimensionArray<double> array(dims, 42.0);
@@ -89,5 +92,27 @@ int main()
     seconds = diff.tv_sec + (diff.tv_usec / 1000000.0);
 
     fprintf(stderr, "MultiDimensionArray took %f seconds; sum=%f\n", seconds, sum);
+
+    
+    // ===== boost::multi_array ===== //
+
+    gettimeofday(&begin, NULL);
+    sum = 0.0;
+    for (size_t i = 0; i < rowlen; ++i) {
+        for (size_t j = 0; j < rowlen; ++j) {
+            sum += boost_array[i][j];
+        }
+    }
+    gettimeofday(&end, NULL);
+    diff.tv_sec = end.tv_sec - begin.tv_sec;
+    if (end.tv_usec < begin.tv_usec) {
+        --diff.tv_sec;
+        end.tv_usec += 1000000;
+    }
+    diff.tv_usec = end.tv_usec - begin.tv_usec;
+    seconds = diff.tv_sec + (diff.tv_usec / 1000000.0);
+
+    fprintf(stderr, "boost::multi_array took %f seconds; sum=%f\n", seconds, sum);
+    
     return 0;
 }
