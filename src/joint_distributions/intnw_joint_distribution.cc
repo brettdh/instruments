@@ -4,6 +4,8 @@
 #include "stats_distribution_all_samples.h"
 #include "estimator.h"
 
+#include <stdlib.h>
+
 #include <vector>
 using std::vector;
 
@@ -12,7 +14,7 @@ static const size_t REDUNDANT_STRATEGY_CHILDREN = 2;
 static const size_t NUM_ESTIMATORS_REDUNDANT = 
     NUM_ESTIMATORS_SINGULAR * REDUNDANT_STRATEGY_CHILDREN;
 
-static const size_t NUM_STRAEGIES = 3;
+static const size_t NUM_STRATEGIES = 3;
 
 
 static double *create_array(size_t length, double value)
@@ -185,6 +187,8 @@ IntNWJointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 double 
 IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
+    getEstimatorErrorDistributions();
+
     double ***saved_values = NULL;
     double **strategy_probabilities = NULL;
     size_t *error_count = NULL;
@@ -208,8 +212,6 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
     double **cur_strategy_memo = *saved_values;
     assert(cur_strategy_memo);
 
-    getEstimatorErrorDistributions();
-
     double weightedSum = 0.0;
     for (size_t i = 0; i < max_i; ++i) {
         estimatorIndices[current_strategy_estimators[0]] = i;
@@ -224,15 +226,38 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
     return weightedSum;
 }
 
+static double min(double a, double b)
+{
+    return (a < b) ? a : b;
+}
+
+static double sum(double a, double b)
+{
+    return a + b;
+}
+
+typedef double (*combiner_fn_t)(double, double);
+
+static combiner_fn_t
+combiner_fn(typesafe_eval_fn_t fn)
+{
+    if (fn == redundant_strategy_minimum_time) {
+        return min;
+    } else if (fn == redundant_strategy_total_energy_cost ||
+               fn == redundant_strategy_total_data_cost) {
+        return sum;
+    } else abort();
+}
+
 double 
 IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
     for (size_t i = 0; i < singular_strategies.size(); ++i) {
-        assert(singular_strategies_saved_valies[i] != NULL);
+        assert(singular_strategy_saved_values[i] != NULL);
     }
     
     double weightedSum = 0.0;
-    double (*combine)(double, double) = NULL;
+    combiner_fn_t combine = combiner_fn(fn);
 
     size_t max_i, max_j, max_k, max_m;  // counts for:
     max_i = singular_error_count[0][0]; // (strategy 0, estimator 0)
@@ -242,15 +267,15 @@ IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, types
 
     for (size_t i = 0; i < max_i; ++i) {
         for (size_t j = 0; j < max_j; ++j) {
-            for (size_t k = 0; i < max_k; ++k) {
-                for (size_t m = 0; j < max_m; ++m) {
+            for (size_t k = 0; k < max_k; ++k) {
+                for (size_t m = 0; m < max_m; ++m) {
                     double value = combine(singular_strategy_saved_values[0][i][j], 
                                            singular_strategy_saved_values[1][k][m]);
                     double probability = 
                         singular_probabilities[0][0][i] * // strategy 0, estimator 0
                         singular_probabilities[0][1][j] * // strategy 0, estimator 1
                         singular_probabilities[1][0][k] * // strategy 1, estimator 0
-                        singular_probabilities[0][1][m];  // strategy 1, estimator 1
+                        singular_probabilities[1][1][m];  // strategy 1, estimator 1
                     weightedSum += (value * probability);
                 }
             }
