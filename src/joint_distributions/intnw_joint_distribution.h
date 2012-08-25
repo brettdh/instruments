@@ -43,6 +43,9 @@ class IntNWJointDistribution : public AbstractJointDistribution {
 
     double singularStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
     double redundantStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
+
+    double redundantStrategyExpectedValueMin();
+    double redundantStrategyExpectedValueSum();
     
     void getEstimatorErrorDistributions();
     void clearEstimatorErrorDistributions();
