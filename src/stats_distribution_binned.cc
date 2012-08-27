@@ -65,10 +65,22 @@ StatsDistributionBinned::Iterator::probability()
             distribution->all_samples_sorted.size());
 }
 
+inline double 
+StatsDistributionBinned::Iterator::probability(int pos)
+{
+    return probability();
+}
+
 inline double
 StatsDistributionBinned::Iterator::value()
 {
-    return distribution->mids[index];
+    return at(index);
+}
+
+inline double
+StatsDistributionBinned::Iterator::at(int pos)
+{
+    return distribution->mids[pos];
 }
 
 inline void

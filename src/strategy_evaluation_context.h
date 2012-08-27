@@ -2,7 +2,6 @@
 #define STRATEGY_EVALUATION_CONTEXT_H_INCL
 
 #include "instruments.h"
-#include "small_map.h"
 
 class Estimator;
 struct EstimatorContext;

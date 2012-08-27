@@ -1,21 +1,17 @@
 #ifndef EMPIRICAL_ERROR_STRATEGY_EVALUATOR_H_INCL
 #define EMPIRICAL_ERROR_STRATEGY_EVALUATOR_H_INCL
 
-#include <vector>
+#include "instruments.h"
 #include "strategy.h"
 #include "strategy_evaluator.h"
-#include "strategy_evaluation_context.h"
-#include "stats_distribution.h"
-#include "small_map.h"
+#include "eval_method.h"
 
 class Estimator;
-
-class JointErrorIterator;
-typedef small_map<Estimator *, StatsDistribution *> JointErrorMap;
+class AbstractJointDistribution;
 
 class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
   public:
-    EmpiricalErrorStrategyEvaluator();
+    EmpiricalErrorStrategyEvaluator(EvalMethod eval_method);
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
@@ -23,12 +19,14 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
     
   protected:
     virtual void observationAdded(Estimator *estimator, double value);
+    virtual void setStrategies(const instruments_strategy_t *strategies_,
+                               size_t num_strategies_);
   private:
-    friend class SingleStrategyJointErrorIterator;
-    
-    JointErrorMap jointError;
+    EmpiricalErrorEvalMethod eval_method;
+    JointDistributionType joint_distribution_type;
+    AbstractJointDistribution *jointDistribution;
 
-    JointErrorIterator *jointErrorIterator;
+    AbstractJointDistribution *createJointDistribution();
 };
 
 #endif

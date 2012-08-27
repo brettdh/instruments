@@ -13,10 +13,22 @@ StatsDistributionAllSamples::Iterator::probability()
     return cached_probability;
 }
 
+inline double 
+StatsDistributionAllSamples::Iterator::probability(int pos)
+{
+    return cached_probability;
+}
+
 inline double
 StatsDistributionAllSamples::Iterator::value()
 {
-    return distribution->values[cur_position];
+    return at(cur_position);
+}
+
+inline double
+StatsDistributionAllSamples::Iterator::at(int pos)
+{
+    return distribution->values[pos];
 }
 
 inline void

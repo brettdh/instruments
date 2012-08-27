@@ -1,4 +1,4 @@
-EXECUTABLES=run_unit_tests
+EXECUTABLES=run_unit_tests multi_array_perf_test multi_array_perf_test_deeper
 all: $(EXECUTABLES) ../../common/R_generated_vars.mk
 
 
@@ -49,7 +49,7 @@ include $(DEPS)
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-%.o: ../%.cc
+%.o: ../../src/joint_distributions/%.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o: ../../src/%.cc
@@ -65,12 +65,16 @@ TESTOBJS := \
 	strategy_estimators_discovery_test.o
 
 SUPPORTOBJS := \
+	abstract_joint_distribution.o \
 	empirical_error_strategy_evaluator.o \
 	estimator.o \
 	estimator_registry.o \
+	eval_method.o \
 	external_estimator.o \
 	goal_adaptive_resource_weight.o \
 	instruments.o \
+	joint_distribution.o \
+	intnw_joint_distribution.o \
 	r_singleton.o \
 	running_mean_estimator.o \
 	strategy.o \
@@ -83,6 +87,14 @@ SUPPORTOBJS := \
 
 run_unit_tests: run_all_tests.o $(TESTOBJS) $(SUPPORTOBJS)
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS)
+
+#OPTI_FLAGS := -march=native -mtune-native -ffast-math
+
+multi_array_perf_test: multi_array_perf_test.o
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) -DNDEBUG -O3 $(OPTI_FLAGS)
+
+multi_array_perf_test_deeper: multi_array_perf_test_deeper.o
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LDFLAGS) -DNDEBUG -O3 $(OPTI_FLAGS)
 
 clean:
 	rm -f *.o *~ $(EXECUTABLES)

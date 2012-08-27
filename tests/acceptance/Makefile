@@ -12,7 +12,7 @@ all: run_tests run_perf_test
 run_tests: main.o $(TESTS)
 	gcc $(LDFLAGS) main.o $(TESTS) -o $@ $(LIBS)
 
-run_perf_test: main.o brute_force_performance_test.o
+run_perf_test: brute_force_performance_test.o
 	gcc $(LDFLAGS) $^ -o $@ $(LIBS)
 
 clean:

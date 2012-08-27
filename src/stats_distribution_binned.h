@@ -20,12 +20,14 @@ class StatsDistributionBinned : public StatsDistribution {
     class Iterator : StatsDistribution::Iterator {
       public:
         virtual double probability();
+        virtual double probability(int pos);
         virtual double value();
         virtual void advance();
         virtual bool isDone();
         virtual void reset();
         virtual int position();
         virtual int totalCount();
+        virtual double at(int pos);
         
       private:
         friend class StatsDistributionBinned;

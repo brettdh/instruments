@@ -1,11 +1,14 @@
 #include <instruments.h>
 #include <instruments_private.h>
 
-#include "ctest.h"
-
 #include <stdio.h>
 #include <sys/time.h>
 #include <assert.h>
+#include <stdlib.h>
+
+#if (defined(ANDROID) && defined(PROFILING_BUILD))
+#include "prof.h"
+#endif
 
 #define TIMEDIFF(tvb,tve,tvr)                                    \
 do {                                                             \
@@ -34,32 +37,10 @@ do {                                                             \
 
 
 
-#define NUM_ESTIMATORS 4
-
-CTEST_DATA(brute_force_perf) {
-    instruments_external_estimator_t estimators[NUM_ESTIMATORS];
-};
-
 struct strategy_args {
     int num_estimators;
     instruments_external_estimator_t *estimators;
 };
-
-CTEST_SETUP(brute_force_perf)
-{
-    int i;
-    for (i = 0; i < NUM_ESTIMATORS; ++i) {
-        data->estimators[i] = create_external_estimator();
-    }
-}
-
-CTEST_TEARDOWN(brute_force_perf)
-{
-    int i;
-    for (i = 0; i < NUM_ESTIMATORS; ++i) {
-        free_external_estimator(data->estimators[i]);
-    }
-}
 
 static double
 estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
@@ -78,33 +59,42 @@ static double no_cost(instruments_context_t ctx, void *strategy_arg, void *choos
 }
 
 
-CTEST2(brute_force_perf, value_observed)
+#define NUM_ESTIMATORS 4
+
+int main()
 {
+#if (defined(ANDROID) && defined(PROFILING_BUILD))
+    monstartup("libinstruments.so");
+#endif
+    instruments_external_estimator_t estimators[NUM_ESTIMATORS];
+    int i;
+    for (i = 0; i < NUM_ESTIMATORS; ++i) {
+        estimators[i] = create_external_estimator();
+    }
+
     struct strategy_args args[2] = {
         {
         num_estimators: 2,
-        estimators: &data->estimators[0]
+        estimators: &estimators[0]
         },
         {
         num_estimators: 2,
-        estimators: &data->estimators[2]
+        estimators: &estimators[2]
         },
     };
 
     instruments_strategy_t strategies[3];
     strategies[0] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[0], NULL);
-    ASSERT_NOT_NULL(strategies[0]);
     strategies[1] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[1], NULL);
-    ASSERT_NOT_NULL(strategies[1]);
     strategies[2] = make_redundant_strategy(strategies, 2);
-    ASSERT_NOT_NULL(strategies[2]);
     
-    instruments_strategy_evaluator_t evaluator = register_strategy_set_with_method(strategies, 3,
-                                                                                   EMPIRICAL_ERROR);
+    instruments_strategy_evaluator_t evaluator = 
+        register_strategy_set_with_method(strategies, 3,
+                                          EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
 
     int bytelen = 4096;
-    //int max_samples = 30;
-    int max_samples = 500;
+    int max_samples = 50;
+    //int max_samples = 500;
     int num_new_samples = 5;
     int k;
 
@@ -113,11 +103,20 @@ CTEST2(brute_force_perf, value_observed)
         char title[64];
         for (i = 0; i < num_new_samples; ++i) {
             for (j = 0; j < NUM_ESTIMATORS; ++j) {
-                add_observation(data->estimators[j], random(), random());
+                add_observation(estimators[j], random(), random());
             }
         }
         
         snprintf(title, 64, "choose_strategy, %d samples", num_new_samples * (k+1));
         TIME_FN_CALL(title, choose_strategy(evaluator, (void*) bytelen));
     }
+
+    for (i = 0; i < NUM_ESTIMATORS; ++i) {
+        free_external_estimator(estimators[i]);
+    }
+
+#if (defined(ANDROID) && defined(PROFILING_BUILD))
+    moncleanup();
+#endif
+    return 0;
 }
