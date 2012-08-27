@@ -6,6 +6,7 @@
 #include "strategy_evaluation_context.h"
 #include "estimator.h"
 
+#include <vector>
 #include <set>
 #include "small_set.h"
 
@@ -188,4 +189,10 @@ typesafe_eval_fn_t
 Strategy::getEvalFn(eval_fn_type_t type)
 {
     return fns[type];
+}
+
+std::vector<Estimator *>
+Strategy::getEstimators()
+{
+    return std::vector<Estimator *>(estimators.begin(), estimators.end());
 }

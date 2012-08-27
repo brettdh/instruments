@@ -4,13 +4,14 @@
 #include "instruments.h"
 #include "strategy.h"
 #include "strategy_evaluator.h"
+#include "eval_method.h"
 
 class Estimator;
-class JointDistribution;
+class AbstractJointDistribution;
 
 class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
   public:
-    EmpiricalErrorStrategyEvaluator();
+    EmpiricalErrorStrategyEvaluator(EvalMethod eval_method);
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
@@ -21,7 +22,11 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
     virtual void setStrategies(const instruments_strategy_t *strategies_,
                                size_t num_strategies_);
   private:
-    JointDistribution *jointDistribution;
+    EmpiricalErrorEvalMethod eval_method;
+    JointDistributionType joint_distribution_type;
+    AbstractJointDistribution *jointDistribution;
+
+    AbstractJointDistribution *createJointDistribution();
 };
 
 #endif

@@ -49,7 +49,7 @@ include $(DEPS)
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-%.o: ../%.cc
+%.o: ../../src/joint_distributions/%.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o: ../../src/%.cc
@@ -65,13 +65,16 @@ TESTOBJS := \
 	strategy_estimators_discovery_test.o
 
 SUPPORTOBJS := \
+	abstract_joint_distribution.o \
 	empirical_error_strategy_evaluator.o \
 	estimator.o \
 	estimator_registry.o \
+	eval_method.o \
 	external_estimator.o \
 	goal_adaptive_resource_weight.o \
 	instruments.o \
 	joint_distribution.o \
+	intnw_joint_distribution.o \
 	r_singleton.o \
 	running_mean_estimator.o \
 	strategy.o \

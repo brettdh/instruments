@@ -1,7 +1,7 @@
 #include "empirical_error_strategy_evaluator.h"
 #include "estimator.h"
 #include "strategy.h"
-#include "joint_distribution.h"
+#include "abstract_joint_distribution.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -9,8 +9,12 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator()
+#include "joint_distributions/intnw_joint_distribution.h"
+
+EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator(EvalMethod method)
 {
+    eval_method = EmpiricalErrorEvalMethod(method & EMPIRICAL_ERROR_EVAL_METHOD_MASK);
+    joint_distribution_type = JointDistributionType(method & JOINT_DISTRIBUTION_TYPE_MASK);
 }
 
 void 
@@ -19,7 +23,18 @@ EmpiricalErrorStrategyEvaluator::setStrategies(const instruments_strategy_t *str
 {
     // TODO: refactor.
     StrategyEvaluator::setStrategies(strategies_, num_strategies_);
-    jointDistribution = new JointDistribution(strategies);
+    jointDistribution = createJointDistribution();
+}
+
+AbstractJointDistribution *
+EmpiricalErrorStrategyEvaluator::createJointDistribution()
+{
+    if (joint_distribution_type == INTNW_JOINT_DISTRIBUTION) {
+        return new IntNWJointDistribution(eval_method, strategies);
+    } else if (joint_distribution_type == GENERAL_JOINT_DISTRIBUTION) {
+        return new JointDistribution(eval_method, strategies);
+    } else abort();
+    // TODO: other specialized eval methods
 }
 
 double 
@@ -42,4 +57,3 @@ EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval
     jointDistribution->setEvalArgs(strategy_arg, chooser_arg);
     return jointDistribution->expectedValue(strategy, fn);
 }
-

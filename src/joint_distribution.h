@@ -8,14 +8,19 @@
 #include <vector>
 #include "multi_dimension_array.h"
 
+#include "eval_method.h"
+
+#include "abstract_joint_distribution.h"
+
 class Estimator;
 
 
 typedef small_map<Estimator *, StatsDistribution *> EstimatorErrorMap;
 
-class JointDistribution : public StrategyEvaluationContext {
+class JointDistribution : public AbstractJointDistribution {
   public:
-    JointDistribution(const std::vector<Strategy *>& strategies);
+    JointDistribution(EmpiricalErrorEvalMethod eval_method_,
+                      const std::vector<Strategy *>& strategies);
 
     void setEvalArgs(void *strategy_arg_, void *chooser_arg_);
     double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
@@ -43,8 +48,6 @@ class JointDistribution : public StrategyEvaluationContext {
     std::vector<MultiDimensionArray<double> *>& 
         getMemoList(Strategy *strategy, typesafe_eval_fn_t fn);
 
-    StatsDistribution *createErrorDistribution();
-    
     friend double memoized_min_time(StrategyEvaluationContext *ctx, 
                                     void *strategy_arg, void *chooser_arg);
     friend double memoized_total_energy_cost(StrategyEvaluationContext *ctx,
