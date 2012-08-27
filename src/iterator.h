@@ -4,12 +4,14 @@
 class Iterator {
   public:
     virtual double probability() = 0;
+    virtual double probability(int pos) = 0;
     virtual double value() = 0;
     virtual void advance() = 0;
     virtual bool isDone() = 0;
     virtual void reset() = 0;
     virtual int position() = 0;
     virtual int totalCount() = 0;
+    virtual double at(int pos) = 0;
     virtual ~Iterator() {}
 };
 

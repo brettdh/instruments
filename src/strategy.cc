@@ -6,6 +6,7 @@
 #include "strategy_evaluation_context.h"
 #include "estimator.h"
 
+#include <vector>
 #include <set>
 #include "small_set.h"
 
@@ -21,6 +22,15 @@ Strategy::Strategy(eval_fn_t time_fn_,
       default_chooser_arg(default_chooser_arg_)
 {
     collectEstimators();
+    setEvalFnLookupArray();
+}
+
+void
+Strategy::setEvalFnLookupArray()
+{
+    fns[TIME_FN] = time_fn;
+    fns[ENERGY_FN] = energy_cost_fn;
+    fns[DATA_FN] = data_cost_fn;
 }
 
 /* fake context that just collects all the estimators 
@@ -149,9 +159,10 @@ Strategy::Strategy(const instruments_strategy_t strategies[],
         this->child_strategies.push_back((Strategy *) strategies[i]);
     }
     collectEstimators();
+    setEvalFnLookupArray();
 }
 
-std::vector<Strategy *> 
+const std::vector<Strategy *>&
 Strategy::getChildStrategies()
 {
     return child_strategies;
@@ -174,16 +185,14 @@ Strategy::childrenAreDisjoint()
     return true;
 }
 
-typesafe_eval_fn_t 
+typesafe_eval_fn_t
 Strategy::getEvalFn(eval_fn_type_t type)
 {
-    switch (type) {
-    case TIME_FN:
-        return time_fn;
-    case ENERGY_FN:
-        return energy_cost_fn;
-    case DATA_FN:
-        return data_cost_fn;
-    }
-    abort();
+    return fns[type];
+}
+
+std::vector<Estimator *>
+Strategy::getEstimators()
+{
+    return std::vector<Estimator *>(estimators.begin(), estimators.end());
 }

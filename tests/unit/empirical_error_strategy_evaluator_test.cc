@@ -20,7 +20,12 @@ double get_time(instruments_context_t ctx, void *strategy_arg, void *chooser_arg
     return get_adjusted_estimator_value(ctx, estimator);
 }
 
-double get_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
+double get_energy_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
+{
+    return 0.0;
+}
+
+double get_data_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     return 0.0;
 }
@@ -41,7 +46,7 @@ void
 EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
 {
     Estimator *estimator = Estimator::create(LAST_OBSERVATION);
-    Strategy *strategy = new Strategy(get_time, get_cost, get_cost, estimator, NULL);
+    Strategy *strategy = new Strategy(get_time, get_energy_cost, get_data_cost, estimator, NULL);
     strategy->addEstimator(estimator);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1, 
@@ -66,7 +71,7 @@ EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimators()
         estimators[i] = Estimator::create(LAST_OBSERVATION);
     }
     Strategy *strategy = new Strategy(get_time_all_estimators, 
-                                      get_cost, get_cost, estimators, NULL);
+                                      get_energy_cost, get_data_cost, estimators, NULL);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1, 
                                                              EMPIRICAL_ERROR);
@@ -114,11 +119,11 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     CallCountEstimator *estimator2 = new CallCountEstimator;
 
     Strategy *strategies[3];
-    strategies[0] = new Strategy(get_time, get_cost, get_cost,
+    strategies[0] = new Strategy(get_time, get_energy_cost, get_data_cost,
                                  estimator1, NULL);
     CPPUNIT_ASSERT_EQUAL(1, estimator1->getCount());
 
-    strategies[1] = new Strategy(get_time, get_cost, get_cost,
+    strategies[1] = new Strategy(get_time, get_energy_cost, get_data_cost,
                                  estimator2, NULL);
     CPPUNIT_ASSERT_EQUAL(1, estimator2->getCount());
 
@@ -158,9 +163,12 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     // chooseStrategy should not call getEstimate
     //  when a strategy doesn't use the estimator.
     // Total new calls here:
-    //  At least 4, due to the joint-distribution iteration: 2x2
+    //  Naive case: 4, due to the joint-distribution iteration: 2x2
+    //  Smarter case: the strategies are disjoint with respect to the
+    //    estimators they use, so they can be computed in O(N) and cached
+    //    for the 2x2 iteration.
+    //   So, at least 2 new calls here.
     //  With simple iteration, it's at most 6.
-    //  With some caching, though, it could be just 4, maybe.
     (void)evaluator->chooseStrategy(NULL);
 
     int estimator1_new_calls = (estimator1->getCount() - estimator1_count);
@@ -169,8 +177,8 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     fprintf(stderr, "Estimator 2, new calls: %d\n", estimator2_new_calls);
 
     // lower now, due to memoization.
-    CPPUNIT_ASSERT(estimator1_new_calls >= 4);
+    CPPUNIT_ASSERT(estimator1_new_calls >= 2);
     CPPUNIT_ASSERT(estimator1_new_calls <= 6);
-    CPPUNIT_ASSERT(estimator2_new_calls >= 4);
+    CPPUNIT_ASSERT(estimator2_new_calls >= 2);
     CPPUNIT_ASSERT(estimator2_new_calls <= 6);
 }

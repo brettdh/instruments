@@ -17,7 +17,9 @@ class StrategyEvaluationContext;
 typedef double (*typesafe_eval_fn_t)(StrategyEvaluationContext *, void *strategy_arg, void *chooser_arg);
 
 enum eval_fn_type_t {
-    TIME_FN, ENERGY_FN, DATA_FN
+    TIME_FN=0, ENERGY_FN, DATA_FN,
+
+    NUM_FNS
 };
 
 class Strategy {
@@ -37,10 +39,12 @@ class Strategy {
 
     void getAllEstimators(StrategyEvaluator *evaluator);
     bool usesEstimator(Estimator *estimator);
+    
+    std::vector<Estimator *> getEstimators();
 
-    std::vector<Strategy *> getChildStrategies();
+    const std::vector<Strategy *>& getChildStrategies();
     bool childrenAreDisjoint();
-    typesafe_eval_fn_t getEvalFn(eval_fn_type_t type);
+
   private:
     friend class EmpiricalErrorStrategyEvaluatorTest;
     friend class MultiStrategyJointErrorIterator;
@@ -58,11 +62,17 @@ class Strategy {
     void *strategy_arg;
     void *default_chooser_arg;
 
+    typesafe_eval_fn_t fns[NUM_FNS];
+    void setEvalFnLookupArray();
+
     void collectEstimators();
 
     small_set<Estimator*> estimators;
 
     std::vector<Strategy *> child_strategies;
+
+  public:
+    typesafe_eval_fn_t getEvalFn(eval_fn_type_t type);
 };
 
 double redundant_strategy_minimum_time(StrategyEvaluationContext *ctx,
