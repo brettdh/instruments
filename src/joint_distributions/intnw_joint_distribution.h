@@ -16,7 +16,8 @@ typedef small_map<Estimator *, size_t> EstimatorIndicesMap;
 
 class IntNWJointDistribution : public AbstractJointDistribution {
   public:
-    IntNWJointDistribution(const std::vector<Strategy *>& strategies);
+    IntNWJointDistribution(EmpiricalErrorEvalMethod eval_method, 
+                           const std::vector<Strategy *>& strategies);
 
     virtual void setEvalArgs(void *strategy_arg_, void *chooser_arg_);
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
@@ -49,8 +50,6 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     
     void getEstimatorErrorDistributions();
     void clearEstimatorErrorDistributions();
-
-    StatsDistribution *createErrorDistribution();
 };
 
 #endif /* _INTNW_JOINT_DISTRIBUTION_H_ */

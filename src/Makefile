@@ -7,12 +7,15 @@ all: $(LIBRARIES)
 include ../common/R_generated_vars.mk
 
 OBJS := \
+	abstract_joint_distribution.o \
 	empirical_error_strategy_evaluator.o \
 	estimator.o \
 	estimator_registry.o \
+	eval_method.o \
 	external_estimator.o \
 	goal_adaptive_resource_weight.o \
 	instruments.o \
+	joint_distribution.o \
 	joint_distributions/intnw_joint_distribution.o \
 	r_singleton.o \
 	running_mean_estimator.o \
@@ -23,8 +26,6 @@ OBJS := \
 	strategy_evaluator.o \
 	timeops.o \
 	trusted_oracle_strategy_evaluator.o
-
-#	joint_distribution.o \
 
 
 CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic -pthread $(R_CXXFLAGS)

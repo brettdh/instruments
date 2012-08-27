@@ -80,7 +80,9 @@ static size_t get_estimator_samples_count(StatsDistribution *estimator_error)
     return len;
 }
 
-IntNWJointDistribution::IntNWJointDistribution(const std::vector<Strategy *>& strategies)
+IntNWJointDistribution::IntNWJointDistribution(EmpiricalErrorEvalMethod eval_method,
+                                               const std::vector<Strategy *>& strategies)
+    : AbstractJointDistribution(eval_method)
 {
     assert(strategies.size() == NUM_STRATEGIES);
     for (size_t i = 0; i < strategies.size(); ++i) {
@@ -337,13 +339,4 @@ IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
         estimatorError[estimator]->addValue(0.0);
     }
     clearEstimatorErrorDistributions();
-}
-
-StatsDistribution *
-IntNWJointDistribution::createErrorDistribution()
-{
-    // make this an actual factory method, with a flag set in 
-    //  the JointDistribution constructor.
-    return new StatsDistributionAllSamples;
-    //return new StatsDistributionBinned;
 }

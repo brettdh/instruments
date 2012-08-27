@@ -16,7 +16,9 @@
 #include <vector>
 using std::vector; using std::min;
 
-JointDistribution::JointDistribution(const vector<Strategy *>& strategies)
+JointDistribution::JointDistribution(EmpiricalErrorEvalMethod eval_method_,
+                                     const vector<Strategy *>& strategies)
+    : AbstractJointDistribution(eval_method_)
 {
     for (size_t i = 0; i < strategies.size(); ++i) {
         Strategy *strategy = strategies[i];
@@ -207,15 +209,6 @@ JointDistribution::observationAdded(Estimator *estimator, double value)
         // there's no error until we have at least two observations.
         estimatorError[estimator]->addValue(0.0);
     }
-}
-
-StatsDistribution *
-JointDistribution::createErrorDistribution()
-{
-    // make this an actual factory method, with a flag set in 
-    //  the JointDistribution constructor.
-    return new StatsDistributionAllSamples;
-    //return new StatsDistributionBinned;
 }
 
 vector<MultiDimensionArray<double> *>&

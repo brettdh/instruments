@@ -60,14 +60,11 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
                           size_t num_strategies, EvalMethod type)
 {
     StrategyEvaluator *evaluator = NULL;
-    switch (type) {
-    case TRUSTED_ORACLE:
+    if (type == TRUSTED_ORACLE) {
         evaluator = new TrustedOracleStrategyEvaluator;
-        break;
-    case EMPIRICAL_ERROR:
-        evaluator = new EmpiricalErrorStrategyEvaluator;
-        break;
-    default:
+    } else if (type & EMPIRICAL_ERROR) {
+        evaluator = new EmpiricalErrorStrategyEvaluator(type);
+    } else {
         // TODO: implement the rest.
         assert(0);
     }
