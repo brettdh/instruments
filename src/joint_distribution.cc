@@ -11,6 +11,7 @@
 
 #include <assert.h>
 #include <float.h>
+#include <stdlib.h>
 
 #include <functional>
 #include <vector>

@@ -16,12 +16,16 @@ include $(CLEAR_VARS)
 LOCAL_CPP_EXTENSION:=.cc
 LOCAL_MODULE := instruments
 LOCAL_SRC_FILES := $(addprefix ../src/, \
+	abstract_joint_distribution.cc \
 	empirical_error_strategy_evaluator.cc \
 	estimator.cc \
 	estimator_registry.cc \
+	eval_method.cc \
 	external_estimator.cc \
 	goal_adaptive_resource_weight.cc \
 	instruments.cc \
+	joint_distribution.cc \
+	joint_distributions/intnw_joint_distribution.cc \
 	running_mean_estimator.cc \
 	stats_distribution.cc \
 	stats_distribution_all_samples.cc \
