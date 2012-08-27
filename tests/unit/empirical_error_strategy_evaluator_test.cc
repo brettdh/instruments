@@ -163,9 +163,12 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     // chooseStrategy should not call getEstimate
     //  when a strategy doesn't use the estimator.
     // Total new calls here:
-    //  At least 4, due to the joint-distribution iteration: 2x2
+    //  Naive case: 4, due to the joint-distribution iteration: 2x2
+    //  Smarter case: the strategies are disjoint with respect to the
+    //    estimators they use, so they can be computed in O(N) and cached
+    //    for the 2x2 iteration.
+    //   So, at least 2 new calls here.
     //  With simple iteration, it's at most 6.
-    //  With some caching, though, it could be just 4, maybe.
     (void)evaluator->chooseStrategy(NULL);
 
     int estimator1_new_calls = (estimator1->getCount() - estimator1_count);
@@ -174,8 +177,8 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     fprintf(stderr, "Estimator 2, new calls: %d\n", estimator2_new_calls);
 
     // lower now, due to memoization.
-    CPPUNIT_ASSERT(estimator1_new_calls >= 4);
+    CPPUNIT_ASSERT(estimator1_new_calls >= 2);
     CPPUNIT_ASSERT(estimator1_new_calls <= 6);
-    CPPUNIT_ASSERT(estimator2_new_calls >= 4);
+    CPPUNIT_ASSERT(estimator2_new_calls >= 2);
     CPPUNIT_ASSERT(estimator2_new_calls <= 6);
 }
