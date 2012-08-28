@@ -28,9 +28,9 @@ network_time(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 static double data_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     struct strategy_args *args = (struct strategy_args *) strategy_arg;
-    //int bytes = (int) chooser_arg;
 
-    return (args->is_cellular ? 10000000 : 0);
+    // see below for reason for these costs.
+    return (args->is_cellular ? 0.97 : 10.0);
 }
 
 #define NUM_ESTIMATORS 4
@@ -112,6 +112,7 @@ static void init_network_params(struct intnw_specific_test_data *data,
                                 double bandwidth2, double latency2)
 {
     int num_samples = 50;
+    //int num_samples = 1;
 
     int i;
     for (i = 0; i < num_samples; ++i) {
@@ -147,20 +148,35 @@ CTEST2(intnw_specific_test, test_both_networks_best)
 {
     int num_samples = 50;
     int i;
-    double better_bandwidth = 1500;
+    int bytelen = 5000;
+    double stable_bandwidth = 2000;
+    double better_bandwidth = 5000;
+    double worse_bandwidth = 1000;
+    // expected value of time on network 1: 2.5 seconds
+    //                   cost             : x
+    //                   time on network 2: bandwidth: 5000 +/- 4000
+    //                                      ((5/9)*25 + 5*25 + 1)/51 = 2.74
+    //                   cost             : y
+    //                   time on both-nets: ((5/9)*25 + 2.5*25 + 1)/51 = 1.51
+    //                   cost             : x + y
+    // net benefit: (2.5 - 1.52) - y
+    // so, need to set y < 0.98
     
+    add_observation(data->estimators[0], stable_bandwidth, stable_bandwidth);
+    add_observation(data->estimators[1], 0.0, 0.0);
     add_observation(data->estimators[2], better_bandwidth, better_bandwidth);
+    add_observation(data->estimators[3], 0.0, 0.0);
     
     for (i = 0; i < num_samples; ++i) {
-        add_observation(data->estimators[0], 5000, 5000);
-        add_observation(data->estimators[1], 0.02, 0.02);
+        add_observation(data->estimators[0], stable_bandwidth, stable_bandwidth);
+        add_observation(data->estimators[1], 0.0, 0.0);
         if (i % 2 == 0) {
-            add_observation(data->estimators[2], 2500, better_bandwidth);
+            add_observation(data->estimators[2], worse_bandwidth, worse_bandwidth);
         } else {
-            add_observation(data->estimators[2], better_bandwidth, 2500);
+            add_observation(data->estimators[2], better_bandwidth, better_bandwidth);
         }
-        add_observation(data->estimators[3], 0.02, 0.02);
+        add_observation(data->estimators[3], 0.0, 0.0);
     }
 
-    assert_correct_strategy(data, data->strategies[2], 500000);
+    assert_correct_strategy(data, data->strategies[2], bytelen);
 }

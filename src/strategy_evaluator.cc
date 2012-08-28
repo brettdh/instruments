@@ -7,6 +7,8 @@
 
 #include "small_set.h"
 
+#include <stdio.h>
+
 #include <vector>
 using std::vector;
 
@@ -123,10 +125,15 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
          it != strategies.end(); ++it) {
         currentStrategy = *it;
         if (currentStrategy->isRedundant()) {
-            double benefit = best_singular_time - calculateTime(currentStrategy, chooser_arg);
+            double redundant_time = calculateTime(currentStrategy, chooser_arg);
+            double benefit = best_singular_time - redundant_time;
             double singular_cost = calculateCost(best_singular, chooser_arg);
             double redundant_cost = calculateCost(currentStrategy, chooser_arg);
             double net_benefit = benefit - (redundant_cost - singular_cost);
+            //fprintf(stderr, "Best singular strategy time: %f\n", best_singular_time);
+            //fprintf(stderr, "Redundant strategy time: %f\n", redundant_time);
+            //fprintf(stderr, "Redundant strategy benefit: %f\n", benefit);
+            //fprintf(stderr, "Redundant strategy additional cost: %f\n", redundant_cost - singular_cost);
             if (net_benefit > 0.0 && 
                 (best_redundant == NULL || net_benefit > best_redundant_net_benefit)) {
                 best_redundant = currentStrategy;

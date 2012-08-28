@@ -180,9 +180,9 @@ CDECL void free_external_estimator(instruments_external_estimator_t estimator);
 /** Add an observation to an external estimator.
  *
  *  @param observation The latest observation (measurement) of the estimated quantity.
- *  @param previous_estimate The value of the estimator just before this observation.
+ *  @param new_estimate The value of the estimator just after this observation.
  */
 CDECL void add_observation(instruments_external_estimator_t estimator, 
-                           double observation, double previous_estimate);
+                           double observation, double new_estimate);
 
 #endif
