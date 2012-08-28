@@ -5,6 +5,8 @@
 #include "estimator.h"
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <float.h>
 
 #include <vector>
 using std::vector;
@@ -16,6 +18,20 @@ static const size_t NUM_ESTIMATORS_REDUNDANT =
 
 static const size_t NUM_STRATEGIES = 3;
 
+enum SavedValueType {TIME_MEMO=0, ENERGY_MEMO, DATA_MEMO};
+static const size_t NUM_SAVED_VALUE_TYPES = DATA_MEMO + 1;
+
+static SavedValueType
+get_saved_value_type(Strategy *strategy, typesafe_eval_fn_t fn)
+{
+    if (fn == strategy->getEvalFn(TIME_FN)) {
+        return TIME_MEMO;
+    } else if (fn == strategy->getEvalFn(ENERGY_FN)) {
+        return ENERGY_MEMO;
+    } else if (fn == strategy->getEvalFn(DATA_FN)) {
+        return DATA_MEMO;
+    } else abort();
+}
 
 static double *create_array(size_t length, double value)
 {
@@ -84,6 +100,9 @@ IntNWJointDistribution::IntNWJointDistribution(EmpiricalErrorEvalMethod eval_met
                                                const std::vector<Strategy *>& strategies)
     : AbstractJointDistribution(eval_method)
 {
+    strategy_arg = NULL;
+    chooser_arg = NULL;
+
     assert(strategies.size() == NUM_STRATEGIES);
     for (size_t i = 0; i < strategies.size(); ++i) {
         if (!strategies[i]->isRedundant()) {
@@ -96,13 +115,16 @@ IntNWJointDistribution::IntNWJointDistribution(EmpiricalErrorEvalMethod eval_met
     singular_probabilities = new double**[singular_strategy_estimators.size()];
     singular_error_values = new double**[singular_strategy_estimators.size()];
     singular_error_count = new size_t*[singular_strategy_estimators.size()];
-    singular_strategy_saved_values = new double**[singular_strategy_estimators.size()];
+    singular_strategy_saved_values = new double***[singular_strategy_estimators.size()];
     
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         singular_probabilities[i] = new double*[NUM_ESTIMATORS_SINGULAR];
         singular_error_values[i] = new double*[NUM_ESTIMATORS_SINGULAR];
         singular_error_count[i] = new size_t[NUM_ESTIMATORS_SINGULAR];
-        singular_strategy_saved_values[i] = NULL;
+        singular_strategy_saved_values[i] = new double**[NUM_SAVED_VALUE_TYPES];
+        for (size_t j = 0; j < NUM_SAVED_VALUE_TYPES; ++j) {
+            singular_strategy_saved_values[i][j] = NULL;
+        }
         for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
             singular_probabilities[i][j] = NULL;
             singular_error_values[i][j] = NULL;
@@ -111,12 +133,27 @@ IntNWJointDistribution::IntNWJointDistribution(EmpiricalErrorEvalMethod eval_met
     }
 }
 
+IntNWJointDistribution::~IntNWJointDistribution()
+{
+    clearEstimatorErrorDistributions();
+    for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
+        delete [] singular_probabilities[i];
+        delete [] singular_error_values[i];
+        delete [] singular_error_count[i];
+        delete [] singular_strategy_saved_values[i];
+    }
+    delete [] singular_probabilities;
+    delete [] singular_error_values;
+    delete [] singular_error_count;
+    delete [] singular_strategy_saved_values;
+}
+
 void
 IntNWJointDistribution::getEstimatorErrorDistributions()
 {
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         if (singular_probabilities[i][0] != NULL) {
-            break;
+            return;
         }
 
         for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
@@ -134,9 +171,11 @@ IntNWJointDistribution::getEstimatorErrorDistributions()
             estimatorErrorValues[estimator] = singular_error_values[i][j];
             estimatorIndices[estimator] = 0;
         }
-        singular_strategy_saved_values[i] = create_array(singular_error_count[i][0],
-                                                         singular_error_count[i][1],
-                                                         0.0);
+        for (size_t j = 0; j < NUM_SAVED_VALUE_TYPES; ++j) {
+            singular_strategy_saved_values[i][j] = create_array(singular_error_count[i][0],
+                                                                singular_error_count[i][1],
+                                                                DBL_MAX);
+        }
     }
 }
 
@@ -145,11 +184,13 @@ IntNWJointDistribution::clearEstimatorErrorDistributions()
 {
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         if (singular_probabilities[i][0] == NULL) {
-            break;
+            return;
         }
         
-        destroy_array(singular_strategy_saved_values[i], singular_error_count[i][0]);
-        singular_strategy_saved_values[i] = NULL;
+        for (size_t j = 0; j < NUM_SAVED_VALUE_TYPES; ++j) {
+            destroy_array(singular_strategy_saved_values[i][j], singular_error_count[i][0]);
+            singular_strategy_saved_values[i][j] = NULL;
+        }
         
         for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
             delete [] singular_probabilities[i][j];
@@ -186,33 +227,35 @@ IntNWJointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
     }
 }
 
+
+
 double 
 IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
     getEstimatorErrorDistributions();
 
-    double ***saved_values = NULL;
+    size_t saved_value_type = get_saved_value_type(strategy, fn);
+
+    
+    double **cur_strategy_memo = NULL;
     double **strategy_probabilities = NULL;
     size_t *error_count = NULL;
     vector<Estimator *> current_strategy_estimators;
     for (size_t i = 0; i < singular_strategies.size(); ++i) {
         if (strategy == singular_strategies[i]) {
-            saved_values = &singular_strategy_saved_values[i];
+            cur_strategy_memo = singular_strategy_saved_values[i][saved_value_type];
             current_strategy_estimators = singular_strategy_estimators[i];
             error_count = singular_error_count[i];
             strategy_probabilities = singular_probabilities[i];
             break;
         }
     }
-    assert(saved_values);
     assert(error_count);
-    
+    assert(cur_strategy_memo);
+
     size_t max_i, max_j;
     max_i = error_count[0];
     max_j = error_count[1];
-
-    double **cur_strategy_memo = *saved_values;
-    assert(cur_strategy_memo);
 
     double weightedSum = 0.0;
     for (size_t i = 0; i < max_i; ++i) {
@@ -256,17 +299,22 @@ combiner_fn(typesafe_eval_fn_t fn)
 double 
 IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
+    SavedValueType saved_value_type = get_saved_value_type(strategy, fn);
+    
     if (fn == redundant_strategy_minimum_time) {
-        return redundantStrategyExpectedValueMin();
+        return redundantStrategyExpectedValueMin(saved_value_type);
     } else if (fn == redundant_strategy_total_energy_cost ||
                fn == redundant_strategy_total_data_cost) {
-        return redundantStrategyExpectedValueSum();
+        return redundantStrategyExpectedValueSum(saved_value_type);
     } else abort();
 }
 
-#define FN_BODY_WITH_COMBINER(COMBINER)                                            \
+
+#define FN_BODY_WITH_COMBINER(COMBINER, saved_value_type)                          \
+{                                                                                  \
     for (size_t i = 0; i < singular_strategies.size(); ++i) {                      \
         assert(singular_strategy_saved_values[i] != NULL);                         \
+        assert(singular_strategy_saved_values[i][saved_value_type] != NULL);      \
     }                                                                              \
                                                                                    \
     double weightedSum = 0.0;                                                      \
@@ -282,38 +330,45 @@ IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, types
     double *strategy_1_estimator_0_probs = singular_probabilities[1][0];           \
     double *strategy_1_estimator_1_probs = singular_probabilities[1][1];           \
                                                                                    \
-    double **strategy_0_saved_values = singular_strategy_saved_values[0];          \
-    double **strategy_1_saved_values = singular_strategy_saved_values[1];          \
+    double **strategy_0_saved_values = singular_strategy_saved_values[0][saved_value_type];          \
+    double **strategy_1_saved_values = singular_strategy_saved_values[1][saved_value_type];          \
                                                                                    \
     for (size_t i = 0; i < max_i; ++i) {                                           \
         double *tmp_i = strategy_0_saved_values[i];                                \
         double prob_i = strategy_0_estimator_0_probs[i];                           \
         for (size_t j = 0; j < max_j; ++j) {                                       \
             double tmp_strategy_0 = tmp_i[j];                                      \
+            assert(tmp_strategy_0 != DBL_MAX);                                     \
             double prob_j = prob_i * strategy_0_estimator_1_probs[j];              \
             for (size_t k = 0; k < max_k; ++k) {                                   \
                 double *tmp_k = strategy_1_saved_values[k];                        \
                 double prob_k = prob_j * strategy_1_estimator_0_probs[k];          \
                 for (size_t m = 0; m < max_m; ++m) {                               \
-                    double value = COMBINER(tmp_strategy_0, tmp_k[m]);             \
+                    double tmp_strategy_1 = tmp_k[m];                              \
+                    assert(tmp_strategy_1 != DBL_MAX);                             \
+                    double value = COMBINER(tmp_strategy_0, tmp_strategy_1);       \
                     double probability = prob_k * strategy_1_estimator_1_probs[m]; \
+                    /*fprintf(stderr, "probs: [%.10f %.10f %.10f %.10f]\n", prob_i, prob_j, prob_k, probability);*/ \
                     weightedSum += (value * probability);                          \
+                    /*fprintf(stderr, "strategy1 value = %.10f  strategy2 value = %.10f\n", tmp_strategy_0, tmp_k[m]);*/ \
+                      /*fprintf(stderr, "value = %.10f prob = %.10f weightedSum = %.20f\n", value, probability, weightedSum);*/ \
                 }                                                                  \
             }                                                                      \
         }                                                                          \
     }                                                                              \
-    return weightedSum;
-
-double
-IntNWJointDistribution::redundantStrategyExpectedValueMin()
-{
-    FN_BODY_WITH_COMBINER(min)
+    return weightedSum;                                                            \
 }
 
 double
-IntNWJointDistribution::redundantStrategyExpectedValueSum()
+IntNWJointDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
 {
-    FN_BODY_WITH_COMBINER(sum)
+    FN_BODY_WITH_COMBINER(min, saved_value_type);
+}
+
+double
+IntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
+{
+    FN_BODY_WITH_COMBINER(sum, saved_value_type);
 }
 
 

@@ -18,6 +18,7 @@ class IntNWJointDistribution : public AbstractJointDistribution {
   public:
     IntNWJointDistribution(EmpiricalErrorEvalMethod eval_method, 
                            const std::vector<Strategy *>& strategies);
+    ~IntNWJointDistribution();
 
     virtual void setEvalArgs(void *strategy_arg_, void *chooser_arg_);
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
@@ -40,16 +41,19 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     double ***singular_error_values;
     size_t **singular_error_count;
 
-    double ***singular_strategy_saved_values;
+    double ****singular_strategy_saved_values;
 
     double singularStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
     double redundantStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
 
-    double redundantStrategyExpectedValueMin();
-    double redundantStrategyExpectedValueSum();
+    double redundantStrategyExpectedValueMin(size_t saved_value_type);
+    double redundantStrategyExpectedValueSum(size_t saved_value_type);
     
     void getEstimatorErrorDistributions();
     void clearEstimatorErrorDistributions();
+
+    // for debugging only.
+    double FN_BODY_WITH_COMBINER(double (*COMBINER)(double, double), size_t saved_value_type);
 };
 
 #endif /* _INTNW_JOINT_DISTRIBUTION_H_ */
