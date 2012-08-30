@@ -152,9 +152,6 @@ double
 JointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
     assert(iterator == NULL);
-    assert(strategy->getEvalFn(TIME_FN) != strategy->getEvalFn(ENERGY_FN) &&
-           strategy->getEvalFn(TIME_FN) != strategy->getEvalFn(DATA_FN) &&
-           strategy->getEvalFn(ENERGY_FN) != strategy->getEvalFn(DATA_FN));
     
     struct memoized_strategy_args args;
     args.parent_strategy = strategy;

@@ -93,7 +93,8 @@ int main()
                                           EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
 
     int bytelen = 4096;
-    int max_samples = 50;
+    //int max_samples = 50;
+    int max_samples = 100;
     //int max_samples = 500;
     int num_new_samples = 5;
     int k;

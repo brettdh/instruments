@@ -61,7 +61,7 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredAtRegistration()
         estimators[i]->addObservation(1.0);
     }
     Strategy *strategy = new Strategy(eval_fn_with_all_estimators,
-                                      eval_fn_no_estimators,
+                                      NULL,
                                       eval_fn_no_estimators,
                                       estimators, NULL);
 
@@ -81,7 +81,7 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredUponLaterUse()
         estimators[i]->addObservation(1.0);
     }
     Strategy *strategy = new Strategy(eval_fn_with_all_estimators_two_steps,
-                                      eval_fn_no_estimators,
+                                      NULL,
                                       eval_fn_no_estimators,
                                       estimators, NULL);
 

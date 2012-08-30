@@ -21,6 +21,10 @@ Strategy::Strategy(eval_fn_t time_fn_,
       strategy_arg(strategy_arg_),
       default_chooser_arg(default_chooser_arg_)
 {
+    assert(time_fn != energy_cost_fn);
+    assert(time_fn != data_cost_fn);
+    assert(energy_cost_fn != data_cost_fn);
+    
     collectEstimators();
     setEvalFnLookupArray();
 }
