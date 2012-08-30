@@ -6,6 +6,8 @@
 #include "goal_adaptive_resource_weight.h"
 #include "timeops.h"
 
+#include <stdlib.h>
+
 #ifdef MOCKTIME_BUILD
 #include "mocktime.h"
 #else
@@ -27,7 +29,8 @@ GoalAdaptiveResourceWeightTest::testWeight()
     weight->updateWeight();
     double smallerWeight = weight->getWeight();
     CPPUNIT_ASSERT(smallerWeight < initWeight);
-    
+
+    mocktime_usleep(1000000);
     weight->reportSpentResource(5);
     double nextWeight = weight->getWeight();
     CPPUNIT_ASSERT_DOUBLES_EQUAL(smallerWeight, nextWeight, 0.00001);
@@ -54,13 +57,14 @@ GoalAdaptiveResourceWeightTest::testConstantlyIncreasingWeight()
     prevWeight = weight->getWeight();
         
     for (int i = 0; i < (int) duration; ++i) {
-        weight->reportSpentResource(duration - i + 1);
         mocktime_usleep(1000000);
+        weight->reportSpentResource(duration - i + 1);
+        weight->updateWeight();
         
         //fprintf(stderr, "New weight: %.6f\n", weight->getWeight());
         double curWeight = weight->getWeight();
         struct timeval now;
-        TIME(now);
+        mocktime_gettimeofday(&now, NULL);
         if (timercmp(&goalTime, &now, <)) {
             break;
         }
@@ -82,24 +86,27 @@ GoalAdaptiveResourceWeightTest::testWeightUpdatesPeriodically()
     int num_updates = 100;
     fprintf(stderr, "Spending nothing for %d seconds\n", no_spend_seconds);
     for (int i = 0; i < num_updates; ++i) {
+        mocktime_usleep((no_spend_seconds * 1000000) / num_updates);
         weight->reportSpentResource(0);
         weight->updateWeight();
-        mocktime_usleep((no_spend_seconds * 1000000) / num_updates);;
     }
 
     fprintf(stderr, "Waiting 60 seconds for expected weight update\n");
     double curWeight = weight->getWeight();
+    mocktime_usleep(1000000);
     weight->reportSpentResource(100);
         
     struct timeval end = secondsInFuture(60);
     struct timeval now;
-    TIME(now);
+    mocktime_gettimeofday(&now, NULL);
     while (timercmp(&now, &end, <)) {
         if (weight->getWeight() - curWeight > 0.1) {
             return;
         }
+        weight->updateWeight();
+        
         mocktime_usleep(1000000);
-        TIME(now);
+        mocktime_gettimeofday(&now, NULL);
     }
     CPPUNIT_FAIL("Weight should have been updated");
 }
@@ -108,7 +115,7 @@ struct timeval
 GoalAdaptiveResourceWeightTest::secondsInFuture(double seconds)
 {
     struct timeval future;
-    TIME(future);
+    mocktime_gettimeofday(&future, NULL);
     
     struct timeval addend = {(int)seconds, 0};
     addend.tv_usec = (suseconds_t) ((seconds - addend.tv_sec) * 1000000.0);

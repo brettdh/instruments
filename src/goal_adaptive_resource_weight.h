@@ -8,6 +8,9 @@ class GoalAdaptiveResourceWeight {
   public:
     GoalAdaptiveResourceWeight(std::string type, double supply, struct timeval goalTime);
     ~GoalAdaptiveResourceWeight();
+
+    void startPeriodicUpdates();
+
     void reportSpentResource(double amount);
     bool supplyIsExhausted();
     
@@ -20,6 +23,8 @@ class GoalAdaptiveResourceWeight {
 
     void updateGoalTime(struct timeval newGoalTime);
 
+    void updateWeight();
+    
   private:
     static const int UPDATE_INTERVAL_SECS = 1;
     static double PROHIBITIVELY_LARGE_WEIGHT;
@@ -44,8 +49,6 @@ class GoalAdaptiveResourceWeight {
     double secondsSince(struct timeval date);
     double calculateNewSpendingRate(double oldRate, double rateSample);
     
-    friend class GoalAdaptiveResourceWeightTest;
-    void updateWeight();
     void updateWeightLocked();
     
     double calculateNewWeight(double oldWeight, double supply, double spendingRate);

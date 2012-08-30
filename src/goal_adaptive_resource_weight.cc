@@ -4,12 +4,11 @@
 #include "timeops.h"
 #include "pthread_util.h"
 
+#include <stdlib.h>
+
 #ifdef MOCKTIME_BUILD
 #include "mocktime.h"
 #else
-#define mocktime_pthread_create pthread_create
-#define mocktime_pthread_cond_signal pthread_cond_signal
-#define mocktime_pthread_cond_timedwait pthread_cond_timedwait
 #define mocktime_gettimeofday gettimeofday
 #endif
 
@@ -62,11 +61,16 @@ GoalAdaptiveResourceWeight::GoalAdaptiveResourceWeight(std::string type, double 
     //  an amount of time as big as my entire goal.
     this->weight = secondsUntil(goalTime) / supply;
         
-
     pthread_mutex_init(&mutex, NULL);
     pthread_cond_init(&cv, NULL);
+    memset(&update_thread, 0, sizeof(update_thread));
+}
+
+void
+GoalAdaptiveResourceWeight::startPeriodicUpdates()
+{
     updating = true;
-    int rc = mocktime_pthread_create(&update_thread, NULL, WeightUpdateThread, this);
+    int rc = pthread_create(&update_thread, NULL, WeightUpdateThread, this);
     PTHREAD_ASSERT_SUCCESS(rc);
 }
 
@@ -75,7 +79,7 @@ GoalAdaptiveResourceWeight::~GoalAdaptiveResourceWeight()
     {
         PthreadScopedLock lock(&mutex);
         updating = false;
-        mocktime_pthread_cond_signal(&cv);
+        pthread_cond_signal(&cv);
     }
     pthread_join(update_thread, NULL);
 }
@@ -279,10 +283,15 @@ GoalAdaptiveResourceWeight::stillUpdating()
 void
 GoalAdaptiveResourceWeight::waitForNextPeriodicUpdate()
 {
+#ifdef MOCKTIME_BUILD
+    // shouldn't be here in unit testing.
+    abort();
+#endif
+
     struct timespec abstime;
     struct timeval now;
-    mocktime_gettimeofday(&now, NULL);
+    gettimeofday(&now, NULL);
     abstime.tv_sec = now.tv_sec + UPDATE_INTERVAL_SECS;
     abstime.tv_nsec = now.tv_usec * 1000;
-    mocktime_pthread_cond_timedwait(&cv, &mutex, &abstime);
+    pthread_cond_timedwait(&cv, &mutex, &abstime);
 }
