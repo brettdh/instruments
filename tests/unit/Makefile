@@ -9,8 +9,11 @@ include ../../common/R_generated_vars.mk
 
 R_CXXFLAGS := $(subst -O3,,$(R_CXXFLAGS))
 
-CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g $(R_CXXFLAGS)
-LDFLAGS += -L. -lcppunit $(R_LDLIBS)
+#MOCKTIME_CXXFLAGS := -DMOCKTIME_BUILD -I../../../mocktime/
+#MOCKTIME_LDFLAGS :=  -L../../../mocktime/ -lmocktime
+
+CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g $(R_CXXFLAGS) $(MOCKTIME_CXXFLAGS)
+LDFLAGS += -L. -lcppunit $(R_LDLIBS) $(MOCKTIME_LDFLAGS)
 
 ifeq ($(shell uname), Darwin)
 CXXFLAGS += -I/opt/local/include

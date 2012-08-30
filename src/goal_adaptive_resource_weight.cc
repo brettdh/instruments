@@ -4,6 +4,15 @@
 #include "timeops.h"
 #include "pthread_util.h"
 
+#ifdef MOCKTIME_BUILD
+#include "mocktime.h"
+#else
+#define mocktime_pthread_create pthread_create
+#define mocktime_pthread_cond_signal pthread_cond_signal
+#define mocktime_pthread_cond_timedwait pthread_cond_timedwait
+#define mocktime_gettimeofday gettimeofday
+#endif
+
 #include <functional>
 using std::min; using std::max;
 
@@ -44,7 +53,7 @@ GoalAdaptiveResourceWeight::GoalAdaptiveResourceWeight(std::string type, double 
     initialSupply = supply;
     this->lastSupply = supply;
     this->goalTime = goalTime;
-    TIME(lastResourceUseSample);
+    mocktime_gettimeofday(&lastResourceUseSample, NULL);
         
     lastSpendingRate = supply / secondsUntil(goalTime);
     spendingRateUpdateCount = 1;
@@ -57,7 +66,7 @@ GoalAdaptiveResourceWeight::GoalAdaptiveResourceWeight(std::string type, double 
     pthread_mutex_init(&mutex, NULL);
     pthread_cond_init(&cv, NULL);
     updating = true;
-    int rc = pthread_create(&update_thread, NULL, WeightUpdateThread, this);
+    int rc = mocktime_pthread_create(&update_thread, NULL, WeightUpdateThread, this);
     PTHREAD_ASSERT_SUCCESS(rc);
 }
 
@@ -66,7 +75,7 @@ GoalAdaptiveResourceWeight::~GoalAdaptiveResourceWeight()
     {
         PthreadScopedLock lock(&mutex);
         updating = false;
-        pthread_cond_signal(&cv);
+        mocktime_pthread_cond_signal(&cv);
     }
     pthread_join(update_thread, NULL);
 }
@@ -77,7 +86,7 @@ GoalAdaptiveResourceWeight::reportSpentResource(double amount)
     PthreadScopedLock lock(&mutex);
 
     double samplePeriod = secondsSince(lastResourceUseSample);
-    TIME(lastResourceUseSample);
+    mocktime_gettimeofday(&lastResourceUseSample, NULL);
 
     logPrint("Old %s spending rate: %.6f   old supply: %.6f\n",
              type.c_str(), lastSpendingRate, lastSupply);
@@ -151,7 +160,7 @@ GoalAdaptiveResourceWeight::smoothingFactor()
 {
     // from Odyssey.
     struct timeval now;
-    TIME(now);
+    mocktime_gettimeofday(&now, NULL);
     if (timercmp(&goalTime, &now, <)) {
         return 0.0;
     } else {
@@ -163,7 +172,7 @@ double
 GoalAdaptiveResourceWeight::secondsUntil(struct timeval date)
 {
     struct timeval now, diff;
-    TIME(now);
+    mocktime_gettimeofday(&now, NULL);
     double sign = 1.0;
     if (timercmp(&now, &date, <=)) {
         TIMEDIFF(now, date, diff);
@@ -213,7 +222,7 @@ double
 GoalAdaptiveResourceWeight::calculateNewWeight(double oldWeight, double supply, double spendingRate)
 {
     struct timeval now;
-    TIME(now);
+    mocktime_gettimeofday(&now, NULL);
     double newWeight = oldWeight;
         
     logPrint("Old %s weight: %.6f\n", type.c_str(), oldWeight);
@@ -272,8 +281,8 @@ GoalAdaptiveResourceWeight::waitForNextPeriodicUpdate()
 {
     struct timespec abstime;
     struct timeval now;
-    TIME(now);
+    mocktime_gettimeofday(&now, NULL);
     abstime.tv_sec = now.tv_sec + UPDATE_INTERVAL_SECS;
     abstime.tv_nsec = now.tv_usec * 1000;
-    pthread_cond_timedwait(&cv, &mutex, &abstime);
+    mocktime_pthread_cond_timedwait(&cv, &mutex, &abstime);
 }

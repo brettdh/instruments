@@ -51,9 +51,6 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     
     void getEstimatorErrorDistributions();
     void clearEstimatorErrorDistributions();
-
-    // for debugging only.
-    double FN_BODY_WITH_COMBINER(double (*COMBINER)(double, double), size_t saved_value_type);
 };
 
 #endif /* _INTNW_JOINT_DISTRIBUTION_H_ */
