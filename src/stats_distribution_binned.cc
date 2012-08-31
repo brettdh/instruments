@@ -61,14 +61,14 @@ StatsDistributionBinned::addValue(double value)
 double 
 StatsDistributionBinned::Iterator::probability()
 {
-    return (double(distribution->counts[index]) / 
-            distribution->all_samples_sorted.size());
+    return probability(index);
 }
 
 inline double 
 StatsDistributionBinned::Iterator::probability(int pos)
 {
-    return probability();
+    return (double(distribution->counts[pos]) / 
+            distribution->all_samples_sorted.size());
 }
 
 inline double

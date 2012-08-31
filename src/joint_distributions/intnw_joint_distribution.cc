@@ -377,7 +377,10 @@ IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 {
     double *estimator_error_values = estimatorErrorValues[estimator];
     size_t index = estimatorIndices[estimator];
-    return estimator->getEstimate() - estimator_error_values[index];
+    double estimate = estimator->getEstimate();
+    double error = estimator_error_values[index];
+    double adjusted_value = estimate - error;
+    return adjusted_value;
 }
 
 void

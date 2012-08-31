@@ -8,6 +8,8 @@
 #include "small_set.h"
 
 #include <stdio.h>
+#include <sys/select.h>
+#include <signal.h>
 
 #include <vector>
 using std::vector;
@@ -57,10 +59,22 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
     return create(strategies, num_strategies, DEFAULT_EVAL_METHOD);
 }
 
+void wait_for_debugger()
+{
+    fprintf(stderr, "ATTACH DEBUGGER NOW!\n");
+    int flag = 1;
+    while (flag) {
+        struct timeval dur = {1, 0};
+        (void)select(0, NULL, NULL, NULL, &dur);
+    }
+}
+
 StrategyEvaluator *
 StrategyEvaluator::create(const instruments_strategy_t *strategies,
                           size_t num_strategies, EvalMethod type)
 {
+    //wait_for_debugger();
+
     StrategyEvaluator *evaluator = NULL;
     if (type == TRUSTED_ORACLE) {
         evaluator = new TrustedOracleStrategyEvaluator;
