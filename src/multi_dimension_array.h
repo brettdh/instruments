@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <assert.h>
+#include <sys/types.h>
 
 template <typename T>
 class MultiDimensionArray {

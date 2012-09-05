@@ -30,7 +30,7 @@ estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg
 
 static double data_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
-    return 4.0;
+    return 2.0;
 }
 
 
@@ -57,7 +57,7 @@ run_test_with_oscillating_estimator(struct external_estimator_data *data,
                                     double value1, double value2,
                                     int correct_strategy)
 {
-    instruments_strategy_t strategies[2];
+    instruments_strategy_t strategies[3];
     strategies[0] = make_strategy(estimator_value, NULL, data_cost, (void*) data->high_estimator, NULL);
     ASSERT_NOT_NULL(strategies[0]);
     strategies[1] = make_strategy(estimator_value, NULL, data_cost, (void*) data->low_estimator, NULL);
@@ -66,7 +66,8 @@ run_test_with_oscillating_estimator(struct external_estimator_data *data,
     ASSERT_NOT_NULL(strategies[2]);
     
     instruments_strategy_evaluator_t evaluator = 
-        register_strategy_set_with_method(strategies, 3, EMPIRICAL_ERROR);
+        register_strategy_set_with_method(strategies, 3, 
+                                          EMPIRICAL_ERROR_ALL_SAMPLES);
 
     add_observation(data->high_estimator, value2, value2);
     add_observation(data->low_estimator, 5.0, 5.0);
@@ -88,10 +89,10 @@ run_test_with_oscillating_estimator(struct external_estimator_data *data,
 
 CTEST2(external_estimator, singular_strategy_chosen)
 {
-    run_test_with_oscillating_estimator(data, 10.0, 9.0, 1);
+    run_test_with_oscillating_estimator(data, 20.0, 19.0, 1);
 }
 
 CTEST2(external_estimator, redundant_strategy_chosen)
 {
-    run_test_with_oscillating_estimator(data, 10.0, 0.0, 2);
+    run_test_with_oscillating_estimator(data, 20.0, 10.0, 2);
 }
