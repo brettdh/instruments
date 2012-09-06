@@ -18,18 +18,17 @@ static const size_t NUM_ESTIMATORS_REDUNDANT =
 
 static const size_t NUM_STRATEGIES = 3;
 
-enum SavedValueType {TIME_MEMO=0, ENERGY_MEMO, DATA_MEMO};
-static const size_t NUM_SAVED_VALUE_TYPES = DATA_MEMO + 1;
+static const size_t NUM_SAVED_VALUE_TYPES = DATA_FN + 1;
 
-static SavedValueType
+static eval_fn_type_t
 get_saved_value_type(Strategy *strategy, typesafe_eval_fn_t fn)
 {
     if (fn == strategy->getEvalFn(TIME_FN)) {
-        return TIME_MEMO;
+        return TIME_FN;
     } else if (fn == strategy->getEvalFn(ENERGY_FN)) {
-        return ENERGY_MEMO;
+        return ENERGY_FN;
     } else if (fn == strategy->getEvalFn(DATA_FN)) {
-        return DATA_MEMO;
+        return DATA_FN;
     } else abort();
 }
 
@@ -296,10 +295,49 @@ combiner_fn(typesafe_eval_fn_t fn)
     } else abort();
 }
 
+static void ensure_valid(double& memoized_value)
+{
+    if (memoized_value == DBL_MAX) {
+        memoized_value = 0.0;
+    }
+}
+
+static void
+ensure_values_valid(double **saved_values, size_t max_i, size_t max_j, 
+                    typesafe_eval_fn_t fn)
+{
+    for (size_t i = 0; i < max_i; ++i) {
+        for (size_t j = 0; j < max_j; ++j) {
+            assert(saved_values[i][j] != DBL_MAX || fn == NULL);
+            ensure_valid(saved_values[i][j]);
+        }
+    }
+}
+
+void
+IntNWJointDistribution::ensureValidMemoizedValues(eval_fn_type_t saved_value_type)
+{
+    size_t max_i, max_j, max_k, max_m;  /* counts for: */                          \
+    max_i = singular_error_count[0][0]; /* (strategy 0, estimator 0) */            \
+    max_j = singular_error_count[0][1]; /* (strategy 0, estimator 1) */            \
+    max_k = singular_error_count[1][0]; /* (strategy 1, estimator 2) */            \
+    max_m = singular_error_count[1][1]; /* (strategy 1, estimator 3) */            \
+
+    double **strategy_0_saved_values = singular_strategy_saved_values[0][saved_value_type];          \
+    double **strategy_1_saved_values = singular_strategy_saved_values[1][saved_value_type];          \
+
+    ensure_values_valid(strategy_0_saved_values, max_i, max_j,
+                        singular_strategies[0]->getEvalFn(saved_value_type));
+    ensure_values_valid(strategy_1_saved_values, max_k, max_m,
+                        singular_strategies[1]->getEvalFn(saved_value_type));
+}
+
 double 
 IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
-    SavedValueType saved_value_type = get_saved_value_type(strategy, fn);
+    eval_fn_type_t saved_value_type = get_saved_value_type(strategy, fn);
+    
+    ensureValidMemoizedValues(saved_value_type);
     
     if (fn == redundant_strategy_minimum_time) {
         return redundantStrategyExpectedValueMin(saved_value_type);
@@ -308,7 +346,6 @@ IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, types
         return redundantStrategyExpectedValueSum(saved_value_type);
     } else abort();
 }
-
 
 #define FN_BODY_WITH_COMBINER(COMBINER, saved_value_type)                          \
 {                                                                                  \
@@ -346,6 +383,7 @@ IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, types
                 for (size_t m = 0; m < max_m; ++m) {                               \
                     double tmp_strategy_1 = tmp_k[m];                              \
                     assert(tmp_strategy_1 != DBL_MAX);                             \
+                                                                                   \
                     double value = COMBINER(tmp_strategy_0, tmp_strategy_1);       \
                     double probability = prob_k * strategy_1_estimator_1_probs[m]; \
                     /*fprintf(stderr, "probs: [%.10f %.10f %.10f %.10f]\n", prob_i, prob_j, prob_k, probability);*/ \

@@ -51,6 +51,8 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     
     void getEstimatorErrorDistributions();
     void clearEstimatorErrorDistributions();
+
+    void ensureValidMemoizedValues(eval_fn_type_t saved_value_type);
 };
 
 #endif /* _INTNW_JOINT_DISTRIBUTION_H_ */

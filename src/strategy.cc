@@ -5,6 +5,7 @@
 #include "strategy_evaluator.h"
 #include "strategy_evaluation_context.h"
 #include "estimator.h"
+#include "resource_weights.h"
 
 #include <vector>
 #include <set>
@@ -97,8 +98,17 @@ Strategy::calculateTime(StrategyEvaluator *evaluator, void *chooser_arg)
 double
 Strategy::calculateCost(StrategyEvaluator *evaluator, void *chooser_arg)
 {
-    // TODO: finish implementing.  e.g. energy, goal-directed adaptation
-    return evaluator->expectedValue(this, data_cost_fn, strategy_arg, chooser_arg);
+    double energy_cost = 0.0, data_cost = 0.0;
+    if (energy_cost_fn) {
+        energy_cost = evaluator->expectedValue(this, energy_cost_fn,
+                                               strategy_arg, chooser_arg);
+    }
+    if (data_cost_fn) {
+        data_cost = evaluator->expectedValue(this, data_cost_fn,
+                                             strategy_arg, chooser_arg);
+    }
+    return ((energy_cost * get_energy_cost_weight()) + 
+            (data_cost * get_data_cost_weight()));
 }
 
 bool

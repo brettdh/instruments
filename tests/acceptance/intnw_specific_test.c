@@ -1,5 +1,6 @@
 #include <instruments.h>
 #include <instruments_private.h>
+#include <resource_weights.h>
 
 #include <stdio.h>
 #include <sys/time.h>
@@ -45,6 +46,8 @@ CTEST_DATA(intnw_specific_test) {
 
 CTEST_SETUP(intnw_specific_test)
 {
+    set_fixed_resource_weights(0.0, 1.0);
+
     int i;
     for (i = 0; i < NUM_ESTIMATORS; ++i) {
         data->estimators[i] = create_external_estimator();

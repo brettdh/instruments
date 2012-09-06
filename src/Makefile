@@ -18,6 +18,7 @@ OBJS := \
 	joint_distribution.o \
 	joint_distributions/intnw_joint_distribution.o \
 	r_singleton.o \
+	resource_weights.o \
 	running_mean_estimator.o \
 	stats_distribution.o \
 	stats_distribution_all_samples.o \

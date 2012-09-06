@@ -1,5 +1,6 @@
 #include <instruments.h>
 #include <instruments_private.h>
+#include <resource_weights.h>
 
 #include "ctest.h"
 
@@ -33,6 +34,8 @@ static double coinflip_data(instruments_context_t ctx, void *strategy_arg, void 
 
 CTEST(coinflip, one_strategy)
 {
+    set_fixed_resource_weights(0.0, 1.0);
+
     reset_coin_flip_estimator(RUNNING_MEAN);
     add_coin_flip_observation(0);
 
@@ -51,6 +54,8 @@ CTEST(coinflip, one_strategy)
 
 CTEST(coinflip, two_strategies)
 {
+    set_fixed_resource_weights(1.0, 1.0);
+
     reset_coin_flip_estimator(RUNNING_MEAN);
     add_coin_flip_observation(1);
     add_coin_flip_observation(0);
@@ -86,6 +91,8 @@ CTEST_SETUP(coinflip)
     int i;
     reset_coin_flip_estimator(RUNNING_MEAN);
     
+    set_fixed_resource_weights(1.0, 1.0);
+
     data->strategies = calloc(NUM_STRATEGIES, sizeof(*data));
     data->strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1, NULL);
     data->strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0, NULL);

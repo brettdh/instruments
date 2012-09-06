@@ -73,13 +73,18 @@ memoized_total_energy_cost(StrategyEvaluationContext *ctx,
     struct memoized_strategy_args *args =
         (struct memoized_strategy_args *) strategy_arg;
     vector<MultiDimensionArray<double> *>& memos = *args->memos;
+    Strategy *parent = args->parent_strategy;
+    vector<Strategy *> children = parent->getChildStrategies();
+    assert(args->num_strategies == children.size());
 
     // valid because singular strategies are always evaluated before redundant strategies.
     double sum = 0.0;
     for (size_t i = 0; i < args->num_strategies; ++i) {
-        double value = jointDistribution->getMemoizedValue(memos[i], i);
-        assert(value != DBL_MAX);
-        sum += value;
+        if (children[i]->getEvalFn(ENERGY_FN) != NULL) {
+            double value = jointDistribution->getMemoizedValue(memos[i], i);
+            assert(value != DBL_MAX);
+            sum += value;
+        }
     }
     return sum;
 }
@@ -92,13 +97,18 @@ memoized_total_data_cost(StrategyEvaluationContext *ctx,
     struct memoized_strategy_args *args =
         (struct memoized_strategy_args *) strategy_arg;
     vector<MultiDimensionArray<double> *>& memos = *args->memos;
+    Strategy *parent = args->parent_strategy;
+    vector<Strategy *> children = parent->getChildStrategies();
+    assert(args->num_strategies == children.size());
 
     // valid because singular strategies are always evaluated before redundant strategies.
     double sum = 0.0;
     for (size_t i = 0; i < args->num_strategies; ++i) {
-        double value = jointDistribution->getMemoizedValue(memos[i], i);
-        assert(value != DBL_MAX);
-        sum += value;
+        if (children[i]->getEvalFn(DATA_FN) != NULL) {
+            double value = jointDistribution->getMemoizedValue(memos[i], i);
+            assert(value != DBL_MAX);
+            sum += value;
+        }
     }
     return sum;
 }
