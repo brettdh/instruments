@@ -86,8 +86,9 @@ void start_periodic_updates()
 static void 
 report_spent_resource(GoalAdaptiveResourceWeight *weight, double amount)
 {
-    assert(weight);
-    weight->reportSpentResource(amount);
+    if (weight) {
+        weight->reportSpentResource(amount);
+    }
 }
 
 void report_spent_energy(int energy_spent_mJ)
@@ -105,7 +106,8 @@ void report_spent_data(int data_spent_bytes)
 void update_weights_now()
 {
     PthreadScopedLock lock(&weights_lock);
-    assert(adaptive_energy_weight && adaptive_data_weight);
-    adaptive_energy_weight->updateWeight();
-    adaptive_data_weight->updateWeight();
+    if (adaptive_energy_weight && adaptive_data_weight) {
+        adaptive_energy_weight->updateWeight();
+        adaptive_data_weight->updateWeight();
+    }
 }
