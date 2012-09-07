@@ -52,15 +52,29 @@ GoalAdaptiveResourceWeight::GoalAdaptiveResourceWeight(std::string type, double 
     initialSupply = supply;
     this->lastSupply = supply;
     this->goalTime = goalTime;
-    mocktime_gettimeofday(&lastResourceUseSample, NULL);
+    
+    struct timeval now;
+    mocktime_gettimeofday(&now, NULL);
+    lastResourceUseSample = now;
         
     lastSpendingRate = supply / secondsUntil(goalTime);
     spendingRateUpdateCount = 1;
-                
+
     // large starting weight: I'll spend my entire budget to save
     //  an amount of time as big as my entire goal.
     this->weight = secondsUntil(goalTime) / supply;
-        
+
+    logPrint("Created %s goal: initial supply %f, goalTime %lu.%06lu "
+             "initial spending rate %f  initial weight %f\n",
+             type.c_str(), supply, goalTime.tv_sec, goalTime.tv_usec,
+             lastSpendingRate, weight);
+    
+    if (timercmp(&now, &goalTime, <)) {
+        logPrint("Goal is %f seconds in the future\n", secondsUntil(goalTime));
+    } else {
+        logPrint("Goal is %f seconds in the past!!\n", secondsSince(goalTime));
+    }
+                        
     pthread_mutex_init(&mutex, NULL);
     pthread_cond_init(&cv, NULL);
     memset(&update_thread, 0, sizeof(update_thread));
@@ -151,12 +165,16 @@ GoalAdaptiveResourceWeight::updateGoalTime(struct timeval newGoalTime)
 void
 GoalAdaptiveResourceWeight::logPrint(const char *fmt, ...)
 {
-    /*
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    */
+    static const char *LOGFILE_NAME = "/tmp/budgets.log";
+    FILE *logfile = fopen(LOGFILE_NAME, "a");
+    if (logfile) {
+        va_list ap;
+        va_start(ap, fmt);
+        vfprintf(logfile, fmt, ap);
+        va_end(ap);
+        
+        fclose(logfile);
+    }
 }
 
 double 
