@@ -9,7 +9,7 @@ include ../../common/R_generated_vars.mk
 
 R_CXXFLAGS := $(subst -O3,,$(R_CXXFLAGS))
 
-MOCKTIME_CXXFLAGS := -DMOCKTIME_BUILD -I../../../mocktime/
+MOCKTIME_CXXFLAGS := -I../../../mocktime/
 MOCKTIME_LDFLAGS :=  -L../../../mocktime/ -lmocktime
 
 CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g $(R_CXXFLAGS) $(MOCKTIME_CXXFLAGS)
@@ -79,6 +79,7 @@ SUPPORTOBJS := \
 	joint_distribution.o \
 	intnw_joint_distribution.o \
 	r_singleton.o \
+	resource_weights.o \
 	running_mean_estimator.o \
 	strategy.o \
 	strategy_evaluator.o \

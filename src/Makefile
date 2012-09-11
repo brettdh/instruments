@@ -33,7 +33,7 @@ CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic -pthread $(R_CXXFLAGS)
 #CXXFLAGS := $(subst -O3,-O0,$(CXXFLAGS))
 #CXXFLAGS += -fno-inline
 CXXFLAGS += -O3 -DNDEBUG
-LDFLAGS := -lpthread $(R_LDLIBS) -Wl,--no-undefined
+LDFLAGS := -lpthread $(R_LDLIBS) -L/usr/local/lib -lmocktime -Wl,--no-undefined
 
 ifeq ($(shell uname), Darwin)
 CXXFLAGS += -I/opt/local/include

@@ -6,11 +6,9 @@
 
 #include <stdlib.h>
 
-#ifdef MOCKTIME_BUILD
 #include "mocktime.h"
-#else
-#define mocktime_gettimeofday gettimeofday
-#endif
+// client must call mocktime_enable 
+//  before creating a GoalAdaptiveResourceWeight
 
 #include <functional>
 using std::min; using std::max;
