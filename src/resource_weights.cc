@@ -2,6 +2,12 @@
 #include "goal_adaptive_resource_weight.h"
 #include <pthread.h>
 #include "pthread_util.h"
+#include "mocktime.h"
+
+#include <sstream>
+using std::ostringstream;
+
+#include <stdarg.h>
 
 static double fixed_energy_weight = 0.0;
 static double fixed_data_weight = 0.0;
@@ -67,12 +73,16 @@ void set_resource_budgets(struct timeval goalTime,
     PthreadScopedLock lock(&weights_lock);
 
     clear_adaptive_weights();
+    
+    logPrint("Setup adaptive strategy\n");
+
     adaptive_energy_weight = 
         new GoalAdaptiveResourceWeight("energy", energyBudgetMilliJoules,
                                        goalTime);
     adaptive_data_weight = 
         new GoalAdaptiveResourceWeight("data", dataBudgetBytes,
                                        goalTime);
+
 }
 
 void start_periodic_updates()
@@ -109,5 +119,26 @@ void update_weights_now()
     if (adaptive_energy_weight && adaptive_data_weight) {
         adaptive_energy_weight->updateWeight();
         adaptive_data_weight->updateWeight();
+    }
+}
+
+void
+logPrint(const char *fmt, ...)
+{
+    static const char *LOGFILE_NAME = "/tmp/budgets.log";
+    FILE *logfile = fopen(LOGFILE_NAME, "a");
+    if (logfile) {
+        ostringstream oss;
+        struct timeval now;
+        mocktime_gettimeofday(&now, NULL);
+        oss << ((now.tv_sec * 1000) + (now.tv_usec / 1000))
+            << " " << fmt;
+
+        va_list ap;
+        va_start(ap, fmt);
+        vfprintf(logfile, oss.str().c_str(), ap);
+        va_end(ap);
+        
+        fclose(logfile);
     }
 }

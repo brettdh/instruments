@@ -32,4 +32,9 @@ void update_weights_now();
 
 void start_periodic_updates();
 
+void logPrint(const char *fmt, ...)
+    __attribute__((format(printf, 1, 2)));
+
+
+
 #endif /* _RESOURCE_WEIGHTS_H_9GVA9HBFEWAVH89udbDe */

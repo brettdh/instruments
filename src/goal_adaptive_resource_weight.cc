@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <math.h>
+#include "resource_weights.h"
 #include "goal_adaptive_resource_weight.h"
 #include "timeops.h"
 #include "pthread_util.h"
@@ -10,8 +11,10 @@
 // client must call mocktime_enable 
 //  before creating a GoalAdaptiveResourceWeight
 
+#include <sstream>
 #include <functional>
 using std::min; using std::max;
+using std::ostringstream;
 
 const double GoalAdaptiveResourceWeight::VARIABLE_BUFFER_WEIGHT = 0.05;
 
@@ -159,21 +162,6 @@ GoalAdaptiveResourceWeight::updateGoalTime(struct timeval newGoalTime)
     goalTime = newGoalTime;
 }
 
-
-void
-GoalAdaptiveResourceWeight::logPrint(const char *fmt, ...)
-{
-    static const char *LOGFILE_NAME = "/tmp/budgets.log";
-    FILE *logfile = fopen(LOGFILE_NAME, "a");
-    if (logfile) {
-        va_list ap;
-        va_start(ap, fmt);
-        vfprintf(logfile, fmt, ap);
-        va_end(ap);
-        
-        fclose(logfile);
-    }
-}
 
 double 
 GoalAdaptiveResourceWeight::smoothingFactor()

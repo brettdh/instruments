@@ -24,7 +24,7 @@ class GoalAdaptiveResourceWeight {
     void updateGoalTime(struct timeval newGoalTime);
 
     void updateWeight();
-    
+
   private:
     static const int UPDATE_INTERVAL_SECS = 1;
     static double PROHIBITIVELY_LARGE_WEIGHT;
@@ -39,9 +39,6 @@ class GoalAdaptiveResourceWeight {
     struct timeval lastResourceUseSample;
     std::string type;
     int spendingRateUpdateCount;
-    
-    void logPrint(const char *fmt, ...)
-        __attribute__((format(printf, 2, 3)));;
     
     double smoothingFactor();
     double secondsUntil(struct timeval date);
