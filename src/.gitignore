@@ -1,2 +1,3 @@
 libinstruments.so
 .*.dep
+.*install

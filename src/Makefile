@@ -39,8 +39,21 @@ ifeq ($(shell uname), Darwin)
 CXXFLAGS += -I/opt/local/include
 endif
 
-libinstruments.so: $(OBJS)
+LIB := libinstruments.so
+HEADERS := ../include/instruments.h
+
+$(LIB): $(OBJS)
 	g++  -shared -o $@ $^ $(LDFLAGS)
+
+.libinstall: $(LIB)
+	install $(LIB) /usr/local/lib/
+	-touch $@
+
+.hdrinstall: $(HEADERS)
+	install $(HEADERS) /usr/local/include/
+	-touch $@
+
+install: .libinstall .hdrinstall
 
 clean:
 	rm -f $(OBJS) $(LIBRARIES) *~
