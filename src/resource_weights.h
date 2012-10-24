@@ -7,8 +7,8 @@
 #define CDECL
 #endif
 
-double get_energy_cost_weight();
-double get_data_cost_weight();
+CDECL double get_energy_cost_weight();
+CDECL double get_data_cost_weight();
 
 /* cancels any goal-tracking in progress and
  * sets fixed resource cost weights. 
@@ -20,19 +20,19 @@ CDECL void set_fixed_resource_weights(double fixedEnergyWeight,
  * removing any previously-set fixed cost weights. 
  * goalTime is absolute epoch-timestamp;
  * goal tracking starts immediately from current time. */
-void set_resource_budgets(struct timeval goalTime, 
-                          int energyBudgetMilliJoules,
-                          int dataBudgetBytes);
+CDECL void set_resource_budgets(struct timeval goalTime, 
+                                int energyBudgetMilliJoules,
+                                int dataBudgetBytes);
 
-void report_spent_energy(int energy_spent_mJ);
-void report_spent_data(int data_spent_bytes);
+CDECL void report_spent_energy(int energy_spent_mJ);
+CDECL void report_spent_data(int data_spent_bytes);
 
 // interface for mocktime-based tracking
-void update_weights_now();
+CDECL void update_weights_now();
 
-void start_periodic_updates();
+CDECL void start_periodic_updates();
 
-void logPrint(const char *fmt, ...)
+CDECL void logPrint(const char *fmt, ...)
     __attribute__((format(printf, 1, 2)));
 
 
