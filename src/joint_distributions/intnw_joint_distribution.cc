@@ -101,7 +101,6 @@ IntNWJointDistribution::IntNWJointDistribution(EmpiricalErrorEvalMethod eval_met
 {
     strategy_arg = NULL;
     chooser_arg = NULL;
-    bytelen = 1;
 
     assert(strategies.size() == NUM_STRATEGIES);
     for (size_t i = 0; i < strategies.size(); ++i) {
@@ -208,15 +207,12 @@ IntNWJointDistribution::clearEstimatorErrorDistributions()
 void 
 IntNWJointDistribution::setEvalArgs(void *strategy_arg_, void *chooser_arg_)
 {
-    strategy_arg = strategy_arg_;
-    chooser_arg = (void *) 1;
-    // pull the chooser_arg out of the calculation, since we know
-    //  this works for the calculation: (bytelen / bandwidth) + latency
-    
-    bytelen = (int) chooser_arg_;
+    if (chooser_arg != chooser_arg_) {
+        clearEstimatorErrorDistributions();
+    }
 
-    // this way we don't have to recompute everything when 
-    // bytelen changes; only when there's a new observation.
+    strategy_arg = strategy_arg_;
+    chooser_arg = chooser_arg_;
 }
 
 double 

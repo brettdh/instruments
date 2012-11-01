@@ -28,7 +28,6 @@ class IntNWJointDistribution : public AbstractJointDistribution {
   private:
     void *strategy_arg;
     void *chooser_arg;
-    int bytelen;
 
     EstimatorErrorMap estimatorError;
     
