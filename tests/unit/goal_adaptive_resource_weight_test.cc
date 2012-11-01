@@ -8,11 +8,7 @@
 
 #include <stdlib.h>
 
-#ifdef MOCKTIME_BUILD
 #include "mocktime.h"
-#else
-#define mocktime_usleep usleep
-#endif
 
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(GoalAdaptiveResourceWeightTest, "slow");
 
@@ -128,13 +124,11 @@ void GoalAdaptiveResourceWeightTest::setUp()
 {
     weight = NULL;
     
-#ifdef MOCKTIME_BUILD
     mocktime_enable_mocking();
 
     struct timeval now;
     gettimeofday(&now, NULL);
     mocktime_settimeofday(&now, NULL);
-#endif
 }
 
 void GoalAdaptiveResourceWeightTest::tearDown()
