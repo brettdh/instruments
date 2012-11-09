@@ -37,6 +37,7 @@ LOCAL_CPP_EXTENSION:=.cc
 LOCAL_MODULE := instruments
 LOCAL_SRC_FILES := $(addprefix ../src/, \
 	abstract_joint_distribution.cc \
+	debug.cc \
 	empirical_error_strategy_evaluator.cc \
 	estimator.cc \
 	estimator_registry.cc \
