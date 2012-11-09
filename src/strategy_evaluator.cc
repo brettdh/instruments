@@ -7,6 +7,8 @@
 
 #include "small_set.h"
 
+#include "debug.h"
+
 #include <stdio.h>
 #include <sys/select.h>
 #include <signal.h>

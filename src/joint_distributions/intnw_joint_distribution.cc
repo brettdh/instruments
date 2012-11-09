@@ -3,6 +3,7 @@
 #include "stats_distribution.h"
 #include "stats_distribution_all_samples.h"
 #include "estimator.h"
+#include "debug.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -428,7 +429,7 @@ IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
         double error = estimator->getEstimate() - value;
         estimatorError[estimator]->addValue(error);
         
-        dbgprintf("IntNWJoint: Added error value to estimator %p: %f\n", error);
+        dbgprintf("IntNWJoint: Added error value to estimator %p: %f\n", estimator, error);
     } else {
         estimatorError[estimator] = createErrorDistribution();
         

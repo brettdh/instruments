@@ -69,6 +69,7 @@ TESTOBJS := \
 
 SUPPORTOBJS := \
 	abstract_joint_distribution.o \
+	debug.o \
 	empirical_error_strategy_evaluator.o \
 	estimator.o \
 	estimator_registry.o \

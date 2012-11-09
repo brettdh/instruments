@@ -10,6 +10,8 @@
 #include "prof.h"
 #endif
 
+#include "debug.h"
+
 #define TIMEDIFF(tvb,tve,tvr)                                    \
 do {                                                             \
     assert(((tve).tv_sec > (tvb).tv_sec)                         \
@@ -63,6 +65,8 @@ static double no_cost(instruments_context_t ctx, void *strategy_arg, void *choos
 
 int main()
 {
+    set_debugging_on(0);
+
 #if (defined(ANDROID) && defined(PROFILING_BUILD))
     monstartup("libinstruments.so");
 #endif

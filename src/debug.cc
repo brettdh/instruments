@@ -6,7 +6,6 @@
 #include <string.h>
 #include "timeops.h"
 #include <pthread.h>
-#include "cmm_thread.h"
 #include <sstream>
 #include <string>
 #include <iomanip>
@@ -18,10 +17,9 @@ using std::setw; using std::setfill;
 #include <android/log.h>
 #endif
 
-void get_thread_name(char *name)
+static void get_thread_name(char *name)
 {
     snprintf(name, 11, "%08lx", pthread_self());
-    return name_str;
 }
 
 static void vdbgprintf(bool plain, const char *fmt, va_list ap)
@@ -64,7 +62,7 @@ static void vdbgprintf(bool plain, const char *fmt, va_list ap)
 
 static bool debugging = true;
 
-void set_debugging(bool debug_on)
+void set_debugging_on(int debug_on)
 {
     debugging = debug_on;
 }
