@@ -145,16 +145,15 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
             double redundant_cost = calculateCost(currentStrategy, chooser_arg);
             double net_benefit = benefit - (redundant_cost - singular_cost);
 
-#if 0
-            fprintf(stderr, "Best singular strategy time: %f\n", best_singular_time);
-            fprintf(stderr, "Redundant strategy time: %f\n", redundant_time);
-            fprintf(stderr, "Redundant strategy benefit: %f\n", benefit);
-            fprintf(stderr, "Best-time singular strategy cost: %f\n",
+            dbgprintf("Best singular strategy time: %f\n", best_singular_time);
+            dbgprintf("Redundant strategy time: %f\n", redundant_time);
+            dbgprintf("Redundant strategy benefit: %f\n", benefit);
+            dbgprintf("Best-time singular strategy cost: %f\n",
                     singular_cost);
-            fprintf(stderr, "Redundant strategy cost: %f\n",
+            dbgprintf("Redundant strategy cost: %f\n",
                     redundant_cost);
-            fprintf(stderr, "Redundant strategy additional cost: %f\n", redundant_cost - singular_cost);
-#endif
+            dbgprintf("Redundant strategy additional cost: %f\n", redundant_cost - singular_cost);
+
             if (net_benefit > 0.0 && 
                 (best_redundant == NULL || net_benefit > best_redundant_net_benefit)) {
                 best_redundant = currentStrategy;

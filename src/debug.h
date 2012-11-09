@@ -4,6 +4,12 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#ifdef __cplusplus
+#define CDECL extern "C"
+#else
+#define CDECL 
+#endif
+
 #define ASSERT(cond)                                                    \
     do {                                                                \
         if (!(cond)) {                                                  \
@@ -12,5 +18,10 @@
             __builtin_trap();                                          \
         }                                                              \
     } while (0)
+
+CDECL void dbgprintf(const char *format, ...)
+  __attribute__((format(printf, 1, 2)));
+CDECL void dbgprintf_always(const char *format, ...)
+  __attribute__((format(printf, 1, 2)));
 
 #endif

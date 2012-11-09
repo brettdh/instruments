@@ -427,6 +427,8 @@ IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
     if (estimatorError.count(estimator) > 0) {
         double error = estimator->getEstimate() - value;
         estimatorError[estimator]->addValue(error);
+        
+        dbgprintf("IntNWJoint: Added error value to estimator %p: %f\n", error);
     } else {
         estimatorError[estimator] = createErrorDistribution();
         
