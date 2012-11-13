@@ -10,6 +10,8 @@
 #include <float.h>
 
 #include <vector>
+#include <map>
+using std::map; using std::pair; using std::make_pair;
 using std::vector;
 
 static const size_t NUM_ESTIMATORS_SINGULAR = 2;
@@ -211,6 +213,7 @@ IntNWJointDistribution::setEvalArgs(void *strategy_arg_, void *chooser_arg_)
 {
     if (chooser_arg != chooser_arg_) {
         clearEstimatorErrorDistributions();
+        cache.clear();
     }
 
     strategy_arg = strategy_arg_;
@@ -220,12 +223,16 @@ IntNWJointDistribution::setEvalArgs(void *strategy_arg_, void *chooser_arg_)
 double 
 IntNWJointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
-    if (strategy->isRedundant()) {
-        assert(strategy->childrenAreDisjoint());
-        return redundantStrategyExpectedValue(strategy, fn);
-    } else {
-        return singularStrategyExpectedValue(strategy, fn);
+    pair<Strategy *, typesafe_eval_fn_t> key = make_pair(strategy, fn);
+    if (cache.count(key) == 0) {
+        if (strategy->isRedundant()) {
+            assert(strategy->childrenAreDisjoint());
+            cache[key] = redundantStrategyExpectedValue(strategy, fn);
+        } else {
+            cache[key] = singularStrategyExpectedValue(strategy, fn);
+        }
     }
+    return cache[key];
 }
 
 

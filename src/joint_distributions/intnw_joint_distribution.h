@@ -9,6 +9,7 @@ class Estimator;
 class StatsDistribution;
 
 #include <vector>
+#include <map>
 
 typedef small_map<Estimator *, StatsDistribution *> EstimatorErrorMap;
 typedef small_map<Estimator *, double *> EstimatorErrorValuesMap;
@@ -42,6 +43,8 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     size_t **singular_error_count;
 
     double ****singular_strategy_saved_values;
+
+    std::map<std::pair<Strategy *, typesafe_eval_fn_t>, double> cache;
 
     double singularStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
     double redundantStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
