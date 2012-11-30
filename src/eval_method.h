@@ -11,7 +11,7 @@ enum EmpiricalErrorEvalMethod {
 };
 
 enum JointDistributionType {
-    GENERAL_JOINT_DISTRIBUTION = 0x00, // default
+    GENERIC_JOINT_DISTRIBUTION = 0x00, // default
     INTNW_JOINT_DISTRIBUTION = 0x10
 };
 

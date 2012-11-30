@@ -5,6 +5,10 @@
 #include "running_mean_estimator.h"
 #include "strategy_evaluator.h"
 
+#include <stdexcept>
+#include <string>
+using std::runtime_error; using std::string;
+
 Estimator *
 Estimator::create()
 {
@@ -40,4 +44,11 @@ void
 Estimator::subscribe(StrategyEvaluator *subscriber)
 {
     subscribers.insert(subscriber);
+}
+
+string
+Estimator::getName()
+{
+    // TODO: set name to enable error-checking when restoring distribution from file
+    throw runtime_error("NOT IMPLEMENTED YET");
 }

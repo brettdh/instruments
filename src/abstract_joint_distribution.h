@@ -17,6 +17,9 @@ class AbstractJointDistribution : public StrategyEvaluationContext {
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator) = 0;
     virtual void observationAdded(Estimator *estimator, double value) = 0;
+
+    virtual void saveToFile(const char *filename) = 0;
+    virtual void restoreFromFile(const char *filename) = 0;
   protected:
     StatsDistribution *createErrorDistribution();
   private:

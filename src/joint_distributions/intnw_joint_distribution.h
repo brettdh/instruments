@@ -1,7 +1,7 @@
 #ifndef _INTNW_JOINT_DISTRIBUTION_H_
 #define _INTNW_JOINT_DISTRIBUTION_H_
 
-#include "joint_distribution.h"
+#include "abstract_joint_distribution.h"
 #include "small_map.h"
 #include "strategy.h"
 
@@ -10,8 +10,10 @@ class StatsDistribution;
 
 #include <vector>
 #include <map>
+#include <string>
 
 typedef small_map<Estimator *, StatsDistribution *> EstimatorErrorMap;
+typedef small_map<std::string, StatsDistribution *> EstimatorErrorPlaceholderMap;
 typedef small_map<Estimator *, double *> EstimatorErrorValuesMap;
 typedef small_map<Estimator *, size_t> EstimatorIndicesMap;
 
@@ -26,6 +28,9 @@ class IntNWJointDistribution : public AbstractJointDistribution {
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
     virtual void observationAdded(Estimator *estimator, double value);
+
+    virtual void saveToFile(const char *filename);
+    virtual void restoreFromFile(const char *filename);
   private:
     void *strategy_arg;
     void *chooser_arg;
@@ -56,6 +61,9 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     void clearEstimatorErrorDistributions();
 
     void ensureValidMemoizedValues(eval_fn_type_t saved_value_type);
+
+    EstimatorErrorPlaceholderMap estimatorErrorPlaceholders;
+    bool estimatorExists(const std::string& key);
 };
 
 #endif /* _INTNW_JOINT_DISTRIBUTION_H_ */

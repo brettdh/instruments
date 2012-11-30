@@ -4,6 +4,8 @@
 #include "estimator_type.h"
 #include "small_set.h"
 
+#include <string>
+
 class StrategyEvaluator;
 
 /* Pure virtual base class for all types of estimators.
@@ -25,6 +27,8 @@ class Estimator {
     
     virtual double getEstimate() = 0;
     virtual ~Estimator() {}
+
+    virtual std::string getName();
   protected:
     Estimator() {}
 
@@ -32,6 +36,8 @@ class Estimator {
     virtual void storeNewObservation(double value) = 0;
     
   private:
+    std::string name;
+
     small_set<StrategyEvaluator*> subscribers;
     const static EstimatorType DEFAULT_TYPE = RUNNING_MEAN;
 };

@@ -16,7 +16,7 @@ OBJS := \
 	external_estimator.o \
 	goal_adaptive_resource_weight.o \
 	instruments.o \
-	joint_distribution.o \
+	generic_joint_distribution.o \
 	joint_distributions/intnw_joint_distribution.o \
 	r_singleton.o \
 	resource_weights.o \
@@ -33,7 +33,7 @@ OBJS := \
 CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic -pthread $(R_CXXFLAGS)
 #CXXFLAGS := $(subst -O3,-O0,$(CXXFLAGS))
 #CXXFLAGS += -fno-inline
-CXXFLAGS += -O3 -DNDEBUG
+CXXFLAGS += -O3 -DNDEBUG -std=gnu++0x
 LDFLAGS := -lpthread $(R_LDLIBS) -L/usr/local/lib -lmocktime -Wl,--no-undefined
 
 ifeq ($(shell uname), Darwin)

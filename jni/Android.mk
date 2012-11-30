@@ -7,7 +7,8 @@ ifneq ($(my_PROFILING_BUILD),)
 -include $(LOCAL_PATH)/android-ndk-profiler.mk
 endif
 
-common_CXXFLAGS:=-g -O3 -Wall -Werror -DANDROID
+common_CFLAGS:=-g -O3 -Wall -Werror -DANDROID
+common_CXXFLAGS:=$(common_CFLAGS) # -std=gnu++0x
 INSTRUMENTS_INCLUDES := \
 	$(LOCAL_PATH)/../include \
 	$(LOCAL_PATH)/../src
@@ -45,7 +46,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	external_estimator.cc \
 	goal_adaptive_resource_weight.cc \
 	instruments.cc \
-	joint_distribution.cc \
+	generic_joint_distribution.cc \
 	joint_distributions/intnw_joint_distribution.cc \
 	resource_weights.cc \
 	running_mean_estimator.cc \
@@ -75,7 +76,7 @@ LOCAL_MODULE := run_perf_test
 LOCAL_SRC_FILES := $(addprefix ../tests/acceptance/, \
 	brute_force_performance_test.c)
 LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(LOCAL_PATH)/../tests/include
-LOCAL_CFLAGS := $(common_CXXFLAGS)
+LOCAL_CFLAGS := $(common_CFLAGS)
 ifneq ($(my_PROFILING_BUILD),)
 LOCAL_CFLAGS += $(my_PROFILING_CFLAGS)
 LOCAL_STATIC_LIBRARIES += andprof

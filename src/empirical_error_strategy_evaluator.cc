@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include "generic_joint_distribution.h"
 #include "joint_distributions/intnw_joint_distribution.h"
 
 EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator(EvalMethod method)
@@ -31,8 +32,8 @@ EmpiricalErrorStrategyEvaluator::createJointDistribution()
 {
     if (joint_distribution_type == INTNW_JOINT_DISTRIBUTION) {
         return new IntNWJointDistribution(eval_method, strategies);
-    } else if (joint_distribution_type == GENERAL_JOINT_DISTRIBUTION) {
-        return new JointDistribution(eval_method, strategies);
+    } else if (joint_distribution_type == GENERIC_JOINT_DISTRIBUTION) {
+        return new GenericJointDistribution(eval_method, strategies);
     } else abort();
     // TODO: other specialized eval methods
 }
@@ -56,4 +57,16 @@ EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval
 {
     jointDistribution->setEvalArgs(strategy_arg, chooser_arg);
     return jointDistribution->expectedValue(strategy, fn);
+}
+
+void
+EmpiricalErrorStrategyEvaluator::saveToFile(const char *filename)
+{
+    jointDistribution->saveToFile(filename);
+}
+
+void 
+EmpiricalErrorStrategyEvaluator::restoreFromFile(const char *filename)
+{
+    jointDistribution->restoreFromFile(filename);
 }

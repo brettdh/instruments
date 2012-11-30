@@ -17,9 +17,9 @@ class Estimator;
 
 typedef small_map<Estimator *, StatsDistribution *> EstimatorErrorMap;
 
-class JointDistribution : public AbstractJointDistribution {
+class GenericJointDistribution : public AbstractJointDistribution {
   public:
-    JointDistribution(EmpiricalErrorEvalMethod eval_method_,
+    GenericJointDistribution(EmpiricalErrorEvalMethod eval_method_,
                       const std::vector<Strategy *>& strategies);
 
     void setEvalArgs(void *strategy_arg_, void *chooser_arg_);
@@ -27,6 +27,10 @@ class JointDistribution : public AbstractJointDistribution {
 
     double getAdjustedEstimatorValue(Estimator *estimator);
     void observationAdded(Estimator *estimator, double value);
+
+    virtual void saveToFile(const char *filename);
+    virtual void restoreFromFile(const char *filename);
+
   private:
     EstimatorErrorMap estimatorError;
     void *strategy_arg;
@@ -61,7 +65,7 @@ class JointDistribution : public AbstractJointDistribution {
 
     class Iterator {
       public:
-        Iterator(JointDistribution *distribution_, Strategy *strategy);
+        Iterator(GenericJointDistribution *distribution_, Strategy *strategy);
         ~Iterator();
         bool isDone();
         double jointProbability();
@@ -77,7 +81,7 @@ class JointDistribution : public AbstractJointDistribution {
         void advancePosition(size_t index);
         void resetPosition(size_t index);
 
-        JointDistribution *distribution;
+        GenericJointDistribution *distribution;
 
         std::vector<size_t> position;
         std::vector<size_t> end_position;

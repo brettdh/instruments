@@ -7,6 +7,8 @@
 class StatsDistributionAllSamples : public StatsDistribution {
   public:
     virtual void addValue(double value);
+    virtual void appendToFile(const std::string& name, std::ofstream& out);
+    virtual void restoreFromFile(const std::string& name, std::ifstream& in);
 
     class Iterator : StatsDistribution::Iterator {
       public:

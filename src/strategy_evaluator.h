@@ -37,6 +37,9 @@ class StrategyEvaluator : public StrategyEvaluationContext {
                                  void *strategy_arg, void *chooser_arg) = 0;
     virtual void observationAdded(Estimator *estimator, double value) = 0;
 
+    virtual void saveToFile(const char *filename) = 0;
+    virtual void restoreFromFile(const char *filename) = 0;
+
     virtual ~StrategyEvaluator() {}
   protected:
     StrategyEvaluator();

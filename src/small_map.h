@@ -13,24 +13,27 @@
 #include <vector>
 #include <functional>
 
-template <typename KeyType, typename ValueType>
+template <typename KeyType, typename MappedType>
 class small_map {
     static const int DEFAULT_RESERVED_SPACE = 32;
 
   public:
-    ValueType& operator[](const KeyType& key);
+    // so that they look like the STL equivalents
+    typedef KeyType key_type;
+    typedef MappedType mapped_type;
+    typedef std::pair<key_type, mapped_type> value_type;
+
+    MappedType& operator[](const KeyType& key);
     void erase(KeyType& key);
     size_t size() const;
     size_t count(const KeyType& val) const;
     void clear();
-
-    typedef std::pair<KeyType, ValueType> PairType;
-
-    typedef typename std::vector<PairType >::const_iterator const_iterator;
+    
+    typedef typename std::vector<value_type>::const_iterator const_iterator;
     const_iterator begin() const;
     const_iterator end() const;
 
-    typedef typename std::vector<PairType >::iterator iterator;
+    typedef typename std::vector<value_type>::iterator iterator;
     iterator begin();
     iterator end();
 
@@ -41,27 +44,27 @@ class small_map {
   private:
     bool contains(const KeyType& key) const;
     
-    std::vector<PairType> items;
+    std::vector<value_type> items;
 };
 
 
-template <typename KeyType, typename ValueType>
-ValueType& 
-small_map<KeyType, ValueType>::operator[](const KeyType& key)
+template <typename KeyType, typename MappedType>
+MappedType& 
+small_map<KeyType, MappedType>::operator[](const KeyType& key)
 {
     for (size_t i = 0; i < items.size(); ++i) {
         if (items[i].first == key) {
             return items[i].second;
         }
     }
-    items.push_back(std::make_pair(key, ValueType()));
+    items.push_back(std::make_pair(key, MappedType()));
     return items[items.size() - 1].second;
 }
 
-template <typename KeyType, typename ValueType>
-void small_map<KeyType,ValueType>::erase(KeyType& key)
+template <typename KeyType, typename MappedType>
+void small_map<KeyType,MappedType>::erase(KeyType& key)
 {
-    for (typename std::vector<PairType>::iterator it = items.begin();
+    for (typename std::vector<value_type>::iterator it = items.begin();
          it != items.end(); ++it) {
         if (it->first == key) {
             items.erase(it);
@@ -70,14 +73,14 @@ void small_map<KeyType,ValueType>::erase(KeyType& key)
     }
 }
 
-template <typename KeyType, typename ValueType>
-size_t small_map<KeyType,ValueType>::size() const
+template <typename KeyType, typename MappedType>
+size_t small_map<KeyType,MappedType>::size() const
 {
     return items.size();
 }
 
-template <typename KeyType, typename ValueType>
-size_t small_map<KeyType,ValueType>::count(const KeyType& key) const
+template <typename KeyType, typename MappedType>
+size_t small_map<KeyType,MappedType>::count(const KeyType& key) const
 {
     if (contains(key)) {
         return 1;
@@ -86,14 +89,14 @@ size_t small_map<KeyType,ValueType>::count(const KeyType& key) const
     }
 }
 
-template <typename KeyType, typename ValueType>
-void small_map<KeyType,ValueType>::clear()
+template <typename KeyType, typename MappedType>
+void small_map<KeyType,MappedType>::clear()
 {
     items.clear();
 }
 
-template <typename KeyType, typename ValueType>
-bool small_map<KeyType,ValueType>::contains(const KeyType& key) const
+template <typename KeyType, typename MappedType>
+bool small_map<KeyType,MappedType>::contains(const KeyType& key) const
 {
     for (size_t i = 0; i < items.size(); ++i) {
         if (items[i].first == key) {
@@ -103,26 +106,26 @@ bool small_map<KeyType,ValueType>::contains(const KeyType& key) const
     return false;
 }
 
-template <typename KeyType, typename ValueType>
-typename small_map<KeyType,ValueType>::const_iterator small_map<KeyType,ValueType>::begin() const
+template <typename KeyType, typename MappedType>
+typename small_map<KeyType,MappedType>::const_iterator small_map<KeyType,MappedType>::begin() const
 {
     return items.begin();
 }
 
-template <typename KeyType, typename ValueType>
-typename small_map<KeyType,ValueType>::const_iterator small_map<KeyType,ValueType>::end() const
+template <typename KeyType, typename MappedType>
+typename small_map<KeyType,MappedType>::const_iterator small_map<KeyType,MappedType>::end() const
 {
     return items.end();
 }
 
-template <typename KeyType, typename ValueType>
-typename small_map<KeyType,ValueType>::iterator small_map<KeyType,ValueType>::begin()
+template <typename KeyType, typename MappedType>
+typename small_map<KeyType,MappedType>::iterator small_map<KeyType,MappedType>::begin()
 {
     return items.begin();
 }
 
-template <typename KeyType, typename ValueType>
-typename small_map<KeyType,ValueType>::iterator small_map<KeyType,ValueType>::end()
+template <typename KeyType, typename MappedType>
+typename small_map<KeyType,MappedType>::iterator small_map<KeyType,MappedType>::end()
 {
     return items.end();
 }

@@ -8,11 +8,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <float.h>
+#include <assert.h>
 
 #include <vector>
 #include <map>
+#include <fstream>
+#include <algorithm>
+#include <sstream>
+#include <string>
+#include <stdexcept>
 using std::map; using std::pair; using std::make_pair;
-using std::vector;
+using std::vector; using std::ifstream; using std::ofstream; using std::count_if;
+using std::ostringstream; using std::endl;
+using std::runtime_error; using std::string;
 
 static const size_t NUM_ESTIMATORS_SINGULAR = 2;
 static const size_t REDUNDANT_STRATEGY_CHILDREN = 2;
@@ -446,4 +454,87 @@ IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
         estimatorError[estimator]->addValue(0.0);
     }
     clearEstimatorErrorDistributions();
+}
+
+void
+IntNWJointDistribution::saveToFile(const char *filename)
+{
+#ifdef SAVE_RESTORE_IMPLEMENTED
+    try {
+        ofstream out(filename);
+        if (!out) {
+            ostringstream oss;
+            oss << "Failed to open " << filename;
+            throw runtime_error(oss.str());
+        }
+        
+        out << estimatorError.size() << " estimators" << endl;
+        for (auto it = estimatorError.begin();
+             it != estimatorError.end(); ++it) {
+            Estimator *estimator = it->first;
+            StatsDistribution *dist = it->second;
+            
+            dist->appendToFile(estimator->getName(), out);
+        }
+    } catch (runtime_error& e) {
+        dbgprintf("WARNING: failed to save joint distribution: %s\n", e.what());
+    }
+#else
+    throw runtime_error("NOT IMPLEMENTED");
+#endif
+}
+
+static void
+check(bool success)
+{
+    if (!success) {
+        throw runtime_error("Parse failure");
+    }
+}
+
+bool
+IntNWJointDistribution::estimatorExists(const string& key)
+{
+#ifdef SAVE_RESTORE_IMPLEMENTED
+    if (estimatorError.size() == 0) { 
+        return false;
+    }
+    auto pred = [&key](const EstimatorErrorMap::value_type& value) -> bool {
+        return (value.first->getName() == key);
+    };
+    return count_if(estimatorError.begin(), estimatorError.end(), pred);
+#else
+    throw runtime_error("NOT IMPLEMENTED");
+#endif
+}
+
+void 
+IntNWJointDistribution::restoreFromFile(const char *filename)
+{
+    try {
+        ifstream in(filename);
+        if (!in) {
+            ostringstream oss;
+            oss << "Failed to open " << filename;
+            throw runtime_error(oss.str());
+        }
+        size_t num_estimators = 0;
+        check(in >> num_estimators);
+        
+        for (size_t i = 0; i < num_estimators; ++i) {
+            string key;
+            check(in >> key);
+            StatsDistribution *dist = createErrorDistribution();
+            dist->restoreFromFile(key, in);
+            
+            if (estimatorExists(key)) {
+                dbgprintf("WARNING: creating placholder %s for already-existing estimator\n",
+                          key.c_str());
+            }
+            estimatorErrorPlaceholders[key] = dist;
+        }
+
+    } catch (runtime_error& e) {
+        dbgprintf("WARNING: failed to restore joint distribution: %s\n", e.what());
+    }
 }

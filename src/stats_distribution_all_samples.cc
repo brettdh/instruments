@@ -1,6 +1,12 @@
 #include "stats_distribution_all_samples.h"
 #include <assert.h>
 
+#include <string>
+#include <fstream>
+#include <stdexcept>
+using std::string; using std::ifstream; using std::ofstream;
+using std::runtime_error;
+
 void 
 StatsDistributionAllSamples::addValue(double value)
 {
@@ -73,4 +79,16 @@ StatsDistribution::Iterator *
 StatsDistributionAllSamples::makeNewIterator()
 {
     return new StatsDistributionAllSamples::Iterator(this);
+}
+
+void 
+StatsDistributionAllSamples::appendToFile(const string& name, ofstream& out)
+{
+    throw runtime_error("NOT IMPLEMENTED");
+}
+
+void 
+StatsDistributionAllSamples::restoreFromFile(const string& name, ifstream& in)
+{
+    throw runtime_error("NOT IMPLEMENTED");
 }

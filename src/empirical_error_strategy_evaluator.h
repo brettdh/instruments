@@ -16,7 +16,9 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg);
-    
+
+    virtual void saveToFile(const char *filename);
+    virtual void restoreFromFile(const char *filename);
   protected:
     virtual void observationAdded(Estimator *estimator, double value);
     virtual void setStrategies(const instruments_strategy_t *strategies_,
