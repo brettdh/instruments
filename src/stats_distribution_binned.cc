@@ -1,11 +1,14 @@
 #include "stats_distribution_binned.h"
 #include <assert.h>
 #include <sstream>
+#include <fstream>
 #include <string>
 #include <iomanip>
 #include <vector>
+#include <stdexcept>
 using std::ostringstream; using std::string; using std::hex;
-using std::vector;
+using std::vector; using std::ifstream; using std::ofstream;
+using std::runtime_error;
 
 #include "small_set.h"
 
@@ -304,4 +307,16 @@ StatsDistributionBinned::addToTail(int& count, double& mid, double value)
     double sum = (count * mid);
     count++;
     mid = (sum + value) / count;
+}
+
+void 
+StatsDistributionBinned::appendToFile(const string& name, ofstream& out)
+{
+    throw runtime_error("NOT IMPLEMENTED");
+}
+
+void 
+StatsDistributionBinned::restoreFromFile(const string& name, ifstream& in)
+{
+    throw runtime_error("NOT IMPLEMENTED");
 }
