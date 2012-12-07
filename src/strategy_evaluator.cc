@@ -112,6 +112,9 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
     // first, pick the singular strategy that takes the least time (expected)
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
+
+    // not the "best cost," but the cost of the best (min-time) singular strategy.
+    double best_singular_cost = 0.0;
     for (vector<Strategy *>::const_iterator it = strategies.begin();
          it != strategies.end(); ++it) {
         currentStrategy = *it;
@@ -123,12 +126,11 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
             // XXX: HACK.  This is a caching decision that belongs inside
             // XXX:  the class that does the caching.
             double cost = calculateCost(currentStrategy, chooser_arg);
-            (void)cost;
 
-            
             if (!best_singular || time < best_singular_time) {
                 best_singular = currentStrategy;
                 best_singular_time = time;
+                best_singular_cost = cost;
             }
         }
     }
@@ -143,18 +145,17 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
         if (currentStrategy->isRedundant()) {
             double redundant_time = calculateTime(currentStrategy, chooser_arg);
             double benefit = best_singular_time - redundant_time;
-            double singular_cost = calculateCost(best_singular, chooser_arg);
+            
             double redundant_cost = calculateCost(currentStrategy, chooser_arg);
-            double net_benefit = benefit - (redundant_cost - singular_cost);
+            double net_benefit = benefit - (redundant_cost - best_singular_cost);
 
             dbgprintf("Best singular strategy time: %f\n", best_singular_time);
             dbgprintf("Redundant strategy time: %f\n", redundant_time);
             dbgprintf("Redundant strategy benefit: %f\n", benefit);
-            dbgprintf("Best-time singular strategy cost: %f\n",
-                    singular_cost);
-            dbgprintf("Redundant strategy cost: %f\n",
-                    redundant_cost);
-            dbgprintf("Redundant strategy additional cost: %f\n", redundant_cost - singular_cost);
+            dbgprintf("Best-time singular strategy cost: %f\n", best_singular_cost);
+            dbgprintf("Redundant strategy cost: %f\n", redundant_cost);
+            dbgprintf("Redundant strategy additional cost: %f\n", 
+                      redundant_cost - best_singular_cost);
 
             if (net_benefit > 0.0 && 
                 (best_redundant == NULL || net_benefit > best_redundant_net_benefit)) {
