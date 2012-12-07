@@ -77,7 +77,7 @@ SUPPORTOBJS := \
 	external_estimator.o \
 	goal_adaptive_resource_weight.o \
 	instruments.o \
-	joint_distribution.o \
+	generic_joint_distribution.o \
 	intnw_joint_distribution.o \
 	r_singleton.o \
 	resource_weights.o \
