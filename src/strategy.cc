@@ -111,9 +111,9 @@ Strategy::calculateCost(StrategyEvaluator *evaluator, void *chooser_arg)
     }
     double energy_weight = get_energy_cost_weight();
     double data_weight = get_data_cost_weight();
-    dbgprintf("  Raw energy cost: %f  energy weight: %f  Weighted energy cost: %f\n",
+    dbgprintf("  Energy cost: %f * %f = %f\n",
               energy_cost, energy_weight, energy_cost * energy_weight);
-    dbgprintf("  Raw data cost: %f  data weight: %f  Weighted data cost: %f\n",
+    dbgprintf("  Data cost:   %f * %f = %f\n",
               data_cost, data_weight, data_cost * data_weight);
     return ((energy_cost * energy_weight) + (data_cost * data_weight));
 }
