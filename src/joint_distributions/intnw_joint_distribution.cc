@@ -170,6 +170,7 @@ IntNWJointDistribution::getEstimatorErrorDistributions()
             Estimator *estimator = singular_strategy_estimators[i][j];
             assert(estimatorError.count(estimator) > 0);
             StatsDistribution *distribution = estimatorError[estimator];
+            ASSERT(distribution != NULL);
             singular_probabilities[i][j] = get_estimator_error_probs(distribution);
             singular_error_values[i][j] = get_estimator_error_values(distribution);
             singular_error_count[i][j] = get_estimator_samples_count(distribution);
