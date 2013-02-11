@@ -1,6 +1,7 @@
 #include "generic_joint_distribution.h"
 #include "strategy.h"
 #include "estimator.h"
+#include "error_calculation.h"
 #include "stats_distribution.h"
 #include "stats_distribution_all_samples.h"
 #ifndef ANDROID
@@ -200,7 +201,8 @@ GenericJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
     double estimate = estimator->getEstimate();
 
     double error = iterator->currentEstimatorError(estimator);
-    return estimate - error;
+    //return estimate - error;
+    return adjusted_estimate(estimate, error);
 }
 
 void 
@@ -209,14 +211,15 @@ GenericJointDistribution::observationAdded(Estimator *estimator, double value)
     clearMemos();
     
     if (estimatorError.count(estimator) > 0) {
-        double error = estimator->getEstimate() - value;
+        //double error = estimator->getEstimate() - value;
+        double error = calculate_error(estimator->getEstimate(), value);
         estimatorError[estimator]->addValue(error);
     } else {
         estimatorError[estimator] = createErrorDistribution();
         
         // don't add a real error value to the distribution.
         // there's no error until we have at least two observations.
-        estimatorError[estimator]->addValue(0.0);
+        estimatorError[estimator]->addValue(no_error_value());
     }
 }
 

@@ -121,7 +121,7 @@ CTEST2(external_estimator, singular_strategy_chosen)
 
 CTEST2(external_estimator, redundant_strategy_chosen)
 {
-    run_test_with_oscillating_estimator(data, 20.0, 10.0, 2);
+    run_test_with_oscillating_estimator(data, 20.0, 2.0, 2);
 }
 
 CTEST2(external_estimator, cost_has_effect)

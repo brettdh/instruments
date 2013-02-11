@@ -71,6 +71,7 @@ SUPPORTOBJS := \
 	abstract_joint_distribution.o \
 	debug.o \
 	empirical_error_strategy_evaluator.o \
+	error_calculation.o \
 	estimator.o \
 	estimator_registry.o \
 	eval_method.o \

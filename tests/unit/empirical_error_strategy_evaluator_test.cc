@@ -9,6 +9,8 @@
 #include "empirical_error_strategy_evaluator.h"
 #include "eval_method.h"
 
+#include "error_calculation.h"
+
 #include "estimator.h"
 #include "last_observation_estimator.h"
 
@@ -56,11 +58,19 @@ EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
     for (int i = 9; i >= 4; --i) {
         estimator->addObservation((double) i);
     }
+
+#ifdef RELATIVE_ERROR
+    // empirical error distribution is (1.0, 8/9, 7/8, 6/7, 5/6, 4/5)
+    // expected value is (4+32/9+7/2+24/7+10/3+16/5)/6 = 3.503
+    double expected_value = 3.503;
+#else
     // empirical error distribution is (0,1,1,1,1,1)
     // expected value is (4+3+3+3+3+3)/6 = 19/6
+    double expected_value = 19.0/6;
+#endif
 
     double value = evaluator->expectedValue(strategy, strategy->time_fn, strategy->strategy_arg, NULL);
-    CPPUNIT_ASSERT_DOUBLES_EQUAL(19.0/6, value, 0.001);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(expected_value, value, 0.001);
 }
 
 void
@@ -84,13 +94,25 @@ EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimators()
         estimators[i]->addObservation(value - error*2);
     }
 
+#ifdef RELATIVE_ERROR
+    // estimate values: 
+    //   5, 3, 1, -1, -3
+    // relative error values:
+    //   (1.0, 1.0), (0.6, 1.0), (0.2, 1.0), (-0.2, 1.0), (-0.6, 1.0)
+    // adjusted error values:
+    //   (5, 5), (1.8, 3), (0.2, 1), (0.2, -1.0), (1.8, -3)
+    // sum of each permutation of those
+    // sum of those, divided by 2^5.
+    double expected_value = 7.0;
+#else
     // values: sum of each permutation of:
     //   (5,5), (1,3), (-3,1), (-7,-1), (-11,-3)
     // sum of those, divided by 2^5.
-    // expected value: -5.0
+    double expected_value = -5.0;
+#endif
 
     double value = evaluator->expectedValue(strategy, strategy->time_fn, strategy->strategy_arg, NULL);
-    CPPUNIT_ASSERT_DOUBLES_EQUAL(-5.0, value, 0.001);
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(expected_value, value, 0.001);
 }
 
 void

@@ -3,6 +3,7 @@
 #include "stats_distribution.h"
 #include "stats_distribution_all_samples.h"
 #include "estimator.h"
+#include "error_calculation.h"
 #include "debug.h"
 
 #include <stdlib.h>
@@ -435,7 +436,8 @@ IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
     size_t index = estimatorIndices[estimator];
     double estimate = estimator->getEstimate();
     double error = estimator_error_values[index];
-    double adjusted_value = estimate - error;
+    //double adjusted_value = estimate - error;
+    double adjusted_value = adjusted_estimate(estimate, error);
     return adjusted_value;
 }
 
@@ -443,7 +445,8 @@ void
 IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
 {
     if (estimatorError.count(estimator) > 0) {
-        double error = estimator->getEstimate() - value;
+        //double error = estimator->getEstimate() - value;
+        double error = calculate_error(estimator->getEstimate(), value);
         estimatorError[estimator]->addValue(error);
         
         dbgprintf("IntNWJoint: Added error value to estimator %p: %f\n", estimator, error);
@@ -452,7 +455,7 @@ IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
         
         // don't add a real error value to the distribution.
         // there's no error until we have at least two observations.
-        estimatorError[estimator]->addValue(0.0);
+        estimatorError[estimator]->addValue(no_error_value());
     }
     clearEstimatorErrorDistributions();
 }
