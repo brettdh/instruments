@@ -1,10 +1,13 @@
 #include "stats_distribution_all_samples.h"
+#include "debug.h"
 #include <assert.h>
 
 #include <string>
 #include <fstream>
 #include <stdexcept>
+#include <iomanip>
 using std::string; using std::ifstream; using std::ofstream;
+using std::endl; using std::setprecision;
 using std::runtime_error;
 
 void 
@@ -81,14 +84,37 @@ StatsDistributionAllSamples::makeNewIterator()
     return new StatsDistributionAllSamples::Iterator(this);
 }
 
+#define VALUES_PER_LINE 5
+static const string TAG = "all-samples";
+
+#define PRECISION 20
+
 void 
 StatsDistributionAllSamples::appendToFile(const string& name, ofstream& out)
 {
-    throw runtime_error("NOT IMPLEMENTED");
+    out << name << " " << TAG << " " << values.size() << endl;;
+    for (size_t i = 0; i < values.size(); ++i) {
+        out << setprecision(PRECISION) << values[i] << " ";
+        if ((i+1) % VALUES_PER_LINE == 0) {
+            out << endl;
+        }
+    }
+    check(out, "Failed to write values");
 }
 
-void 
-StatsDistributionAllSamples::restoreFromFile(const string& name, ifstream& in)
+string
+StatsDistributionAllSamples::restoreFromFile(ifstream& in)
 {
-    throw runtime_error("NOT IMPLEMENTED");
+    string name, type;
+    int num_values = 0;
+    check(in >> name >> type >> num_values, "Failed to read init fields");
+    check(type == TAG, "Distribution type mismatch");
+
+    values.clear();
+    for (int i = 0; i < num_values; ++i) {
+        double value = 0.0;
+        check(in >> value, "Failed to read value");
+        values.push_back(value);
+    }
+    return name;
 }

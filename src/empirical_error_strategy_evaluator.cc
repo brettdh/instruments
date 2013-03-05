@@ -9,6 +9,13 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include <fstream>
+#include <stdexcept>
+#include <sstream>
+using std::ifstream; using std::ofstream;
+using std::runtime_error;
+using std::ostringstream;
+
 #include "generic_joint_distribution.h"
 #include "joint_distributions/intnw_joint_distribution.h"
 
@@ -62,11 +69,25 @@ EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval
 void
 EmpiricalErrorStrategyEvaluator::saveToFile(const char *filename)
 {
-    jointDistribution->saveToFile(filename);
+    ofstream out(filename);
+    if (!out) {
+        ostringstream oss;
+        oss << "Failed to open " << filename;
+        throw runtime_error(oss.str());
+    }
+
+    jointDistribution->saveToFile(out);
 }
 
 void 
 EmpiricalErrorStrategyEvaluator::restoreFromFile(const char *filename)
 {
-    jointDistribution->restoreFromFile(filename);
+    ifstream in(filename);
+    if (!in) {
+        ostringstream oss;
+        oss << "Failed to open " << filename;
+        throw runtime_error(oss.str());
+    }
+
+    jointDistribution->restoreFromFile(in);
 }

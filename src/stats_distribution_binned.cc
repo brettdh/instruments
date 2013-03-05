@@ -315,8 +315,8 @@ StatsDistributionBinned::appendToFile(const string& name, ofstream& out)
     throw runtime_error("NOT IMPLEMENTED");
 }
 
-void 
-StatsDistributionBinned::restoreFromFile(const string& name, ifstream& in)
+string
+StatsDistributionBinned::restoreFromFile(ifstream& in)
 {
     throw runtime_error("NOT IMPLEMENTED");
 }

@@ -18,7 +18,7 @@ class StatsDistribution {
     void finishIterator(Iterator *it);
 
     virtual void appendToFile(const std::string& name, std::ofstream& out) = 0;
-    virtual void restoreFromFile(const std::string& name, std::ifstream& in) = 0;
+    virtual std::string restoreFromFile(std::ifstream& in) = 0;
 
   protected:
     virtual Iterator *makeNewIterator() = 0;

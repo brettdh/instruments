@@ -4,6 +4,9 @@
 #include <cppunit/TestFixture.h>
 #include <cppunit/extensions/HelperMacros.h>
 
+class Strategy;
+class StrategyEvaluator;
+
 class EmpiricalErrorStrategyEvaluatorTest : public CppUnit::TestFixture {
 
     CPPUNIT_TEST_SUITE(EmpiricalErrorStrategyEvaluatorTest);
@@ -11,6 +14,7 @@ class EmpiricalErrorStrategyEvaluatorTest : public CppUnit::TestFixture {
     CPPUNIT_TEST(testMultipleEstimators);
     CPPUNIT_TEST(testMultipleEstimatorsTwice);
     CPPUNIT_TEST(testOnlyIterateOverRelevantEstimators);
+    CPPUNIT_TEST(testSaveRestore);
     CPPUNIT_TEST_SUITE_END();
 
   public:
@@ -18,6 +22,13 @@ class EmpiricalErrorStrategyEvaluatorTest : public CppUnit::TestFixture {
     void testMultipleEstimators();
     void testMultipleEstimatorsTwice();
     void testOnlyIterateOverRelevantEstimators();
+    void testSaveRestore();
+
+  private:
+    void assertRestoredEvaluationMatches(Strategy **strategies, double *expected_values,
+                                         size_t num_strategies, 
+                                         StrategyEvaluator *evaluator, void *chooser_arg);
+
 };
 
 #endif

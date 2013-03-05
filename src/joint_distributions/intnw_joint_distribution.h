@@ -29,8 +29,8 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
     virtual void observationAdded(Estimator *estimator, double value);
 
-    virtual void saveToFile(const char *filename);
-    virtual void restoreFromFile(const char *filename);
+    virtual void saveToFile(std::ofstream& out);
+    virtual void restoreFromFile(std::ifstream& in);
   private:
     void *strategy_arg;
     void *chooser_arg;
@@ -64,6 +64,8 @@ class IntNWJointDistribution : public AbstractJointDistribution {
 
     EstimatorErrorPlaceholderMap estimatorErrorPlaceholders;
     bool estimatorExists(const std::string& key);
+
+    void ensureErrorDistributionExists(Estimator *estimator);
 };
 
 #endif /* _INTNW_JOINT_DISTRIBUTION_H_ */

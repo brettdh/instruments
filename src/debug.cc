@@ -9,8 +9,10 @@
 #include <sstream>
 #include <string>
 #include <iomanip>
+#include <stdexcept>
 using std::ostringstream; using std::string; 
 using std::setw; using std::setfill;
+using std::runtime_error;
 
 #ifdef ANDROID
 #define INSTRUMENTS_LOGFILE "/sdcard/intnw/instruments.log"
@@ -84,3 +86,12 @@ void dbgprintf(const char *fmt, ...)
         va_end(ap);
     }
 }
+
+#ifdef __cplusplus
+void check(bool success, const std::string& msg)
+{
+    if (!success) {
+        throw runtime_error(msg);
+    }
+}
+#endif

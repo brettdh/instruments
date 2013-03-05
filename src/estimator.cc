@@ -7,26 +7,46 @@
 
 #include <stdexcept>
 #include <string>
+#include <sstream>
 using std::runtime_error; using std::string;
+using std::ostringstream;
 
 Estimator *
-Estimator::create()
+Estimator::create(string name)
 {
-    return create(DEFAULT_TYPE);
+    return create(DEFAULT_TYPE, name);
 }
 
 Estimator *
-Estimator::create(EstimatorType type)
+Estimator::create(EstimatorType type, string name)
 {
+    Estimator *estimator = NULL;
     switch (type) {
     case LAST_OBSERVATION:
-        return new LastObservationEstimator();
+        estimator = new LastObservationEstimator();
+        break;
     case RUNNING_MEAN:
-        return new RunningMeanEstimator();
+        estimator = new RunningMeanEstimator();
+        break;
     default:
         // TODO: implement more types
         abort();
     }
+    if (name.empty()) {
+        name = nextDefaultName();
+    }
+    estimator->name = name;
+    return estimator;
+}
+
+int Estimator::numNamelessEstimators = 0;
+
+string
+Estimator::nextDefaultName()
+{
+    ostringstream s;
+    s << "Estimator-" << ++numNamelessEstimators;
+    return s.str();
 }
 
 void
@@ -38,6 +58,13 @@ Estimator::addObservation(double value)
         subscriber->observationAdded(this, value);
     }
     storeNewObservation(value);
+    has_estimate = true;
+}
+
+bool
+Estimator::hasEstimate()
+{
+    return has_estimate;
 }
 
 void
@@ -49,6 +76,5 @@ Estimator::subscribe(StrategyEvaluator *subscriber)
 string
 Estimator::getName()
 {
-    // TODO: set name to enable error-checking when restoring distribution from file
-    throw runtime_error("NOT IMPLEMENTED YET");
+    return name;
 }

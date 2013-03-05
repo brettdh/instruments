@@ -18,25 +18,29 @@ class StrategyEvaluator;
  */
 class Estimator {
   public:
-    static Estimator *create();
-    static Estimator *create(EstimatorType type);
+    static Estimator *create(std::string name="");
+    static Estimator *create(EstimatorType type, std::string name="");
     
     void addObservation(double value);
     
     void subscribe(StrategyEvaluator *subscriber);
-    
+
+    bool hasEstimate();
     virtual double getEstimate() = 0;
     virtual ~Estimator() {}
 
     virtual std::string getName();
   protected:
-    Estimator() {}
+    Estimator() : has_estimate(false) {}
 
     /* override to get estimates from addObservation. */
     virtual void storeNewObservation(double value) = 0;
     
   private:
     std::string name;
+    bool has_estimate;
+    static int numNamelessEstimators;
+    static std::string nextDefaultName();
 
     small_set<StrategyEvaluator*> subscribers;
     const static EstimatorType DEFAULT_TYPE = RUNNING_MEAN;

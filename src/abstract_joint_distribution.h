@@ -5,6 +5,8 @@
 #include "strategy.h"
 #include "strategy_evaluation_context.h"
 
+#include <fstream>
+
 class Estimator;
 class StatsDistribution;
 
@@ -18,8 +20,8 @@ class AbstractJointDistribution : public StrategyEvaluationContext {
     virtual double getAdjustedEstimatorValue(Estimator *estimator) = 0;
     virtual void observationAdded(Estimator *estimator, double value) = 0;
 
-    virtual void saveToFile(const char *filename) = 0;
-    virtual void restoreFromFile(const char *filename) = 0;
+    virtual void saveToFile(std::ofstream& out) = 0;
+    virtual void restoreFromFile(std::ifstream& in) = 0;
   protected:
     StatsDistribution *createErrorDistribution();
   private:

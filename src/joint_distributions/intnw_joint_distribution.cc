@@ -160,6 +160,24 @@ IntNWJointDistribution::~IntNWJointDistribution()
 }
 
 void
+IntNWJointDistribution::ensureErrorDistributionExists(Estimator *estimator)
+{
+    string key = estimator->getName();
+    if (estimatorErrorPlaceholders.count(key) > 0) {
+        estimatorError[estimator] = estimatorErrorPlaceholders[key];
+        estimatorErrorPlaceholders.erase(key);
+    } else if (estimatorError.count(estimator) == 0) {
+        estimatorError[estimator] = createErrorDistribution();
+         
+        // don't add a real error value to the distribution.
+        // there's no error until we have at least two observations.
+        estimatorError[estimator]->addValue(no_error_value());
+   }
+    
+    assert(estimatorError.count(estimator) > 0);
+}
+
+void
 IntNWJointDistribution::getEstimatorErrorDistributions()
 {
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
@@ -169,7 +187,7 @@ IntNWJointDistribution::getEstimatorErrorDistributions()
 
         for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
             Estimator *estimator = singular_strategy_estimators[i][j];
-            assert(estimatorError.count(estimator) > 0);
+            ensureErrorDistributionExists(estimator);
             StatsDistribution *distribution = estimatorError[estimator];
             ASSERT(distribution != NULL);
             singular_probabilities[i][j] = get_estimator_error_probs(distribution);
@@ -444,36 +462,24 @@ IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 void
 IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
 {
-    if (estimatorError.count(estimator) > 0) {
-        //double error = estimator->getEstimate() - value;
+    if (estimator->hasEstimate() && estimatorError.count(estimator) > 0) {
+        // if there's a prior estimate, we can calculate an error sample
         double error = calculate_error(estimator->getEstimate(), value);
         estimatorError[estimator]->addValue(error);
         
         dbgprintf("IntNWJoint: Added error value to estimator %p: %f\n", estimator, error);
-    } else {
-        estimatorError[estimator] = createErrorDistribution();
-        
-        // don't add a real error value to the distribution.
-        // there's no error until we have at least two observations.
-        estimatorError[estimator]->addValue(no_error_value());
+    } else if (estimatorError.count(estimator) == 0) {
+        ensureErrorDistributionExists(estimator);
     }
     clearEstimatorErrorDistributions();
 }
 
 void
-IntNWJointDistribution::saveToFile(const char *filename)
+IntNWJointDistribution::saveToFile(ofstream& out)
 {
-#ifdef SAVE_RESTORE_IMPLEMENTED
     try {
-        ofstream out(filename);
-        if (!out) {
-            ostringstream oss;
-            oss << "Failed to open " << filename;
-            throw runtime_error(oss.str());
-        }
-        
         out << estimatorError.size() << " estimators" << endl;
-        for (auto it = estimatorError.begin();
+        for (EstimatorErrorMap::iterator it = estimatorError.begin();
              it != estimatorError.end(); ++it) {
             Estimator *estimator = it->first;
             StatsDistribution *dist = it->second;
@@ -483,53 +489,37 @@ IntNWJointDistribution::saveToFile(const char *filename)
     } catch (runtime_error& e) {
         dbgprintf("WARNING: failed to save joint distribution: %s\n", e.what());
     }
-#else
-    throw runtime_error("NOT IMPLEMENTED");
-#endif
 }
 
-static void
-check(bool success)
-{
-    if (!success) {
-        throw runtime_error("Parse failure");
+struct MatchName {
+    const string& key;
+    MatchName(const string& key_) : key(key_) {}
+    bool operator()(const EstimatorErrorMap::value_type& value) {
+        return (value.first->getName() == key);
     }
-}
+};
 
 bool
 IntNWJointDistribution::estimatorExists(const string& key)
 {
-#ifdef SAVE_RESTORE_IMPLEMENTED
     if (estimatorError.size() == 0) { 
         return false;
     }
-    auto pred = [&key](const EstimatorErrorMap::value_type& value) -> bool {
-        return (value.first->getName() == key);
-    };
-    return count_if(estimatorError.begin(), estimatorError.end(), pred);
-#else
-    throw runtime_error("NOT IMPLEMENTED");
-#endif
+    return count_if(estimatorError.begin(), estimatorError.end(), MatchName(key));
 }
 
 void 
-IntNWJointDistribution::restoreFromFile(const char *filename)
+IntNWJointDistribution::restoreFromFile(ifstream& in)
 {
     try {
-        ifstream in(filename);
-        if (!in) {
-            ostringstream oss;
-            oss << "Failed to open " << filename;
-            throw runtime_error(oss.str());
-        }
         size_t num_estimators = 0;
-        check(in >> num_estimators);
+        string dummy;
+        check(in >> num_estimators >> dummy, "Parse failure");
         
         for (size_t i = 0; i < num_estimators; ++i) {
             string key;
-            check(in >> key);
             StatsDistribution *dist = createErrorDistribution();
-            dist->restoreFromFile(key, in);
+            key = dist->restoreFromFile(in);
             
             if (estimatorExists(key)) {
                 dbgprintf("WARNING: creating placholder %s for already-existing estimator\n",
@@ -538,6 +528,7 @@ IntNWJointDistribution::restoreFromFile(const char *filename)
             estimatorErrorPlaceholders[key] = dist;
         }
 
+        clearEstimatorErrorDistributions();
     } catch (runtime_error& e) {
         dbgprintf("WARNING: failed to restore joint distribution: %s\n", e.what());
     }

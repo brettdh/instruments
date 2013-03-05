@@ -201,7 +201,6 @@ GenericJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
     double estimate = estimator->getEstimate();
 
     double error = iterator->currentEstimatorError(estimator);
-    //return estimate - error;
     return adjusted_estimate(estimate, error);
 }
 
@@ -210,11 +209,10 @@ GenericJointDistribution::observationAdded(Estimator *estimator, double value)
 {
     clearMemos();
     
-    if (estimatorError.count(estimator) > 0) {
-        //double error = estimator->getEstimate() - value;
+    if (estimator->hasEstimate()) {
         double error = calculate_error(estimator->getEstimate(), value);
         estimatorError[estimator]->addValue(error);
-    } else {
+    } else if (estimatorError.count(estimator) == 0) {
         estimatorError[estimator] = createErrorDistribution();
         
         // don't add a real error value to the distribution.
@@ -480,13 +478,13 @@ GenericJointDistribution::Iterator::numStrategies()
 }
 
 void
-GenericJointDistribution::saveToFile(const char *filename)
+GenericJointDistribution::saveToFile(std::ofstream& out)
 {
     throw runtime_error("NOT IMPLEMENTED");
 }
 
 void
-GenericJointDistribution::restoreFromFile(const char *filename)
+GenericJointDistribution::restoreFromFile(std::ifstream& in)
 {
     throw runtime_error("NOT IMPLEMENTED");
 }
