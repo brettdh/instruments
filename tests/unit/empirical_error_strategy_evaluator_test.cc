@@ -53,7 +53,7 @@ double get_time_all_estimators(instruments_context_t ctx, void *strategy_arg, vo
 void 
 EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
 {
-    Estimator *estimator = Estimator::create(LAST_OBSERVATION);
+    Estimator *estimator = Estimator::create(LAST_OBSERVATION, "simple");
     Strategy *strategy = new Strategy(get_time, get_energy_cost, get_data_cost, estimator, NULL);
     strategy->addEstimator(estimator);
 
@@ -182,7 +182,9 @@ EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimators()
 {
     Estimator *estimators[NUM_ESTIMATORS];
     for (int i = 0; i < NUM_ESTIMATORS; ++i) {
-        estimators[i] = Estimator::create(LAST_OBSERVATION);
+        ostringstream s;
+        s << "estimator-" << i;
+        estimators[i] = Estimator::create(LAST_OBSERVATION, s.str());
     }
     Strategy *strategy = new Strategy(get_time_all_estimators, 
                                       get_energy_cost, get_data_cost, estimators, (void *) NUM_ESTIMATORS);
@@ -228,7 +230,7 @@ EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimatorsTwice()
 
 class CallCountEstimator : public LastObservationEstimator {
   public:
-    CallCountEstimator() : count(0) {}
+    CallCountEstimator() : LastObservationEstimator("call-count"), count(0) {}
     virtual double getEstimate() {
         ++count;
         return LastObservationEstimator::getEstimate();

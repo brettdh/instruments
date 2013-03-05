@@ -63,7 +63,7 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     void ensureValidMemoizedValues(eval_fn_type_t saved_value_type);
 
     EstimatorErrorPlaceholderMap estimatorErrorPlaceholders;
-    bool estimatorExists(const std::string& key);
+    Estimator *getExistingEstimator(const std::string& key);
 
     void ensureErrorDistributionExists(Estimator *estimator);
 };

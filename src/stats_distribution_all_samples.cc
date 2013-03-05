@@ -95,7 +95,7 @@ StatsDistributionAllSamples::appendToFile(const string& name, ofstream& out)
     out << name << " " << TAG << " " << values.size() << endl;;
     for (size_t i = 0; i < values.size(); ++i) {
         out << setprecision(PRECISION) << values[i] << " ";
-        if ((i+1) % VALUES_PER_LINE == 0) {
+        if ((i+1) % VALUES_PER_LINE == 0 || i+1 == values.size()) {
             out << endl;
         }
     }

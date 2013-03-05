@@ -39,7 +39,7 @@ EstimatorRegistry::initializer EstimatorRegistry::theInitializer;
 void
 EstimatorRegistry::init()
 {
-    estimators["CoinFlip"] = Estimator::create();
+    estimators["CoinFlip"] = Estimator::create("CoinFlip");
 }
 
 Estimator *
@@ -58,5 +58,5 @@ EstimatorRegistry::resetEstimator(const char *name, EstimatorType type)
     if (estimators.count(name) > 0) {
         delete estimators[name];
     }
-    estimators[name] = Estimator::create(type);
+    estimators[name] = Estimator::create(type, name);
 }

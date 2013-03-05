@@ -44,29 +44,41 @@ CTEST_DATA(intnw_specific_test) {
     instruments_strategy_evaluator_t evaluator;
 };
 
+static void 
+create_estimators_and_strategies(instruments_external_estimator_t *estimators,
+                                 instruments_strategy_t *strategies,
+                                 struct strategy_args *args,
+                                 instruments_strategy_evaluator_t *evaluator)
+{
+    int i;
+    char name[64];
+    for (i = 0; i < NUM_ESTIMATORS; ++i) {
+        snprintf(name, 64, "estimator-%d", i);
+        estimators[i] = create_external_estimator(name);
+    }
+
+    args[0].num_estimators = 2;
+    args[0].estimators = &estimators[0];
+    args[0].is_cellular = 0;
+    args[1].num_estimators = 2;
+    args[1].estimators = &estimators[2];
+    args[1].is_cellular = 1;
+
+    strategies[0] = make_strategy(network_time, NULL, data_cost, (void*) &args[0], NULL);
+    strategies[1] = make_strategy(network_time, NULL, data_cost, (void*) &args[1], NULL);
+    strategies[2] = make_redundant_strategy(strategies, 2);
+    
+    *evaluator = 
+        register_strategy_set_with_method(strategies, NUM_STRATEGIES,
+                                          EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+}
+
 CTEST_SETUP(intnw_specific_test)
 {
     set_fixed_resource_weights(0.0, 1.0);
 
-    int i;
-    for (i = 0; i < NUM_ESTIMATORS; ++i) {
-        data->estimators[i] = create_external_estimator();
-    }
-
-    data->args[0].num_estimators = 2;
-    data->args[0].estimators = &data->estimators[0];
-    data->args[0].is_cellular = 0;
-    data->args[1].num_estimators = 2;
-    data->args[1].estimators = &data->estimators[2];
-    data->args[1].is_cellular = 1;
-
-    data->strategies[0] = make_strategy(network_time, NULL, data_cost, (void*) &data->args[0], NULL);
-    data->strategies[1] = make_strategy(network_time, NULL, data_cost, (void*) &data->args[1], NULL);
-    data->strategies[2] = make_redundant_strategy(data->strategies, 2);
-    
-    data->evaluator = 
-        register_strategy_set_with_method(data->strategies, NUM_STRATEGIES,
-                                          EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+    create_estimators_and_strategies(data->estimators, data->strategies, 
+                                     data->args, &data->evaluator);
 }
 
 CTEST_TEARDOWN(intnw_specific_test)
@@ -147,23 +159,36 @@ CTEST2(intnw_specific_test, test_each_network_wins)
     assert_correct_strategy(data, data->strategies[1], 3999);
 }
 
-CTEST2(intnw_specific_test, test_both_networks_best)
+
+
+// params used for redundancy test
+static int bytelen = 5000;
+static double stable_bandwidth = 2000;
+static double better_bandwidth = 5000;
+static double worse_bandwidth = 1000;
+// expected value of time on network 1: 2.5 seconds
+//                   cost             : x
+//                   time on network 2: bandwidth: 5000 +/- 4000
+//                                      ((5/9)*25 + 5*25 + 1)/51 = 2.74
+//                   cost             : y
+//                   time on both-nets: ((5/9)*25 + 2.5*25 + 1)/51 = 1.51
+//                   cost             : x + y
+// net benefit: (2.5 - 1.52) - y
+// so, need to set y < 0.98
+
+
+static void add_last_estimates(instruments_external_estimator_t *estimators)
+{
+    add_observation(estimators[0], stable_bandwidth, stable_bandwidth);
+    add_observation(estimators[1], 0.0, 0.0);
+    add_observation(estimators[2], better_bandwidth, better_bandwidth);
+    add_observation(estimators[3], 0.0, 0.0);
+}
+
+static void test_both_networks_best(struct intnw_specific_test_data *data)
 {
     int num_samples = 50;
     int i;
-    int bytelen = 5000;
-    double stable_bandwidth = 2000;
-    double better_bandwidth = 5000;
-    double worse_bandwidth = 1000;
-    // expected value of time on network 1: 2.5 seconds
-    //                   cost             : x
-    //                   time on network 2: bandwidth: 5000 +/- 4000
-    //                                      ((5/9)*25 + 5*25 + 1)/51 = 2.74
-    //                   cost             : y
-    //                   time on both-nets: ((5/9)*25 + 2.5*25 + 1)/51 = 1.51
-    //                   cost             : x + y
-    // net benefit: (2.5 - 1.52) - y
-    // so, need to set y < 0.98
     
     add_observation(data->estimators[0], stable_bandwidth, stable_bandwidth);
     add_observation(data->estimators[1], 0.0, 0.0);
@@ -182,4 +207,26 @@ CTEST2(intnw_specific_test, test_both_networks_best)
     }
 
     assert_correct_strategy(data, data->strategies[2], bytelen);
+}
+
+CTEST2(intnw_specific_test, test_both_networks_best)
+{
+    test_both_networks_best(data);
+}
+
+CTEST2(intnw_specific_test, test_save_restore)
+{
+    test_both_networks_best(data);
+    save_evaluator(data->evaluator, "/tmp/intnw_saved_evaluation_state.txt");
+
+    struct intnw_specific_test_data new_data;
+    create_estimators_and_strategies(new_data.estimators, new_data.strategies, 
+                                     new_data.args, &new_data.evaluator);
+    add_last_estimates(new_data.estimators);
+
+    // before restore, there's no error, so using the higher-bandwidth network is best
+    assert_correct_strategy(&new_data, new_data.strategies[1], bytelen);
+
+    restore_evaluator(new_data.evaluator, "/tmp/intnw_saved_evaluation_state.txt");
+    assert_correct_strategy(&new_data, new_data.strategies[2], bytelen);
 }

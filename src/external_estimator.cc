@@ -1,7 +1,7 @@
 #include "external_estimator.h"
 
-ExternalEstimator::ExternalEstimator()
-    : lastValue(0.0)
+ExternalEstimator::ExternalEstimator(const std::string& name)
+    : Estimator(name), lastValue(0.0)
 {
 }
 

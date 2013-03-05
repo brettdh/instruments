@@ -5,7 +5,7 @@
 
 class ExternalEstimator : public Estimator {
   public:
-    ExternalEstimator();
+    ExternalEstimator(const std::string& name);
     void addObservation(double observation, double new_value);
 
     virtual double getEstimate();

@@ -7,8 +7,8 @@ RunningMeanEstimator::getEstimate()
     return mean;
 }
 
-RunningMeanEstimator::RunningMeanEstimator()
-    : mean(0.0), count(0)
+RunningMeanEstimator::RunningMeanEstimator(const std::string& name)
+    : Estimator(name), mean(0.0), count(0)
 {
 }
 

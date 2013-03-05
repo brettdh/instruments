@@ -92,6 +92,21 @@ choose_strategy(instruments_strategy_evaluator_t evaluator_handle,
     return evaluator->chooseStrategy(chooser_arg);
 }
 
+void
+save_evaluator(instruments_strategy_evaluator_t evaluator_handle, const char *filename)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    evaluator->saveToFile(filename);
+}
+
+void
+restore_evaluator(instruments_strategy_evaluator_t evaluator_handle, const char *filename)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    evaluator->restoreFromFile(filename);
+}
+
+
 struct timeval
 get_retry_time(instruments_strategy_evaluator_t evaluator_handle)
 {
@@ -126,9 +141,9 @@ void add_coin_flip_observation(int heads)
 }
 
 instruments_external_estimator_t
-create_external_estimator()
+create_external_estimator(const char *name)
 {
-    return new ExternalEstimator();
+    return new ExternalEstimator(name);
 }
 
 void free_external_estimator(instruments_estimator_t est_handle)
@@ -143,4 +158,3 @@ void add_observation(instruments_external_estimator_t est_handle,
     ExternalEstimator *estimator = static_cast<ExternalEstimator *>(est_handle);
     estimator->addObservation(observation, new_estimate);
 }
-

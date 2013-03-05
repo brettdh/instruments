@@ -13,6 +13,7 @@ class StatsDistribution;
 class AbstractJointDistribution : public StrategyEvaluationContext {
   public:
     AbstractJointDistribution(EmpiricalErrorEvalMethod eval_method_) : eval_method(eval_method_) {}
+    virtual ~AbstractJointDistribution() {}
 
     virtual void setEvalArgs(void *strategy_arg_, void *chooser_arg_) = 0;
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn) = 0;

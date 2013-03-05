@@ -19,7 +19,7 @@
 #include <string>
 #include <stdexcept>
 using std::map; using std::pair; using std::make_pair;
-using std::vector; using std::ifstream; using std::ofstream; using std::count_if;
+using std::vector; using std::ifstream; using std::ofstream; using std::find_if;
 using std::ostringstream; using std::endl;
 using std::runtime_error; using std::string;
 
@@ -157,6 +157,12 @@ IntNWJointDistribution::~IntNWJointDistribution()
     delete [] singular_error_values;
     delete [] singular_error_count;
     delete [] singular_strategy_saved_values;
+
+    for (EstimatorErrorMap::iterator it = estimatorError.begin();
+         it != estimatorError.end(); ++it) {
+        delete it->second;
+    }
+    estimatorError.clear();
 }
 
 void
@@ -234,6 +240,7 @@ IntNWJointDistribution::clearEstimatorErrorDistributions()
     }
     estimatorErrorValues.clear();
     estimatorIndices.clear();
+    cache.clear();
 }
 
 void 
@@ -241,7 +248,6 @@ IntNWJointDistribution::setEvalArgs(void *strategy_arg_, void *chooser_arg_)
 {
     if (chooser_arg != chooser_arg_) {
         clearEstimatorErrorDistributions();
-        cache.clear();
     }
 
     strategy_arg = strategy_arg_;
@@ -493,19 +499,30 @@ IntNWJointDistribution::saveToFile(ofstream& out)
 
 struct MatchName {
     const string& key;
-    MatchName(const string& key_) : key(key_) {}
+    Estimator *estimator;
+    MatchName(const string& key_) : key(key_), estimator(NULL) {}
     bool operator()(const EstimatorErrorMap::value_type& value) {
-        return (value.first->getName() == key);
+        if (value.first->getName() == key) {
+            assert(estimator == NULL); // should only be one; it's a map
+            estimator = value.first;
+            return true;
+        }
+        return false;
     }
 };
 
-bool
-IntNWJointDistribution::estimatorExists(const string& key)
+Estimator *
+IntNWJointDistribution::getExistingEstimator(const string& key)
 {
     if (estimatorError.size() == 0) { 
-        return false;
+        return NULL;
     }
-    return count_if(estimatorError.begin(), estimatorError.end(), MatchName(key));
+    EstimatorErrorMap::iterator it = 
+        find_if(estimatorError.begin(), estimatorError.end(), MatchName(key));
+    if (it == estimatorError.end()) {
+        return NULL;
+    }
+    return it->first;
 }
 
 void 
@@ -521,11 +538,14 @@ IntNWJointDistribution::restoreFromFile(ifstream& in)
             StatsDistribution *dist = createErrorDistribution();
             key = dist->restoreFromFile(in);
             
-            if (estimatorExists(key)) {
-                dbgprintf("WARNING: creating placholder %s for already-existing estimator\n",
-                          key.c_str());
+            Estimator *estimator = getExistingEstimator(key);
+            if (estimator) {
+                assert(estimatorError.count(estimator) > 0);
+                delete estimatorError[estimator];
+                estimatorError[estimator] = dist;
+            } else {
+                estimatorErrorPlaceholders[key] = dist;
             }
-            estimatorErrorPlaceholders[key] = dist;
         }
 
         clearEstimatorErrorDistributions();

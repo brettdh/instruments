@@ -20,7 +20,7 @@
 using std::vector; using std::min; using std::runtime_error;
 
 GenericJointDistribution::GenericJointDistribution(EmpiricalErrorEvalMethod eval_method_,
-                                     const vector<Strategy *>& strategies)
+                                                   const vector<Strategy *>& strategies)
     : AbstractJointDistribution(eval_method_)
 {
     for (size_t i = 0; i < strategies.size(); ++i) {
@@ -35,6 +35,14 @@ GenericJointDistribution::GenericJointDistribution(EmpiricalErrorEvalMethod eval
     energy_memos.resize(singular_strategies.size(), NULL);
     data_memos.resize(singular_strategies.size(), NULL);
     iterator = NULL;
+}
+
+GenericJointDistribution::~GenericJointDistribution()
+{
+    for (EstimatorErrorMap::iterator it = estimatorError.begin();
+         it != estimatorError.end(); ++it) {
+        delete it->second;
+    }
 }
 
 struct memoized_strategy_args {

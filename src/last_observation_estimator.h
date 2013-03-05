@@ -5,7 +5,8 @@
 
 class LastObservationEstimator : public Estimator {
   public:
-    LastObservationEstimator() : lastValue(0.0) {}
+    LastObservationEstimator(const std::string& name) 
+        : Estimator(name), lastValue(0.0) {}
 
     virtual double getEstimate() {
         return lastValue;

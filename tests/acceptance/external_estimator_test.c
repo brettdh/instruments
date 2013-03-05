@@ -16,8 +16,8 @@ CTEST_SETUP(external_estimator)
 {
     set_fixed_resource_weights(0.0, 1.0);
 
-    data->high_estimator = create_external_estimator();
-    data->low_estimator = create_external_estimator();
+    data->high_estimator = create_external_estimator("high");
+    data->low_estimator = create_external_estimator("low");
 }
 
 CTEST_TEARDOWN(external_estimator)

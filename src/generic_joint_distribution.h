@@ -21,6 +21,7 @@ class GenericJointDistribution : public AbstractJointDistribution {
   public:
     GenericJointDistribution(EmpiricalErrorEvalMethod eval_method_,
                       const std::vector<Strategy *>& strategies);
+    ~GenericJointDistribution();
 
     void setEvalArgs(void *strategy_arg_, void *chooser_arg_);
     double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn);

@@ -23,30 +23,30 @@ Estimator::create(EstimatorType type, string name)
     Estimator *estimator = NULL;
     switch (type) {
     case LAST_OBSERVATION:
-        estimator = new LastObservationEstimator();
+        estimator = new LastObservationEstimator(name);
         break;
     case RUNNING_MEAN:
-        estimator = new RunningMeanEstimator();
+        estimator = new RunningMeanEstimator(name);
         break;
     default:
         // TODO: implement more types
         abort();
     }
-    if (name.empty()) {
-        name = nextDefaultName();
-    }
-    estimator->name = name;
     return estimator;
 }
 
-int Estimator::numNamelessEstimators = 0;
-
-string
-Estimator::nextDefaultName()
+Estimator::Estimator(const string& name_)
+ : name(name_), has_estimate(false)
 {
-    ostringstream s;
-    s << "Estimator-" << ++numNamelessEstimators;
-    return s.str();
+    if (name.empty()) {
+        throw runtime_error("Estimator name must not be empty");
+    }
+    
+    for (size_t i = 0; i < name.length(); ++i) {
+        if (isspace(name[i])) {
+            name[i] = '_';
+        }
+    }
 }
 
 void

@@ -72,8 +72,10 @@ int main()
 #endif
     instruments_external_estimator_t estimators[NUM_ESTIMATORS];
     int i;
+    char name[64];
     for (i = 0; i < NUM_ESTIMATORS; ++i) {
-        estimators[i] = create_external_estimator();
+        snprintf(name, 64, "estimator-%d", i);
+        estimators[i] = create_external_estimator(name);
     }
 
     struct strategy_args args[2] = {

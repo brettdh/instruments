@@ -5,7 +5,7 @@
 
 class RunningMeanEstimator : public Estimator {
   public:
-    RunningMeanEstimator();
+    RunningMeanEstimator(const std::string& name);
 
     virtual double getEstimate();
   protected:

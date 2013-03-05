@@ -104,7 +104,7 @@ CDECL void free_strategy(instruments_strategy_t strategy);
 CDECL instruments_strategy_evaluator_t
 register_strategy_set(const instruments_strategy_t *strategies, size_t num_strategies);
 
-/** Destroy a strategy evaluation previously created with 
+/** Destroy a strategy evaluator previously created with 
  *  register_strategy_set.
  */
 CDECL void free_strategy_evaluator(instruments_strategy_evaluator_t evaluator);
@@ -130,6 +130,18 @@ choose_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
 CDECL struct timeval
 get_retry_time(instruments_strategy_evaluator_t evaluator);
 
+/** Save the evaluator's state to a file.
+ *  A later call to restore_evaluator will restore this state.
+ */
+CDECL void
+save_evaluator(instruments_strategy_evaluator_t evaluator, const char *filename);
+
+/** Restore an evaluator's state from a file.
+ *  Assumes that the evaluator has the same strategies and
+ *  estimators as when it was saved.
+ */
+CDECL void
+restore_evaluator(instruments_strategy_evaluator_t evaluator, const char *filename);
 
 /** Opaque handle representing a quantity that the application
  *  uses to calculate the time and cost of its strategies.
@@ -139,20 +151,20 @@ typedef void * instruments_estimator_t;
 /** Returns an estimator for the downstream bandwidth 
  *  of a network (named by 'iface') in bytes/sec.
  */
-CDECL instruments_estimator_t 
-get_network_bandwidth_down_estimator(const char *iface);
+//CDECL instruments_estimator_t 
+//get_network_bandwidth_down_estimator(const char *iface);
 
 /** Returns an estimator for the upstream bandwidth 
  *  of a network (named by 'iface') in bytes/sec.
  */
-CDECL instruments_estimator_t
-get_network_bandwidth_up_estimator(const char *iface);
+//CDECL instruments_estimator_t
+//get_network_bandwidth_up_estimator(const char *iface);
 
 /** Returns an estimator for the round-trip time
  *  of a network (named by 'iface').
  */
-CDECL instruments_estimator_t
-get_network_rtt_estimator(const char *iface);
+//CDECL instruments_estimator_t
+//get_network_rtt_estimator(const char *iface);
 
 /* ... */
 
@@ -171,8 +183,13 @@ CDECL double get_estimator_value(instruments_context_t ctx,
  */
 typedef instruments_estimator_t instruments_external_estimator_t;
 
-/** Create an external estimator, initially with no observations. */
-CDECL instruments_external_estimator_t create_external_estimator();
+/** Create an external estimator, initially with no observations. 
+ * 
+ *  @param name A descriptive name for the quantity that this estimator estimates.
+ *              Used for saving and restoring error distributions.
+ *              Whitespace will be replaced with '_' characters.
+ */
+CDECL instruments_external_estimator_t create_external_estimator(const char *name);
 
 /** Destroy an external estimator. */
 CDECL void free_external_estimator(instruments_external_estimator_t estimator);

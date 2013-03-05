@@ -57,7 +57,9 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredAtRegistration()
 {
     Estimator *estimators[NUM_ESTIMATORS];
     for (size_t i = 0; i < NUM_ESTIMATORS; ++i) {
-        estimators[i] = Estimator::create(LAST_OBSERVATION);
+        char name[64];
+        snprintf(name, 64, "estimator-%d", i);
+        estimators[i] = Estimator::create(LAST_OBSERVATION, name);
         estimators[i]->addObservation(1.0);
     }
     Strategy *strategy = new Strategy(eval_fn_with_all_estimators,
@@ -77,7 +79,9 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredUponLaterUse()
 {
     Estimator *estimators[NUM_ESTIMATORS];
     for (size_t i = 0; i < NUM_ESTIMATORS; ++i) {
-        estimators[i] = Estimator::create(LAST_OBSERVATION);
+        char name[64];
+        snprintf(name, 64, "estimator-%d", i);
+        estimators[i] = Estimator::create(LAST_OBSERVATION, name);
         estimators[i]->addObservation(1.0);
     }
     Strategy *strategy = new Strategy(eval_fn_with_all_estimators_two_steps,
