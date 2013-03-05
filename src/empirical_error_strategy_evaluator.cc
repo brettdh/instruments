@@ -77,6 +77,7 @@ EmpiricalErrorStrategyEvaluator::saveToFile(const char *filename)
     }
 
     jointDistribution->saveToFile(out);
+    out.close();
 }
 
 void 
@@ -90,4 +91,5 @@ EmpiricalErrorStrategyEvaluator::restoreFromFile(const char *filename)
     }
 
     jointDistribution->restoreFromFile(in);
+    in.close();
 }
