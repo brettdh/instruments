@@ -39,11 +39,13 @@ LOCAL_MODULE := instruments
 LOCAL_SRC_FILES := $(addprefix ../src/, \
 	abstract_joint_distribution.cc \
 	debug.cc \
-	empirical_error_strategy_evaluator.cc \
 	error_calculation.cc \
 	estimator.cc \
 	estimator_registry.cc \
 	eval_method.cc \
+	evaluators/confidence_bounds_strategy_evaluator.cc \
+	evaluators/empirical_error_strategy_evaluator.cc \
+	evaluators/trusted_oracle_strategy_evaluator.cc \
 	external_estimator.cc \
 	goal_adaptive_resource_weight.cc \
 	instruments.cc \
@@ -55,8 +57,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	stats_distribution_all_samples.cc \
 	strategy.cc \
 	strategy_evaluator.cc \
-	timeops.cc \
-	trusted_oracle_strategy_evaluator.cc)
+	timeops.cc)
 #	r_singleton.cc \
 #	stats_distribution_binned.cc \
 

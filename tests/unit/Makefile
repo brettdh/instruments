@@ -12,7 +12,9 @@ R_CXXFLAGS := $(subst -O3,,$(R_CXXFLAGS))
 MOCKTIME_CXXFLAGS := -I../../../mocktime/
 MOCKTIME_LDFLAGS :=  -L../../../mocktime/ -lmocktime
 
-CXXFLAGS += -Wall -Werror -I. -I.. -I../../include -I../../src -m32 -g $(R_CXXFLAGS) $(MOCKTIME_CXXFLAGS)
+INCLUDES := -I. -I.. -I../../include -I../../src -I../../src/evaluators \
+		  	-I../../src/joint_distributions
+CXXFLAGS += -Wall -Werror  -m32 -g $(INCLUDES) $(R_CXXFLAGS) $(MOCKTIME_CXXFLAGS)
 LDFLAGS += -L. -lcppunit $(R_LDLIBS) $(MOCKTIME_LDFLAGS)
 
 ifeq ($(shell uname), Darwin)
@@ -53,6 +55,9 @@ include $(DEPS)
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o: ../../src/joint_distributions/%.cc
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o: ../../src/evaluators/%.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o: ../../src/%.cc

@@ -9,11 +9,13 @@ include ../common/R_generated_vars.mk
 OBJS := \
 	abstract_joint_distribution.o \
 	debug.o \
-	empirical_error_strategy_evaluator.o \
 	error_calculation.o \
 	estimator.o \
 	estimator_registry.o \
 	eval_method.o \
+	evaluators/confidence_bounds_strategy_evaluator.o \
+	evaluators/empirical_error_strategy_evaluator.o \
+	evaluators/trusted_oracle_strategy_evaluator.o \
 	external_estimator.o \
 	goal_adaptive_resource_weight.o \
 	instruments.o \
@@ -27,11 +29,10 @@ OBJS := \
 	stats_distribution_binned.o \
 	strategy.o \
 	strategy_evaluator.o \
-	timeops.o \
-	trusted_oracle_strategy_evaluator.o
+	timeops.o
 
 
-CXXFLAGS := -g -Wall -Werror -I. -I../include -fpic -pthread $(R_CXXFLAGS)
+CXXFLAGS := -g -Wall -Werror -I. -I./evaluators -I./joint_distributions -I../include -fpic -pthread $(R_CXXFLAGS)
 #CXXFLAGS := $(subst -O3,-O0,$(CXXFLAGS))
 #CXXFLAGS += -fno-inline
 CXXFLAGS += -O3 -DNDEBUG # -std=gnu++0x
