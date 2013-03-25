@@ -2,6 +2,7 @@
 #include "strategy_evaluator.h"
 #include "trusted_oracle_strategy_evaluator.h"
 #include "empirical_error_strategy_evaluator.h"
+#include "confidence_bounds_strategy_evaluator.h"
 #include "strategy.h"
 #include "estimator.h"
 
@@ -10,6 +11,7 @@
 #include "debug.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/select.h>
 #include <signal.h>
 
@@ -82,9 +84,13 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
         evaluator = new TrustedOracleStrategyEvaluator;
     } else if (type & EMPIRICAL_ERROR) {
         evaluator = new EmpiricalErrorStrategyEvaluator(type);
+    } else if (type == CONFIDENCE_BOUNDS) {
+        evaluator = new ConfidenceBoundsStrategyEvaluator;
     } else {
         // TODO: implement the rest.
         assert(0);
+        __builtin_unreachable();
+        abort();
     }
     evaluator->setStrategies(strategies, num_strategies);
     return evaluator;

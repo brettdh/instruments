@@ -1,11 +1,18 @@
 #include "confidence_bounds_strategy_evaluator.h"
 #include "estimator.h"
+#include "error_calculation.h"
 
-enum BoundType {
-    LOWER=0, UPPER
-};
+#include <math.h>
+#include <assert.h>
 
-class ErrorConfidenceBounds {
+#include <limits>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+using std::ifstream; using std::ofstream;
+using std::ostringstream; using std::runtime_error;
+
+class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
   public:
     ErrorConfidenceBounds(Estimator *estimator_);
     void observationAdded(double value);
@@ -24,15 +31,15 @@ class ErrorConfidenceBounds {
 };
 
 
-const double ErrorConfidenceBounds::CONFIDENCE_ALPHA = 0.05;
+const double ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::CONFIDENCE_ALPHA = 0.05;
 
-ErrorConfidenceBounds::ErrorConfidenceBounds(Estimator *estimator_)
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::ErrorConfidenceBounds(Estimator *estimator_)
     : estimator(estimator_), error_mean(0.0), error_variance(0.0), M2(0.0), num_samples(0)
 {
 }
 
 void
-ErrorConfidenceBounds::observationAdded(double value)
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(double value)
 {
     /*
      * Algorithm borrowed from
@@ -46,7 +53,7 @@ ErrorConfidenceBounds::observationAdded(double value)
     error_mean += delta / num_samples;
     M2 += delta * (error - error_mean);
     if (num_samples > 1) {
-        error_variance = M2 / (n-1);
+        error_variance = M2 / (num_samples-1);
     }
 
     // Chebyshev interval for error bounds, as described in my proposal.
@@ -69,7 +76,7 @@ ErrorConfidenceBounds::observationAdded(double value)
 
 
 double
-ErrorConfidenceBounds::getBound(BoundType type)
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBound(BoundType type)
 {
     assert(num_samples > 0); 
     // otherwise we would have just returned the estimate in getAdjustedEstimatorValue, below
@@ -81,15 +88,16 @@ void
 ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double value)
 {
     if (bounds_by_estimator.count(estimator) == 0) {
-        bounds.push_back(new ErrorConfidenceBounds(estimator));
-        bounds_by_estimator[estimator] = bounds.back();
+        error_bounds.push_back(new ErrorConfidenceBounds(estimator));
+        bounds_by_estimator[estimator] = error_bounds.back();
     } else {
         bounds_by_estimator[estimator]->observationAdded(value);
     }
 }
 
 
-EvalMode ConfidenceBoundsStrategyEvaluator::DEFAULT_EVAL_MODE = AGGRESSIVE;
+ConfidenceBoundsStrategyEvaluator::EvalMode
+ ConfidenceBoundsStrategyEvaluator::DEFAULT_EVAL_MODE = AGGRESSIVE;
 
 ConfidenceBoundsStrategyEvaluator::ConfidenceBoundsStrategyEvaluator()
     : eval_mode(DEFAULT_EVAL_MODE), // TODO: set as option?
@@ -97,8 +105,9 @@ ConfidenceBoundsStrategyEvaluator::ConfidenceBoundsStrategyEvaluator()
 {
 }
 
-BoundType
-getBoundType(EvalMode eval_mode, Strategy *strategy, typesafe_eval_fn_t fn)
+ConfidenceBoundsStrategyEvaluator::BoundType
+ConfidenceBoundsStrategyEvaluator::getBoundType(EvalMode eval_mode, Strategy *strategy, 
+                                                typesafe_eval_fn_t fn)
 {
     if (eval_mode == AGGRESSIVE) {
         // aggressive = upper bound on benefit of redundancy.
@@ -133,16 +142,16 @@ double
 ConfidenceBoundsStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                                  void *strategy_arg, void *chooser_arg)
 {
-    return evaluateBounded(fn, strategy_arg, chooser_arg);
+    BoundType bound_type = getBoundType(eval_mode, strategy, fn);
+    return evaluateBounded(bound_type, fn, strategy_arg, chooser_arg);
 }
 
+typedef const double& (*bound_fn_t)(const double&, const double&);
+
 double
-ConfidenceBoundsStrategyEvaluator::evaluateBounded(typesafe_eval_fn_t fn,
+ConfidenceBoundsStrategyEvaluator::evaluateBounded(BoundType bound_type, typesafe_eval_fn_t fn,
                                                    void *strategy_arg, void *chooser_arg)
 {
-    BoundType bound_type = getBoundType(eval_mode, strategy, fn);
-    
-    typedef double (*bound_fn_t)(double, double);
     bound_fn_t bound_fns[UPPER + 1] = { &std::min<double>, &std::max<double> };
     bound_fn_t bound_fn = bound_fns[bound_type];
 
@@ -151,8 +160,8 @@ ConfidenceBoundsStrategyEvaluator::evaluateBounded(typesafe_eval_fn_t fn,
     bound_fn_t bound_init_fn = bound_fns[(bound_type + 1) % (UPPER + 1)];
 
     // yes, it's a 2^N algorithm, but N is small; e.g. 4 for intnw
-    unsigned int finish = 1 << bounds.size();
-    double val = bound_init_fn(0.0, std::numeric_limits<double>::max);
+    unsigned int finish = 1 << error_bounds.size();
+    double val = bound_init_fn(0.0, std::numeric_limits<double>::max());
     for (step = 0; step < finish; ++step) {
         val = bound_fn(val, fn(this, strategy_arg, chooser_arg));
     }
@@ -172,11 +181,39 @@ ConfidenceBoundsStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimato
     }
     
     ErrorConfidenceBounds *est_error = bounds_by_estimator[estimator];
-    for (size_t i = 0; i < bounds.size(); ++i) {
-        if (est_error == bounds[i]) {
+    for (size_t i = 0; i < error_bounds.size(); ++i) {
+        if (est_error == error_bounds[i]) {
             char bit = (step >> i) & 0x1;
             return est_error->getBound(BoundType(bit));
         }
     }
-    assert(false);
+    __builtin_unreachable();
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::saveToFile(const char *filename)
+{
+    ofstream out(filename);
+    if (!out) {
+        ostringstream oss;
+        oss << "Failed to open " << filename;
+        throw runtime_error(oss.str());
+    }
+
+    // TODO
+    out.close();
+}
+
+void 
+ConfidenceBoundsStrategyEvaluator::restoreFromFile(const char *filename)
+{
+    ifstream in(filename);
+    if (!in) {
+        ostringstream oss;
+        oss << "Failed to open " << filename;
+        throw runtime_error(oss.str());
+    }
+
+    // TODO
+    in.close();
 }

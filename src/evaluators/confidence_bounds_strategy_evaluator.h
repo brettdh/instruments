@@ -3,6 +3,9 @@
 
 #include "strategy_evaluator.h"
 
+#include <vector>
+#include <map>
+
 class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
   public:
     ConfidenceBoundsStrategyEvaluator();
@@ -15,6 +18,10 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
   protected:
     virtual void observationAdded(Estimator *estimator, double value);
   private:
+    enum BoundType {
+        LOWER=0, UPPER
+    };
+
     enum EvalMode {
         CONSERVATIVE=0, // lower-bound benefit, upper-bound cost (less redundant)
         AGGRESSIVE      // upper-bound benefit, lower-bound cost (more redundant)
@@ -25,10 +32,13 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
 
     unsigned int step;
     class ErrorConfidenceBounds;
-    vector<ErrorConfidenceBounds *> error_bounds;
-    map<Estimator *, ErrorConfidenceBounds *> bounds_by_estimator;
+    std::vector<ErrorConfidenceBounds *> error_bounds;
+    std::map<Estimator *, ErrorConfidenceBounds *> bounds_by_estimator;
 
-    double evaluateBounded(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg);
+    BoundType getBoundType(EvalMode eval_mode, Strategy *strategy, 
+                           typesafe_eval_fn_t fn);
+    double evaluateBounded(BoundType bound_type, typesafe_eval_fn_t fn,
+                           void *strategy_arg, void *chooser_arg);
 };
 
 #endif
