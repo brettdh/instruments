@@ -6,8 +6,13 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <regex.h>
 
 #include <ctest.h>
+
+#include "debug.h"
 
 struct strategy_args {
     int num_estimators;
@@ -257,6 +262,7 @@ CTEST_DATA(confidence_bounds_test) {
 CTEST_SETUP(confidence_bounds_test)
 {
     set_fixed_resource_weights(0.0, 1.0);
+    set_debugging_on(1);
 
     create_estimators_and_strategies(data->estimators, data->strategies, 
                                      data->args, &data->evaluator,
@@ -305,4 +311,59 @@ CTEST2(confidence_bounds_test, test_save_restore)
 {
     test_save_restore(data, "/tmp/confidence_bounds_saved_evaluation_state.txt", 
                       CONFIDENCE_BOUNDS);
+}
+
+static int
+get_estimator_index(const char *network, const char *metric)
+{
+    static const char *networks[] = { "wifi", "3G" };
+    static const char *metrics[] = { "bandwidth:", "latency:" };
+    int network_id = -1;
+    int metric_id = -1;
+    int i;
+    for (i = 0; i < 2; ++i) {
+        if (!strcmp(network, networks[i])) {
+            assert(network_id == -1);
+            network_id = i;
+        }
+        if (!strcmp(metric, metrics[i])) {
+            assert(metric_id == -1);
+            metric_id = i;
+        }
+    }
+    assert(network_id >= 0 && metric_id >= 0);
+    return network_id * 2 + metric_id;
+}
+
+CTEST2(confidence_bounds_test, test_real_distributions)
+{
+    const char *FILENAME = "./confidence_bounds_test_intnw.log";
+    FILE *in = fopen(FILENAME, "r");
+    assert(in);
+
+    char network[64], metric[64];
+    double observation, estimate;
+    char *line = NULL;
+    size_t len = -1;
+    while ((getline(&line, &len, in)) != -1) {
+        char *start = strstr(line, "Adding new stats to ");
+        if (start) {
+            int rc;
+            if ((rc = sscanf(start, "Adding new stats to %s network estimator: %s obs %lf est %lf",
+                             network, metric, &observation, &estimate)) == 4) {
+                int index = get_estimator_index(network, metric);
+                add_observation(data->estimators[index], observation, estimate);
+                
+                if ((rc = sscanf(start, "Adding new stats to %*s network estimator: %*s obs %*f est %*f %s obs %lf est %lf",
+                                 metric, &observation, &estimate)) == 3) {
+                    index = get_estimator_index(network, metric);
+                    add_observation(data->estimators[index], observation, estimate);
+                }
+            }
+        }
+        free(line);
+        line = NULL;
+    }
+    fclose(in);
+    // TODO: try a calculation?
 }
