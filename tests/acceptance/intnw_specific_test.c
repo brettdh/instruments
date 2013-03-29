@@ -262,7 +262,7 @@ CTEST_DATA(confidence_bounds_test) {
 CTEST_SETUP(confidence_bounds_test)
 {
     set_fixed_resource_weights(0.0, 1.0);
-    set_debugging_on(1);
+    //set_debugging_on(1);
 
     create_estimators_and_strategies(data->estimators, data->strategies, 
                                      data->args, &data->evaluator,

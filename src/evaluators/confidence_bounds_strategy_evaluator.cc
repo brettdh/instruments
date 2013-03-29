@@ -1,6 +1,7 @@
 #include "confidence_bounds_strategy_evaluator.h"
 #include "estimator.h"
 #include "error_calculation.h"
+#include "debug.h"
 
 #include <math.h>
 #include <assert.h>
@@ -12,6 +13,9 @@
 using std::ifstream; using std::ofstream;
 using std::ostringstream; using std::runtime_error;
 
+#include <boost/math/distributions/students_t.hpp>
+using namespace boost::math;
+
 class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
   public:
     ErrorConfidenceBounds(Estimator *estimator_);
@@ -22,12 +26,19 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
     static const double CONFIDENCE_ALPHA;
 
     Estimator *estimator;
+
+    // let's try making these log-transformed.
     double error_mean;
     double error_variance;
     double M2; // for running variance algorithm
+    
     size_t num_samples;
     
+    // these are not log-transformed; they are inverse-transformed
+    //  before being stored.
     double error_bounds[UPPER + 1];
+
+    double getBoundDistance();
 };
 
 
@@ -36,6 +47,54 @@ const double ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::CONFIDENC
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::ErrorConfidenceBounds(Estimator *estimator_)
     : estimator(estimator_), error_mean(0.0), error_variance(0.0), M2(0.0), num_samples(0)
 {
+}
+
+static double get_chebyshev_bound(double alpha, double variance)
+{
+    // Chebyshev interval for error bounds, as described in my proposal.
+    return sqrt(variance / alpha);
+}
+
+static double get_t_value(double alpha, size_t df)
+{
+    //http://www.boost.org/doc/libs/1_39_0/libs/math/doc/sf_and_dist/html/
+    //       math_toolkit/dist/stat_tut/weg/st_eg/tut_mean_intervals.html
+    return quantile(complement(students_t(df), alpha / 2));
+}
+
+static double get_confidence_interval_width(double alpha, double variance, size_t num_samples)
+{
+    // student's-t-based confidence interval
+    if (num_samples <= 1) {
+        return 0.0;
+    } else {
+        double t = get_t_value(alpha, num_samples - 1);
+        return t * sqrt(variance / num_samples);
+    }
+}
+
+static double get_prediction_interval_width(double alpha, double variance, size_t num_samples)
+{
+    // student's-t-based prediction interval
+    // http://en.wikipedia.org/wiki/Prediction_interval#Unknown_mean.2C_unknown_variance
+    if (num_samples <= 1) {
+        return 0.0;
+    } else {
+        double t = get_t_value(alpha, num_samples - 1);
+        return t * sqrt(variance * (1 + (1 / num_samples)));
+    }
+}
+
+double
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBoundDistance()
+{
+    if (false) {
+        return get_chebyshev_bound(CONFIDENCE_ALPHA, error_variance);
+    } else if (false) {
+        return get_confidence_interval_width(CONFIDENCE_ALPHA, error_variance, num_samples);
+    } else {
+        return get_prediction_interval_width(CONFIDENCE_ALPHA, error_variance, num_samples);
+    }
 }
 
 void
@@ -49,6 +108,8 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
     ++num_samples;
     double estimate = estimator->getEstimate();
     double error = calculate_error(estimate, value);
+    error = log(error); // natural logarithm
+    
     double delta = error - error_mean;
     error_mean += delta / num_samples;
     M2 += delta * (error - error_mean);
@@ -56,11 +117,11 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
         error_variance = M2 / (num_samples-1);
     }
 
-    // Chebyshev interval for error bounds, as described in my proposal.
-    double chebyshev_interval = sqrt(error_variance / CONFIDENCE_ALPHA);
+    double bound_distance = getBoundDistance();
     double bounds[2];
-    bounds[0] = error_mean - chebyshev_interval;
-    bounds[1] = error_mean + chebyshev_interval;
+
+    bounds[0] = exp(error_mean - bound_distance);
+    bounds[1] = exp(error_mean + bound_distance);
     if (adjusted_estimate(estimate, bounds[0]) < adjusted_estimate(estimate, bounds[1])) {
         error_bounds[LOWER] = bounds[0];
         error_bounds[UPPER] = bounds[1];
@@ -68,6 +129,10 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
         error_bounds[LOWER] = bounds[1];
         error_bounds[UPPER] = bounds[0];
     }
+    dbgprintf("Adding error sample to estimator %p: %f\n",
+              estimator, exp(error));
+    dbgprintf("n=%4d; error bounds: [%f, %f]\n", 
+              num_samples, error_bounds[LOWER], error_bounds[UPPER]);
     if (adjusted_estimate(estimate, error_bounds[LOWER]) < 0.0) {
         // PROBLEMATIC.
         assert(false); // TODO: figure out what to do here.
@@ -78,10 +143,8 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
 double
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBound(BoundType type)
 {
-    assert(num_samples > 0); 
-    // otherwise we would have just returned the estimate in getAdjustedEstimatorValue, below
-
-    return adjusted_estimate(estimator->getEstimate(), error_bounds[type]);
+    double error = num_samples > 0 ? error_bounds[type] : no_error_value();
+    return adjusted_estimate(estimator->getEstimate(), error);
 }
 
 void 
