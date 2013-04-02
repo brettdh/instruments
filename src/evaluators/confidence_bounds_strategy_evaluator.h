@@ -3,12 +3,14 @@
 
 #include "strategy_evaluator.h"
 
+#include <string>
 #include <vector>
 #include <map>
 
 class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
   public:
     ConfidenceBoundsStrategyEvaluator();
+    virtual ~ConfidenceBoundsStrategyEvaluator();
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg);
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
@@ -34,6 +36,8 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     class ErrorConfidenceBounds;
     std::vector<ErrorConfidenceBounds *> error_bounds;
     std::map<Estimator *, ErrorConfidenceBounds *> bounds_by_estimator;
+    std::map<std::string, Estimator *> estimators_by_name;
+    std::map<std::string, ErrorConfidenceBounds *> placeholders;
 
     BoundType getBoundType(EvalMode eval_mode, Strategy *strategy, 
                            typesafe_eval_fn_t fn);

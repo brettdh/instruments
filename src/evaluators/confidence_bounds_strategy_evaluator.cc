@@ -10,18 +10,24 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <iomanip>
 using std::ifstream; using std::ofstream;
 using std::ostringstream; using std::runtime_error;
+using std::string; using std::setprecision; using std::endl;
 
 #include <boost/math/distributions/students_t.hpp>
 using namespace boost::math;
 
 class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
   public:
-    ErrorConfidenceBounds(Estimator *estimator_);
+    ErrorConfidenceBounds(Estimator *estimator_=NULL);
     void observationAdded(double value);
     double getBound(BoundType type);
+    void saveToFile(ofstream& out);
+    string restoreFromFile(ifstream& in);
 
+    void setEstimator(Estimator *estimator_);
   private:
     static const double CONFIDENCE_ALPHA;
 
@@ -45,10 +51,21 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
 const double ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::CONFIDENCE_ALPHA = 0.05;
 
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::ErrorConfidenceBounds(Estimator *estimator_)
-    : estimator(estimator_), error_mean(0.0), error_variance(0.0), M2(0.0), num_samples(0)
+    : estimator(estimator_)
 {
+    error_mean = 0.0;
+    error_variance = 0.0;
+    M2 = 0.0;
+    num_samples = 0;
 }
 
+void 
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::setEstimator(Estimator *estimator_)
+{
+    estimator = estimator_;
+}
+
+          
 static double get_chebyshev_bound(double alpha, double variance)
 {
     // Chebyshev interval for error bounds, as described in my proposal.
@@ -147,13 +164,70 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBound(BoundType typ
     return adjusted_estimate(estimator->getEstimate(), error);
 }
 
+static int PRECISION = 20;
+
+void
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::saveToFile(ofstream& out)
+{
+    out << estimator->getName() << " " << setprecision(PRECISION)
+        << "num_samples " << num_samples
+        << " mean " << error_mean 
+        << " variance " << error_variance
+        << " M2 " << M2 
+        << " bounds " << error_bounds[LOWER] << " " << error_bounds[UPPER] << endl;
+}
+
+string
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstream& in)
+{
+    string name, tag;
+    in >> name >> tag >> num_samples;
+    check(tag == "num_samples", "Failed to parse num_samples");
+    
+    typedef struct {
+        const char *expected_tag;
+        double& field;
+    } field_t;
+    field_t fields[] = {
+        { "mean", error_mean },
+        { "variance", error_variance },
+        { "M2", M2 },
+        { "bounds", error_bounds[LOWER] }
+    };
+    size_t num_fields = sizeof(fields) / sizeof(field_t);
+    for (size_t i = 0; i < num_fields; ++i) {
+        in >> tag >> fields[i].field;
+        check(tag == fields[i].expected_tag, "Failed to parse field");
+    }
+    in >> error_bounds[UPPER];
+    
+    check(in, "Failed to read bounds from file");
+    return name;
+}
+
 void 
 ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double value)
 {
+    string name = estimator->getName();
     if (bounds_by_estimator.count(estimator) == 0) {
-        error_bounds.push_back(new ErrorConfidenceBounds(estimator));
+        ErrorConfidenceBounds *bounds = NULL;
+        if (placeholders.count(name) > 0) {
+            bounds = placeholders[name];
+            placeholders.erase(name);
+        } else {
+            bounds = new ErrorConfidenceBounds(estimator);
+        }
+        error_bounds.push_back(bounds);
         bounds_by_estimator[estimator] = error_bounds.back();
+    }
+    
+    if (estimators_by_name.count(name) > 0) {
+        assert(estimator == estimators_by_name[name]);
     } else {
+        estimators_by_name[name] = estimator;
+    }
+    
+    if (estimator->hasEstimate()) {
         bounds_by_estimator[estimator]->observationAdded(value);
     }
 }
@@ -166,6 +240,17 @@ ConfidenceBoundsStrategyEvaluator::ConfidenceBoundsStrategyEvaluator()
     : eval_mode(DEFAULT_EVAL_MODE), // TODO: set as option?
       step(0)
 {
+}
+
+ConfidenceBoundsStrategyEvaluator::~ConfidenceBoundsStrategyEvaluator()
+{
+    for (size_t i = 0; i < error_bounds.size(); ++i) {
+        delete error_bounds[i];
+    }
+    error_bounds.clear();
+    bounds_by_estimator.clear();
+    estimators_by_name.clear();
+    placeholders.clear();
 }
 
 ConfidenceBoundsStrategyEvaluator::BoundType
@@ -263,7 +348,10 @@ ConfidenceBoundsStrategyEvaluator::saveToFile(const char *filename)
         throw runtime_error(oss.str());
     }
 
-    // TODO
+    out << bounds_by_estimator.size() << " estimator-bounds" << endl;
+    for (size_t i = 0; i < error_bounds.size(); ++i) {
+        error_bounds[i]->saveToFile(out);
+    }
     out.close();
 }
 
@@ -277,6 +365,30 @@ ConfidenceBoundsStrategyEvaluator::restoreFromFile(const char *filename)
         throw runtime_error(oss.str());
     }
 
-    // TODO
+    string tag;
+    int num_estimators = -1;
+    in >> num_estimators >> tag;
+    check(num_estimators >= 0, "Failed to read number of estimator bounds");
+    check(tag == "estimator-bounds", "Failed to read tag");
+
+    for (size_t i = 0; i < error_bounds.size(); ++i) {
+        delete error_bounds[i];
+    }
+    error_bounds.clear();
+    
+    for (int i = 0; i < num_estimators; ++i) {
+        ErrorConfidenceBounds *bounds = new ErrorConfidenceBounds(NULL);
+        string name = bounds->restoreFromFile(in);
+        if (estimators_by_name.count(name) > 0) {
+            Estimator *estimator = estimators_by_name[name];
+            bounds->setEstimator(estimator);
+            error_bounds.push_back(bounds);
+            bounds_by_estimator[estimator] = bounds;
+        } else {
+            assert(placeholders.count(name) == 0);
+            placeholders[name] = bounds;
+        }
+    }
+    
     in.close();
 }

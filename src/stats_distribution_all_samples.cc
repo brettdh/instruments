@@ -87,7 +87,7 @@ StatsDistributionAllSamples::makeNewIterator()
 #define VALUES_PER_LINE 5
 static const string TAG = "all-samples";
 
-#define PRECISION 20
+static int PRECISION = 20;
 
 void 
 StatsDistributionAllSamples::appendToFile(const string& name, ofstream& out)

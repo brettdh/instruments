@@ -25,6 +25,12 @@ EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator(EvalMethod meth
     joint_distribution_type = JointDistributionType(method & JOINT_DISTRIBUTION_TYPE_MASK);
 }
 
+EmpiricalErrorStrategyEvaluator::~EmpiricalErrorStrategyEvaluator()
+{
+    delete jointDistribution;
+}
+
+
 void 
 EmpiricalErrorStrategyEvaluator::setStrategies(const instruments_strategy_t *strategies_,
                                                size_t num_strategies_)
