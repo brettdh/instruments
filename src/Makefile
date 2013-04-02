@@ -33,9 +33,9 @@ OBJS := \
 
 
 CXXFLAGS := -g -Wall -Werror -I. -I./evaluators -I./joint_distributions -I../include -fpic -pthread $(R_CXXFLAGS)
-CXXFLAGS := $(subst -O3,-O0,$(CXXFLAGS))
+#CXXFLAGS := $(subst -O3,-O0,$(CXXFLAGS))
 #CXXFLAGS += -fno-inline
-#CXXFLAGS += -O3 # -DNDEBUG # -std=gnu++0x
+CXXFLAGS += -O3 -DNDEBUG # -std=gnu++0x
 LDFLAGS := -lpthread $(R_LDLIBS) -L/usr/local/lib -lmocktime -Wl,--no-undefined
 
 ifeq ($(shell uname), Darwin)
