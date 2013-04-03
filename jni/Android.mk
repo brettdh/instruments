@@ -11,7 +11,9 @@ common_CFLAGS:=-g -O3 -Wall -Werror -DANDROID
 common_CXXFLAGS:=$(common_CFLAGS) # -std=gnu++0x
 INSTRUMENTS_INCLUDES := \
 	$(LOCAL_PATH)/../include \
-	$(LOCAL_PATH)/../src
+	$(LOCAL_PATH)/../src \
+	$(LOCAL_PATH)/../src/evaluators \
+	$(LOCAL_PATH)/../src/joint_distributions
 
 ANDROID_LIBS_ROOT := $(LOCAL_PATH)/../../android-source/external/bdh_apps
 

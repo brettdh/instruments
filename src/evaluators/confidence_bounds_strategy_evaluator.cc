@@ -117,6 +117,8 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBoundDistance()
 void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(double value)
 {
+    dbgprintf("Getting error sample from estimator %p\n", estimator);
+
     /*
      * Algorithm borrowed from
      * http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#On-line_algorithm
@@ -208,17 +210,23 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
 void 
 ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double value)
 {
+    dbgprintf("Adding observation %f to estimator %p\n", value, estimator);
+    
+    assert(estimator);
     string name = estimator->getName();
+    ErrorConfidenceBounds *bounds = NULL;
     if (bounds_by_estimator.count(estimator) == 0) {
-        ErrorConfidenceBounds *bounds = NULL;
         if (placeholders.count(name) > 0) {
             bounds = placeholders[name];
+            bounds->setEstimator(estimator);
             placeholders.erase(name);
         } else {
             bounds = new ErrorConfidenceBounds(estimator);
         }
         error_bounds.push_back(bounds);
         bounds_by_estimator[estimator] = error_bounds.back();
+    } else {
+        bounds = bounds_by_estimator[estimator];
     }
     
     if (estimators_by_name.count(name) > 0) {
@@ -228,13 +236,15 @@ ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double
     }
     
     if (estimator->hasEstimate()) {
-        bounds_by_estimator[estimator]->observationAdded(value);
+        dbgprintf("Adding observation %f to estimator-bounds %p\n",
+                  value, bounds);
+        bounds->observationAdded(value);
     }
 }
 
 
 ConfidenceBoundsStrategyEvaluator::EvalMode
- ConfidenceBoundsStrategyEvaluator::DEFAULT_EVAL_MODE = AGGRESSIVE;
+ConfidenceBoundsStrategyEvaluator::DEFAULT_EVAL_MODE = AGGRESSIVE;
 
 ConfidenceBoundsStrategyEvaluator::ConfidenceBoundsStrategyEvaluator()
     : eval_mode(DEFAULT_EVAL_MODE), // TODO: set as option?
