@@ -91,12 +91,18 @@ GoalAdaptiveResourceWeight::startPeriodicUpdates()
 
 GoalAdaptiveResourceWeight::~GoalAdaptiveResourceWeight()
 {
+    bool join = false;
     {
         PthreadScopedLock lock(&mutex);
+        if (updating) {
+            join = true;
+        }
         updating = false;
         pthread_cond_signal(&cv);
     }
-    pthread_join(update_thread, NULL);
+    if (join) {
+        pthread_join(update_thread, NULL);
+    }
 }
 
 void 

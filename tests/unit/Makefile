@@ -22,6 +22,7 @@ CXXFLAGS += -I/opt/local/include
 LDFLAGS += -L/opt/local/lib
 else
 CXXFLAGS += -pthread
+LDFLAGS += -lpthread
 endif
 
 
