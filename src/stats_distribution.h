@@ -9,6 +9,7 @@
 
 class StatsDistribution {
   public:
+    virtual ~StatsDistribution() {}
     virtual void addValue(double value) = 0;
 
     class Iterator : public ::Iterator {
