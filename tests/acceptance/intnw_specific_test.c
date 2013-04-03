@@ -244,6 +244,7 @@ static void test_save_restore(void *data_generic, const char *filename,
 
     restore_evaluator(new_data.evaluator, filename);
     assert_correct_strategy(&new_data, new_data.strategies[2], bytelen);
+    add_last_estimates(new_data.estimators);
 }
 
 CTEST2(intnw_specific_test, test_save_restore)
@@ -311,6 +312,7 @@ CTEST2(confidence_bounds_test, test_save_restore)
 {
     test_save_restore(data, "/tmp/confidence_bounds_saved_evaluation_state.txt", 
                       CONFIDENCE_BOUNDS);
+    
 }
 
 static int
