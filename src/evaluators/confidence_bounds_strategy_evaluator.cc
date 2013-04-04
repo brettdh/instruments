@@ -271,10 +271,24 @@ ConfidenceBoundsStrategyEvaluator::getBoundType(EvalMode eval_mode, Strategy *st
         // aggressive = upper bound on benefit of redundancy.
         //            = max_time(singular) - min_time(redundant)
         // or:
-        // aggressive = lower bound on additional cost of redundancy
-        //            = min_cost(redundant) - max_cost(singular)
-        // same bound for time and cost.
-        return strategy->isRedundant() ? LOWER : UPPER;
+        // //aggressive = lower bound on additional cost of redundancy
+        // //           = min_cost(redundant) - max_cost(singular)
+        // //same bound for time and cost.
+        // PROBLEM WITH THAT: cost diff can now be negative.
+        //    could lower-bound at 0, but:
+        //    a) This actually isn't what I proposed; and
+        //    b) This will probably lead to always-redundant, all the time.
+        //    What I proposed was that min-additional cost is 
+        //      calculated using the min-cost for all singular strategies.
+        //    So, let's try that.
+        //return strategy->isRedundant() ? LOWER : UPPER;
+
+        if (fn == strategy->getEvalFn(ENERGY_FN) ||
+            fn == strategy->getEvalFn(DATA_FN)) {
+            return LOWER;
+        } else {
+            return strategy->isRedundant() ? LOWER : UPPER;
+        }
     } else {
         assert(eval_mode == CONSERVATIVE);
         // XXX: can these be negative? e.g. is it possible that min_time(singular) < max_time(redundant)?
