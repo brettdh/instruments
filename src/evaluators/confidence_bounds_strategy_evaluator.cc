@@ -16,8 +16,7 @@ using std::ifstream; using std::ofstream;
 using std::ostringstream; using std::runtime_error;
 using std::string; using std::setprecision; using std::endl;
 
-#include <boost/math/distributions/students_t.hpp>
-using namespace boost::math;
+#include "students_t.h"
 
 class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
   public:
@@ -70,13 +69,6 @@ static double get_chebyshev_bound(double alpha, double variance)
 {
     // Chebyshev interval for error bounds, as described in my proposal.
     return sqrt(variance / alpha);
-}
-
-static double get_t_value(double alpha, size_t df)
-{
-    //http://www.boost.org/doc/libs/1_39_0/libs/math/doc/sf_and_dist/html/
-    //       math_toolkit/dist/stat_tut/weg/st_eg/tut_mean_intervals.html
-    return quantile(complement(students_t(df), alpha / 2));
 }
 
 static double get_confidence_interval_width(double alpha, double variance, size_t num_samples)

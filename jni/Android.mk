@@ -48,6 +48,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	evaluators/confidence_bounds_strategy_evaluator.cc \
 	evaluators/empirical_error_strategy_evaluator.cc \
 	evaluators/trusted_oracle_strategy_evaluator.cc \
+	evaluators/students_t.cc \
 	external_estimator.cc \
 	goal_adaptive_resource_weight.cc \
 	instruments.cc \
