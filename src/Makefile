@@ -16,6 +16,7 @@ OBJS := \
 	evaluators/confidence_bounds_strategy_evaluator.o \
 	evaluators/empirical_error_strategy_evaluator.o \
 	evaluators/trusted_oracle_strategy_evaluator.o \
+	evaluators/students_t.o \
 	external_estimator.o \
 	goal_adaptive_resource_weight.o \
 	instruments.o \
