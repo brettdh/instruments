@@ -43,6 +43,10 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
                            typesafe_eval_fn_t fn);
     double evaluateBounded(BoundType bound_type, typesafe_eval_fn_t fn,
                            void *strategy_arg, void *chooser_arg);
+
+    void *last_chooser_arg;
+    std::map<std::pair<Strategy*, typesafe_eval_fn_t>, double> cache;
+    void clearCache();
 };
 
 #endif

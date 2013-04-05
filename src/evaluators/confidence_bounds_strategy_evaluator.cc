@@ -12,9 +12,11 @@
 #include <stdexcept>
 #include <string>
 #include <iomanip>
+#include <map>
 using std::ifstream; using std::ofstream;
 using std::ostringstream; using std::runtime_error;
 using std::string; using std::setprecision; using std::endl;
+using std::pair; using std::make_pair;
 
 #include "students_t.h"
 
@@ -232,6 +234,8 @@ ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double
                   value, bounds);
         bounds->observationAdded(value);
     }
+
+    clearCache();
 }
 
 
@@ -240,7 +244,7 @@ ConfidenceBoundsStrategyEvaluator::DEFAULT_EVAL_MODE = AGGRESSIVE;
 
 ConfidenceBoundsStrategyEvaluator::ConfidenceBoundsStrategyEvaluator()
     : eval_mode(DEFAULT_EVAL_MODE), // TODO: set as option?
-      step(0)
+      step(0), last_chooser_arg(NULL)
 {
 }
 
@@ -306,8 +310,18 @@ double
 ConfidenceBoundsStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                                  void *strategy_arg, void *chooser_arg)
 {
-    BoundType bound_type = getBoundType(eval_mode, strategy, fn);
-    return evaluateBounded(bound_type, fn, strategy_arg, chooser_arg);
+    if (chooser_arg != last_chooser_arg) {
+        clearCache();
+    }
+    last_chooser_arg = chooser_arg;
+
+    pair<Strategy*, typesafe_eval_fn_t> key = make_pair(strategy, fn);
+    if (cache.count(key) == 0) {
+        BoundType bound_type = getBoundType(eval_mode, strategy, fn);
+        cache[key] = evaluateBounded(bound_type, fn, strategy_arg, chooser_arg);
+    }
+
+    return cache[key];
 }
 
 typedef const double& (*bound_fn_t)(const double&, const double&);
@@ -407,4 +421,12 @@ ConfidenceBoundsStrategyEvaluator::restoreFromFile(const char *filename)
     }
     
     in.close();
+
+    clearCache();
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::clearCache()
+{
+    cache.clear();
 }
