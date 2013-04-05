@@ -339,9 +339,17 @@ get_estimator_index(const char *network, const char *metric)
 
 CTEST2(confidence_bounds_test, test_real_distributions)
 {
-    const char *FILENAME = "./confidence_bounds_test_intnw.log";
-    FILE *in = fopen(FILENAME, "r");
+    set_debugging_on(1);
+    
+    //const char *logfile = "./confidence_bounds_test_intnw.log";
+    const char *logfile = "./post_restore_intnw.log";
+    FILE *in = fopen(logfile, "r");
     assert(in);
+
+    const char *filename = 
+        "/home/brettdh/scripts/nistnet_scripts/app_trace_simulator/live_replayer/"
+        "saved_error_distributions_prob.txt";
+    restore_evaluator(data->evaluator, filename);
 
     char network[64], metric[64];
     double observation, estimate;
@@ -362,10 +370,10 @@ CTEST2(confidence_bounds_test, test_real_distributions)
                     add_observation(data->estimators[index], observation, estimate);
                 }
             }
+            choose_strategy(data->evaluator, (void *) 1024);
         }
         free(line);
         line = NULL;
     }
     fclose(in);
-    // TODO: try a calculation?
 }

@@ -162,6 +162,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
             dbgprintf("Redundant strategy cost: %f\n", redundant_cost);
             dbgprintf("Redundant strategy additional cost: %f\n", 
                       redundant_cost - best_singular_cost);
+            assert(redundant_cost >= best_singular_cost);
 
             if (net_benefit > 0.0 && 
                 (best_redundant == NULL || net_benefit > best_redundant_net_benefit)) {
