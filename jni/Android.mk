@@ -77,9 +77,24 @@ include $(BUILD_SHARED_LIBRARY)
 
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := run_perf_test
+LOCAL_MODULE := run_brute_force_perf_test
 LOCAL_SRC_FILES := $(addprefix ../tests/acceptance/, \
-	brute_force_performance_test.c)
+	performance_test.c)
+LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(LOCAL_PATH)/../tests/include
+LOCAL_CFLAGS := $(common_CFLAGS) -DBRUTE_FORCE
+ifneq ($(my_PROFILING_BUILD),)
+LOCAL_CFLAGS += $(my_PROFILING_CFLAGS)
+LOCAL_STATIC_LIBRARIES += andprof
+LOCAL_LDLIBS += -llog
+endif
+#LOCAL_LDFLAGS += -fuse-ld=gold
+LOCAL_SHARED_LIBRARIES := libinstruments libpowertutor libmocktime
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := run_prob_perf_test
+LOCAL_SRC_FILES := $(addprefix ../tests/acceptance/, \
+	performance_test.c)
 LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(LOCAL_PATH)/../tests/include
 LOCAL_CFLAGS := $(common_CFLAGS)
 ifneq ($(my_PROFILING_BUILD),)

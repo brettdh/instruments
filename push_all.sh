@@ -4,4 +4,6 @@ DIR=obj/local/armeabi-v7a
 
 adb root \
 && adb remount \
-&& adb push $DIR/libinstruments.so /system/lib/
+&& adb push $DIR/libinstruments.so /system/lib/ \
+&& adb push $DIR/run_brute_force_perf_test /system/bin \
+&& adb push $DIR/run_prob_perf_test /system/bin
