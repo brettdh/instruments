@@ -1,2 +1,3 @@
 run_tests
-run_perf_test
+run_brute_force_perf_test
+run_prob_perf_test

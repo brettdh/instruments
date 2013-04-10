@@ -93,10 +93,15 @@ int main()
     strategies[0] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[0], NULL);
     strategies[1] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[1], NULL);
     strategies[2] = make_redundant_strategy(strategies, 2);
-    
+
+#ifdef BRUTE_FORCE
+#define EVAL_METHOD EMPIRICAL_ERROR_ALL_SAMPLES_INTNW
+#else
+#define EVAL_METHOD CONFIDENCE_BOUNDS
+//#define EVAL_METHOD TRUSTED_ORACLE
+#endif
     instruments_strategy_evaluator_t evaluator = 
-        register_strategy_set_with_method(strategies, 3,
-                                          EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+        register_strategy_set_with_method(strategies, 3, EVAL_METHOD);
 
     int bytelen = 4096;
     //int max_samples = 50;
