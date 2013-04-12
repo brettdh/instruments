@@ -88,9 +88,8 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
         evaluator = new ConfidenceBoundsStrategyEvaluator;
     } else {
         // TODO: implement the rest.
-        assert(0);
+        assert(false);
         __builtin_unreachable();
-        abort();
     }
     evaluator->setStrategies(strategies, num_strategies);
     return evaluator;

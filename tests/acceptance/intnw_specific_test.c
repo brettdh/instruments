@@ -42,11 +42,15 @@ static double data_cost(instruments_context_t ctx, void *strategy_arg, void *cho
 #define NUM_ESTIMATORS 4
 #define NUM_STRATEGIES 3
 
-CTEST_DATA(intnw_specific_test) {
+struct common_test_data {
     instruments_external_estimator_t estimators[NUM_ESTIMATORS];
     struct strategy_args args[NUM_STRATEGIES-1];
     instruments_strategy_t strategies[NUM_STRATEGIES];
     instruments_strategy_evaluator_t evaluator;
+};
+
+CTEST_DATA(intnw_specific_test) {
+    struct common_test_data common_data;
 };
 
 static void 
@@ -54,7 +58,7 @@ create_estimators_and_strategies(instruments_external_estimator_t *estimators,
                                  instruments_strategy_t *strategies,
                                  struct strategy_args *args,
                                  instruments_strategy_evaluator_t *evaluator,
-                                 enum EvalMethod type)
+                                 enum EvalMethod method)
 {
     int i;
     char name[64];
@@ -75,38 +79,46 @@ create_estimators_and_strategies(instruments_external_estimator_t *estimators,
     strategies[2] = make_redundant_strategy(strategies, 2);
     
     *evaluator = 
-        register_strategy_set_with_method(strategies, NUM_STRATEGIES, type);
+        register_strategy_set_with_method(strategies, NUM_STRATEGIES, method);
+}
+
+static void setup_common(struct common_test_data *cdata, enum EvalMethod method)
+{
+    set_fixed_resource_weights(0.0, 1.0);
+
+    cdata->evaluator = NULL;
+    create_estimators_and_strategies(cdata->estimators, cdata->strategies, 
+                                     cdata->args, &cdata->evaluator, method);
+}
+
+static void teardown_common(struct common_test_data *cdata)
+{
+    int i;
+    for (i = 0; i < NUM_ESTIMATORS; ++i) {
+        free_external_estimator(cdata->estimators[i]);
+    }
+    for (i = 0; i < NUM_STRATEGIES; ++i) {
+        free_strategy(cdata->strategies[i]);
+    }
+    free_strategy_evaluator(cdata->evaluator);
 }
 
 CTEST_SETUP(intnw_specific_test)
 {
-    set_fixed_resource_weights(0.0, 1.0);
-
-    create_estimators_and_strategies(data->estimators, data->strategies, 
-                                     data->args, &data->evaluator,
-                                     EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+    setup_common(&data->common_data, EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
 }
 
 CTEST_TEARDOWN(intnw_specific_test)
 {
-    int i;
-    for (i = 0; i < NUM_ESTIMATORS; ++i) {
-        free_external_estimator(data->estimators[i]);
-    }
-    for (i = 0; i < NUM_STRATEGIES; ++i) {
-        free_strategy(data->strategies[i]);
-    }
-    free_strategy_evaluator(data->evaluator);
+    teardown_common(&data->common_data);
 }
 
-static void assert_correct_strategy(void *data_generic, 
+static void assert_correct_strategy(struct common_test_data *cdata,
                                     instruments_strategy_t correct_strategy,
                                     int bytes)
 {
-    struct intnw_specific_test_data *data = (struct intnw_specific_test_data *) data_generic;
-    
-    instruments_strategy_t *strategies = data->strategies;
-    instruments_strategy_evaluator_t evaluator = data->evaluator;
+    instruments_strategy_t *strategies = cdata->strategies;
+    instruments_strategy_evaluator_t evaluator = cdata->evaluator;
     
     instruments_strategy_t chosen_strategy = choose_strategy(evaluator, (void *)bytes);
     int chosen_strategy_idx = -1, correct_strategy_idx = -1, i;
@@ -130,34 +142,36 @@ static void assert_correct_strategy(void *data_generic,
     ASSERT_EQUAL((int)correct_strategy, (int)chosen_strategy);
 }
 
-static void init_network_params(void *data_generic,
+static void init_network_params(struct common_test_data *cdata,
                                 double bandwidth1, double latency1, 
                                 double bandwidth2, double latency2)
 {
-    struct intnw_specific_test_data *data = (struct intnw_specific_test_data *) data_generic;
-    
     int num_samples = 50;
     //int num_samples = 1;
 
     int i;
     for (i = 0; i < num_samples; ++i) {
-        add_observation(data->estimators[0], bandwidth1, bandwidth1);
-        add_observation(data->estimators[1], latency1, latency1);
-        add_observation(data->estimators[2], bandwidth2, bandwidth2);
-        add_observation(data->estimators[3], latency2, latency2);
+        add_observation(cdata->estimators[0], bandwidth1, bandwidth1);
+        add_observation(cdata->estimators[1], latency1, latency1);
+        add_observation(cdata->estimators[2], bandwidth2, bandwidth2);
+        add_observation(cdata->estimators[3], latency2, latency2);
     }
 }
 
 CTEST2(intnw_specific_test, test_one_network_wins)
 {
+    struct common_test_data *cdata = &data->common_data;
+
     int bytelen = 500000;
-    init_network_params(data, 500000, 0.02, 128, 0.5);
-    assert_correct_strategy(data, data->strategies[0], bytelen);
+    init_network_params(cdata, 500000, 0.02, 128, 0.5);
+    assert_correct_strategy(cdata, cdata->strategies[0], bytelen);
 }
 
 CTEST2(intnw_specific_test, test_each_network_wins)
 {
-    init_network_params(data, 5000, 1.0, 2500, 0.2);
+    struct common_test_data *cdata = &data->common_data;
+    
+    init_network_params(cdata, 5000, 1.0, 2500, 0.2);
     // break-even: 
     //   x / 5000 + 1.0 = x / 2500 + 0.2
     //   x = 0.8 * 5000
@@ -165,8 +179,8 @@ CTEST2(intnw_specific_test, test_each_network_wins)
     //  if x > 4000, network 1 wins.
     //  if x < 4000, network 2 wins.
     
-    assert_correct_strategy(data, data->strategies[0], 4001);
-    assert_correct_strategy(data, data->strategies[1], 3999);
+    assert_correct_strategy(cdata, cdata->strategies[0], 4001);
+    assert_correct_strategy(cdata, cdata->strategies[1], 3999);
 }
 
 
@@ -195,45 +209,42 @@ static void add_last_estimates(instruments_external_estimator_t *estimators)
     add_observation(estimators[3], 0.0, 0.0);
 }
 
-static void test_both_networks_best(void *data_generic)
+static void test_both_networks_best(struct common_test_data *cdata)
 {
-    struct intnw_specific_test_data *data = (struct intnw_specific_test_data *) data_generic;
-    
     int num_samples = 50;
     int i;
     
-    add_observation(data->estimators[0], stable_bandwidth, stable_bandwidth);
-    add_observation(data->estimators[1], 0.0, 0.0);
-    add_observation(data->estimators[2], better_bandwidth, better_bandwidth);
-    add_observation(data->estimators[3], 0.0, 0.0);
+    add_observation(cdata->estimators[0], stable_bandwidth, stable_bandwidth);
+    add_observation(cdata->estimators[1], 0.0, 0.0);
+    add_observation(cdata->estimators[2], better_bandwidth, better_bandwidth);
+    add_observation(cdata->estimators[3], 0.0, 0.0);
     
     for (i = 0; i < num_samples; ++i) {
-        add_observation(data->estimators[0], stable_bandwidth, stable_bandwidth);
-        add_observation(data->estimators[1], 0.0, 0.0);
+        add_observation(cdata->estimators[0], stable_bandwidth, stable_bandwidth);
+        add_observation(cdata->estimators[1], 0.0, 0.0);
         if (i % 2 == 0) {
-            add_observation(data->estimators[2], worse_bandwidth, worse_bandwidth);
+            add_observation(cdata->estimators[2], worse_bandwidth, worse_bandwidth);
         } else {
-            add_observation(data->estimators[2], better_bandwidth, better_bandwidth);
+            add_observation(cdata->estimators[2], better_bandwidth, better_bandwidth);
         }
-        add_observation(data->estimators[3], 0.0, 0.0);
+        add_observation(cdata->estimators[3], 0.0, 0.0);
     }
 
-    assert_correct_strategy(data, data->strategies[2], bytelen);
+    assert_correct_strategy(cdata, cdata->strategies[2], bytelen);
 }
 
 CTEST2(intnw_specific_test, test_both_networks_best)
 {
-    test_both_networks_best(data);
+    test_both_networks_best(&data->common_data);
 }
 
-static void test_save_restore(void *data_generic, const char *filename, 
+static void test_save_restore(struct common_test_data *cdata, const char *filename, 
                               enum EvalMethod eval_method)
 {
-    struct intnw_specific_test_data *data = (struct intnw_specific_test_data *) data_generic;
-    test_both_networks_best(data);
-    save_evaluator(data->evaluator, filename);
+    test_both_networks_best(cdata);
+    save_evaluator(cdata->evaluator, filename);
 
-    struct intnw_specific_test_data new_data;
+    struct common_test_data new_data;
     create_estimators_and_strategies(new_data.estimators, new_data.strategies, 
                                      new_data.args, &new_data.evaluator,
                                      eval_method);
@@ -249,49 +260,36 @@ static void test_save_restore(void *data_generic, const char *filename,
 
 CTEST2(intnw_specific_test, test_save_restore)
 {
-    test_save_restore(data, "/tmp/intnw_saved_evaluation_state.txt", 
+    test_save_restore(&data->common_data, "/tmp/intnw_saved_evaluation_state.txt", 
                       EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
 }
 
 CTEST_DATA(confidence_bounds_test) {
-    instruments_external_estimator_t estimators[NUM_ESTIMATORS];
-    struct strategy_args args[NUM_STRATEGIES-1];
-    instruments_strategy_t strategies[NUM_STRATEGIES];
-    instruments_strategy_evaluator_t evaluator;
+    struct common_test_data common_data;
 };
 
 CTEST_SETUP(confidence_bounds_test)
 {
-    set_fixed_resource_weights(0.0, 1.0);
-    //set_debugging_on(1);
-
-    create_estimators_and_strategies(data->estimators, data->strategies, 
-                                     data->args, &data->evaluator,
-                                     CONFIDENCE_BOUNDS);
+    setup_common(&data->common_data, CONFIDENCE_BOUNDS);
 }
 
 CTEST_TEARDOWN(confidence_bounds_test)
 {
-    int i;
-    for (i = 0; i < NUM_ESTIMATORS; ++i) {
-        free_external_estimator(data->estimators[i]);
-    }
-    for (i = 0; i < NUM_STRATEGIES; ++i) {
-        free_strategy(data->strategies[i]);
-    }
-    free_strategy_evaluator(data->evaluator);
+    teardown_common(&data->common_data);
 }
 
 CTEST2(confidence_bounds_test, test_one_network_wins)
 {
+    struct common_test_data *cdata = &data->common_data;
     int bytelen = 500000;
-    init_network_params(data, 500000, 0.02, 128, 0.5);
-    assert_correct_strategy(data, data->strategies[0], bytelen);
+    init_network_params(cdata, 500000, 0.02, 128, 0.5);
+    assert_correct_strategy(cdata, cdata->strategies[0], bytelen);
 }
 
 CTEST2(confidence_bounds_test, test_each_network_wins)
 {
-    init_network_params(data, 5000, 1.0, 2500, 0.2);
+    struct common_test_data *cdata = &data->common_data;
+    init_network_params(cdata, 5000, 1.0, 2500, 0.2);
     // break-even: 
     //   x / 5000 + 1.0 = x / 2500 + 0.2
     //   x = 0.8 * 5000
@@ -299,18 +297,18 @@ CTEST2(confidence_bounds_test, test_each_network_wins)
     //  if x > 4000, network 1 wins.
     //  if x < 4000, network 2 wins.
     
-    assert_correct_strategy(data, data->strategies[0], 4001);
-    assert_correct_strategy(data, data->strategies[1], 3999);
+    assert_correct_strategy(cdata, cdata->strategies[0], 4001);
+    assert_correct_strategy(cdata, cdata->strategies[1], 3999);
 }
 
 CTEST2(confidence_bounds_test, test_both_networks_best)
 {
-    test_both_networks_best(data);
+    test_both_networks_best(&data->common_data);
 }
 
 CTEST2(confidence_bounds_test, test_save_restore)
 {
-    test_save_restore(data, "/tmp/confidence_bounds_saved_evaluation_state.txt", 
+    test_save_restore(&data->common_data, "/tmp/confidence_bounds_saved_evaluation_state.txt", 
                       CONFIDENCE_BOUNDS);
     
 }
@@ -339,15 +337,17 @@ get_estimator_index(const char *network, const char *metric)
 
 CTEST2(confidence_bounds_test, test_real_distributions)
 {
-    set_debugging_on(1);
+    //set_debugging_on(1);
     
     //const char *logfile = "./support_files/confidence_bounds_test_intnw.log";
     const char *logfile = "./support_files/post_restore_intnw.log";
     FILE *in = fopen(logfile, "r");
     assert(in);
 
+    struct common_test_data *cdata = &data->common_data;
+
     const char *filename = "support_files/saved_error_distributions_prob.txt";
-    restore_evaluator(data->evaluator, filename);
+    restore_evaluator(cdata->evaluator, filename);
 
     char network[64], metric[64];
     double observation, estimate;
@@ -360,18 +360,66 @@ CTEST2(confidence_bounds_test, test_real_distributions)
             if ((rc = sscanf(start, "Adding new stats to %s network estimator: %s obs %lf est %lf",
                              network, metric, &observation, &estimate)) == 4) {
                 int index = get_estimator_index(network, metric);
-                add_observation(data->estimators[index], observation, estimate);
+                add_observation(cdata->estimators[index], observation, estimate);
                 
                 if ((rc = sscanf(start, "Adding new stats to %*s network estimator: %*s obs %*f est %*f %s obs %lf est %lf",
                                  metric, &observation, &estimate)) == 3) {
                     index = get_estimator_index(network, metric);
-                    add_observation(data->estimators[index], observation, estimate);
+                    add_observation(cdata->estimators[index], observation, estimate);
                 }
             }
-            choose_strategy(data->evaluator, (void *) 1024);
+            choose_strategy(cdata->evaluator, (void *) 1024);
         }
         free(line);
         line = NULL;
     }
     fclose(in);
+}
+
+CTEST_DATA(bayesian_method_test) {
+    struct common_test_data common_data;
+};
+
+CTEST_SETUP(bayesian_method_test)
+{
+    setup_common(&data->common_data, BAYESIAN);
+}
+
+CTEST_TEARDOWN(bayesian_method_test)
+{
+    teardown_common(&data->common_data);
+}
+
+CTEST2(bayesian_method_test, test_one_network_wins)
+{
+    struct common_test_data *cdata = &data->common_data;
+    int bytelen = 500000;
+    init_network_params(cdata, 500000, 0.02, 128, 0.5);
+    assert_correct_strategy(cdata, cdata->strategies[0], bytelen);
+}
+
+CTEST2(bayesian_method_test, test_each_network_wins)
+{
+    struct common_test_data *cdata = &data->common_data;
+    init_network_params(cdata, 5000, 1.0, 2500, 0.2);
+    // break-even: 
+    //   x / 5000 + 1.0 = x / 2500 + 0.2
+    //   x = 0.8 * 5000
+    //   x = 4000
+    //  if x > 4000, network 1 wins.
+    //  if x < 4000, network 2 wins.
+    
+    assert_correct_strategy(cdata, cdata->strategies[0], 4001);
+    assert_correct_strategy(cdata, cdata->strategies[1], 3999);
+}
+
+CTEST2(bayesian_method_test, test_both_networks_best)
+{
+    test_both_networks_best(&data->common_data);
+}
+
+CTEST2(bayesian_method_test, test_save_restore)
+{
+    test_save_restore(&data->common_data, "/tmp/bayesian_method_saved_evaluation_state.txt", 
+                      BAYESIAN);
 }

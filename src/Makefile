@@ -1,4 +1,4 @@
-LIBRARIES := libinstruments.so
+LIBRARIES := libinstruments.so libinstruments_debug.so
 all: $(LIBRARIES)
 
 ../common/R_generated_vars.mk: ../common/Makefile
@@ -34,20 +34,30 @@ OBJS := \
 
 
 CXXFLAGS := -g -Wall -Werror -I. -I./evaluators -I./joint_distributions -I../include -fpic -pthread $(R_CXXFLAGS)
-#CXXFLAGS := $(subst -O3,-O0,$(CXXFLAGS))
-#CXXFLAGS += -fno-inline
-CXXFLAGS += -O3 -DNDEBUG # -std=gnu++0x
 LDFLAGS := -lpthread $(R_LDLIBS) -L/usr/local/lib -lmocktime -Wl,--no-undefined
+
+DEBUG_CXXFLAGS := $(subst -O3,-O0,$(CXXFLAGS)) 
+OPTI_FLAGS += -O3 -DNDEBUG
 
 ifeq ($(shell uname), Darwin)
 CXXFLAGS += -I/opt/local/include
 endif
 
 LIB := libinstruments.so
+LIB_DEBUG := libinstruments_debug.so
 HEADERS := ../include/instruments.h
 
+%.o: %.cc
+	g++ -o $@ -c $< $(CXXFLAGS) $(OPTI_FLAGS)
+
+%_debug.o: %.cc
+	g++ -o $@ -c $< $(DEBUG_CXXFLAGS)
+
 $(LIB): $(OBJS)
-	g++  -shared -o $@ $^ $(LDFLAGS)
+	g++  -shared -o $@ $^ $(LDFLAGS) $(OPTI_FLAGS)
+
+$(LIB_DEBUG): $(OBJS:%.o=%_debug.o)
+	g++ -shared -o $@ $^ $(LDFLAGS)
 
 .libinstall: $(LIB)
 	install $(LIB) /usr/local/lib/
