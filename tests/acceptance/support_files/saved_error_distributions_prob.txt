@@ -1,0 +1,5 @@
+4 estimator-bounds
+estimator-0 num_samples 50 mean 0 variance 0 M2 0 bounds 1 1
+estimator-1 num_samples 50 mean 0 variance 0 M2 0 bounds 1 1
+estimator-2 num_samples 50 mean 1.6669608401964630673e-18 variance 2.6431534632451372246 M2 129.51451969901171424 bounds 0.038115936133995831359 26.235745502472234136
+estimator-3 num_samples 50 mean 0 variance 0 M2 0 bounds 1 1
