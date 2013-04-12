@@ -95,6 +95,7 @@ SUPPORTOBJS := \
 	stats_distribution.o \
 	stats_distribution_all_samples.o \
 	stats_distribution_binned.o \
+	students_t.o \
 	timeops.o \
 	trusted_oracle_strategy_evaluator.o
 
