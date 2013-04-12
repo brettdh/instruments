@@ -13,6 +13,7 @@ OBJS := \
 	estimator.o \
 	estimator_registry.o \
 	eval_method.o \
+	evaluators/bayesian_strategy_evaluator.o \
 	evaluators/confidence_bounds_strategy_evaluator.o \
 	evaluators/empirical_error_strategy_evaluator.o \
 	evaluators/trusted_oracle_strategy_evaluator.o \

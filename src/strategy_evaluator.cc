@@ -3,6 +3,7 @@
 #include "trusted_oracle_strategy_evaluator.h"
 #include "empirical_error_strategy_evaluator.h"
 #include "confidence_bounds_strategy_evaluator.h"
+#include "bayesian_strategy_evaluator.h"
 #include "strategy.h"
 #include "estimator.h"
 
@@ -86,6 +87,8 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
         evaluator = new EmpiricalErrorStrategyEvaluator(type);
     } else if (type == CONFIDENCE_BOUNDS) {
         evaluator = new ConfidenceBoundsStrategyEvaluator;
+    } else if (type == BAYESIAN) {
+        evaluator = new BayesianStrategyEvaluator;
     } else {
         // TODO: implement the rest.
         assert(false);
