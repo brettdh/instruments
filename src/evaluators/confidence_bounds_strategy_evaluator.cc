@@ -144,7 +144,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
     }
     dbgprintf("Adding error sample to estimator %p: %f\n",
               estimator, exp(error));
-    dbgprintf("n=%4d; error bounds: [%f, %f]\n", 
+    dbgprintf("n=%4zu; error bounds: [%f, %f]\n", 
               num_samples, error_bounds[LOWER], error_bounds[UPPER]);
     if (adjusted_estimate(estimate, error_bounds[LOWER]) < 0.0) {
         // PROBLEMATIC.
