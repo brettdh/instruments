@@ -33,6 +33,9 @@ enum EvalMethod {
                                   INTNW_JOINT_DISTRIBUTION)
 };
 
+const char *
+get_method_name(enum EvalMethod method);
+
 #ifdef __cplusplus
 }
 #endif

@@ -26,18 +26,16 @@ do {                                                             \
     }                                                            \
 } while (0)
 
-#define TIME_FN_CALL(TITLE, FUNCCALL)                   \
-    do {                                                \
-        struct timeval begin, end, diff;                \
-        gettimeofday(&begin, NULL);                     \
-        FUNCCALL;                                       \
-        gettimeofday(&end, NULL);                       \
-        TIMEDIFF(begin, end, diff);                     \
-        fprintf(stderr, "%20s: %lu.%06lu seconds\n",    \
-                TITLE, diff.tv_sec, diff.tv_usec);      \
-    } while (0)
-
-
+static struct timeval
+time_choose_strategy(instruments_strategy_evaluator_t evaluator, int bytelen)
+{
+    struct timeval begin, end, diff;
+    gettimeofday(&begin, NULL);
+    (void) choose_strategy(evaluator, (void *) bytelen);
+    gettimeofday(&end, NULL);
+    TIMEDIFF(begin, end, diff);
+    return diff;
+}
 
 struct strategy_args {
     int num_estimators;
@@ -63,13 +61,8 @@ static double no_cost(instruments_context_t ctx, void *strategy_arg, void *choos
 
 #define NUM_ESTIMATORS 4
 
-int main()
+static struct timeval run_test(int num_samples, enum EvalMethod method)
 {
-    set_debugging_on(0);
-
-#if (defined(ANDROID) && defined(PROFILING_BUILD))
-    monstartup("libinstruments.so");
-#endif
     instruments_external_estimator_t estimators[NUM_ESTIMATORS];
     int i;
     char name[64];
@@ -89,42 +82,74 @@ int main()
         },
     };
 
-    instruments_strategy_t strategies[3];
+    const size_t NUM_STRATEGIES = 3;
+    instruments_strategy_t strategies[NUM_STRATEGIES];
     strategies[0] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[0], NULL);
     strategies[1] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[1], NULL);
     strategies[2] = make_redundant_strategy(strategies, 2);
 
-#ifdef BRUTE_FORCE
-#define EVAL_METHOD EMPIRICAL_ERROR_ALL_SAMPLES_INTNW
-#else
-#define EVAL_METHOD CONFIDENCE_BOUNDS
-//#define EVAL_METHOD TRUSTED_ORACLE
-#endif
     instruments_strategy_evaluator_t evaluator = 
-        register_strategy_set_with_method(strategies, 3, EVAL_METHOD);
+        register_strategy_set_with_method(strategies, 3, method);
 
     int bytelen = 4096;
-    //int max_samples = 50;
-    int max_samples = 100;
-    //int max_samples = 500;
-    int num_new_samples = 5;
-    int k;
 
-    for (k = 0; k < max_samples / num_new_samples; ++k) {
-        int i, j;
-        char title[64];
-        for (i = 0; i < num_new_samples; ++i) {
-            for (j = 0; j < NUM_ESTIMATORS; ++j) {
-                add_observation(estimators[j], random(), random());
-            }
+    int j;
+    for (i = 0; i < num_samples; ++i) {
+        for (j = 0; j < NUM_ESTIMATORS; ++j) {
+            add_observation(estimators[j], random(), random());
         }
-        
-        snprintf(title, 64, "choose_strategy, %d samples", num_new_samples * (k+1));
-        TIME_FN_CALL(title, choose_strategy(evaluator, (void*) bytelen));
     }
-
+    struct timeval duration = time_choose_strategy(evaluator, bytelen);
+    
     for (i = 0; i < NUM_ESTIMATORS; ++i) {
         free_external_estimator(estimators[i]);
+    }
+
+    for (i = 0; i < NUM_STRATEGIES; ++i) {
+        free_strategy(strategies[i]);
+    }
+    free_strategy_evaluator(evaluator);
+    
+    return duration;
+}
+
+int main()
+{
+    int i;
+    set_debugging_on(0);
+
+#if (defined(ANDROID) && defined(PROFILING_BUILD))
+    monstartup("libinstruments.so");
+#endif
+
+    const size_t NUM_METHODS = 3;
+    enum EvalMethod methods[] = { 
+        CONFIDENCE_BOUNDS, 
+        EMPIRICAL_ERROR_ALL_SAMPLES,
+        EMPIRICAL_ERROR_ALL_SAMPLES_INTNW
+    };
+    
+    fprintf(stderr, "%11s", "");
+    for (i = 0; i < NUM_METHODS; ++i) {
+        enum EvalMethod method = methods[i];
+        fprintf(stderr, " %-15s", get_method_name(method));
+    }
+    fprintf(stderr, "\n");
+
+    int min_samples = 5;
+    int max_samples = 50;
+    int new_samples = 5;
+    int num_samples;
+
+    for (num_samples = min_samples; num_samples <= max_samples; 
+         num_samples += new_samples) {
+        fprintf(stderr, "%3d %s", num_samples, "samples");
+        for (i = 0; i < NUM_METHODS; ++i) {
+            enum EvalMethod method = methods[i];
+            struct timeval duration = run_test(num_samples, method);
+            fprintf(stderr, " %lu.%06lu%7s", duration.tv_sec, duration.tv_usec, "");
+        }
+        fprintf(stderr, "\n");
     }
 
 #if (defined(ANDROID) && defined(PROFILING_BUILD))
