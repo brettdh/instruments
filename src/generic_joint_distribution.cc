@@ -188,12 +188,8 @@ GenericJointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t f
         args.memos = &getMemoList(strategy, fn);
     }
     
-    double weightedSum = 0.0;
     iterator = new Iterator(this, strategy);
-    while (!iterator->isDone()) {
-        weightedSum += fn(this, &args, chooser_arg) * iterator->jointProbability();
-        iterator->advance();
-    }
+    double weightedSum = iterator->evaluate(fn, &args, chooser_arg);
     delete iterator;
     iterator = NULL;
     
@@ -364,6 +360,60 @@ GenericJointDistribution::Iterator::Iterator(GenericJointDistribution *distribut
     cached_probabilities.resize(num_iterators);
     setCachedProbabilities(0);
 }
+
+#define RECURSION
+//#define FLAT_LOOP
+
+double
+GenericJointDistribution::Iterator::
+evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg)
+{
+    double weightedSum = 0.0;
+#if defined(RECURSION)
+    evaluate(fn, strategy_arg, chooser_arg, 0, weightedSum, 1.0);
+#elif defined(FLAT_LOOP)
+    evaluateLoop(fn, strategy_arg, chooser_arg, weightedSum);
+#else
+    while (!isDone()) {
+        weightedSum += fn(distribution, strategy_arg, chooser_arg) * jointProbability();
+        advance();
+    }
+#endif
+    return weightedSum;
+}
+
+void
+GenericJointDistribution::Iterator::
+evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg,
+         size_t depth, double& weightedSum, double probability)
+{
+    if (depth == num_iterators) {
+        weightedSum += fn(distribution, strategy_arg, chooser_arg) * probability;
+    } else {
+        position[depth] = 0;
+        while (position[depth] < end_position[depth]) {
+            evaluate(fn, strategy_arg, chooser_arg, depth + 1, weightedSum, 
+                     probability * iterators[depth]->probability());
+            ++position[depth];
+        }
+    }
+}
+
+void
+GenericJointDistribution::Iterator::
+evaluateLoop(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg,
+             double& weightedSum)
+{
+    size_t iterations = 1;
+    for (size_t i = 0; i < num_iterators; ++i) {
+        iterations *= end_position[i];
+    }
+    for (size_t i = 0; i < iterations; ++i) {
+        weightedSum += fn(distribution, strategy_arg, chooser_arg) * jointProbability();
+        advance();
+    }
+}
+
 
 inline bool
 GenericJointDistribution::Iterator::isDone()

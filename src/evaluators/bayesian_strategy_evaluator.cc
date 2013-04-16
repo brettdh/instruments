@@ -22,3 +22,13 @@ BayesianStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
     //  so here we just return the value.
     return estimator->getEstimate();
 }
+
+void BayesianStrategyEvaluator::saveToFile(const char *filename)
+{
+    // TODO
+}
+
+void BayesianStrategyEvaluator::restoreFromFile(const char *filename)
+{
+    // TODO
+}

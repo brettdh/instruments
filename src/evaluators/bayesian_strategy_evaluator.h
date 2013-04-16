@@ -10,8 +10,8 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
 
     // nothing to save/restore.
-    virtual void saveToFile(const char *filename) {}
-    virtual void restoreFromFile(const char *filename) {}
+    virtual void saveToFile(const char *filename);
+    virtual void restoreFromFile(const char *filename);
   protected:
     virtual void observationAdded(Estimator *estimator, double value);
 };

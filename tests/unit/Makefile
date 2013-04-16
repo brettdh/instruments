@@ -75,6 +75,7 @@ TESTOBJS := \
 
 SUPPORTOBJS := \
 	abstract_joint_distribution.o \
+	bayesian_strategy_evaluator.o \
 	debug.o \
 	confidence_bounds_strategy_evaluator.o \
 	empirical_error_strategy_evaluator.o \

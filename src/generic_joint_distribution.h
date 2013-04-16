@@ -77,6 +77,9 @@ class GenericJointDistribution : public AbstractJointDistribution {
         const std::vector<size_t>& strategyPosition(size_t strategy_index);
         size_t getStrategyIndex(Strategy *strategy);
         size_t numStrategies();
+
+        double evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg);
+
       private:
         void setStrategyPositions(size_t index, size_t value);
         void advancePosition(size_t index);
@@ -99,6 +102,14 @@ class GenericJointDistribution : public AbstractJointDistribution {
 
         void setCachedProbabilities(size_t index);
         std::vector<double> cached_probabilities;
+
+
+        void evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg,
+                      size_t depth, double& weightedSum, double probability);
+        void evaluateLoop(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg,
+                          double& weightedSum);
+
+
     };
 
     Iterator *iterator;
