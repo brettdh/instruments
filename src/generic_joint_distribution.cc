@@ -361,7 +361,7 @@ GenericJointDistribution::Iterator::Iterator(GenericJointDistribution *distribut
     setCachedProbabilities(0);
 }
 
-#define RECURSION
+//#define RECURSION
 //#define FLAT_LOOP
 
 double
@@ -370,6 +370,9 @@ evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg)
 {
     double weightedSum = 0.0;
 #if defined(RECURSION)
+    // XXX: negligible performance impact, and it's actually broken.
+    // XXX: that is, it doesn't generate the same result as the other methods.
+    // XXX: passing for now.
     evaluate(fn, strategy_arg, chooser_arg, 0, weightedSum, 1.0);
 #elif defined(FLAT_LOOP)
     evaluateLoop(fn, strategy_arg, chooser_arg, weightedSum);

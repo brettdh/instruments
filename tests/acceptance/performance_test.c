@@ -5,6 +5,7 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <math.h>
 
 #if (defined(ANDROID) && defined(PROFILING_BUILD))
 #include "prof.h"
@@ -58,6 +59,29 @@ static double no_cost(instruments_context_t ctx, void *strategy_arg, void *choos
     return 0.0;
 }
 
+static double get_unit_uniform_sample()
+{
+    return ((double) random()) / RAND_MAX;
+}
+
+static double last_sample = -1.0;
+
+static void reset_prng()
+{
+    srandom(424242);
+    last_sample = -1.0;
+}
+
+static double get_sample()
+{
+    if (last_sample < 0.0) {
+        last_sample = get_unit_uniform_sample();
+    }
+    double cur_sample = get_unit_uniform_sample();
+    double normal_sample = sqrt(-2 * log(last_sample)) * cos(2 * M_PI * cur_sample);
+    last_sample = cur_sample;
+    return normal_sample + 5.0;
+}
 
 #define NUM_ESTIMATORS 4
 
@@ -93,10 +117,11 @@ static struct timeval run_test(int num_samples, enum EvalMethod method)
 
     int bytelen = 4096;
 
+    reset_prng();
     int j;
     for (i = 0; i < num_samples; ++i) {
         for (j = 0; j < NUM_ESTIMATORS; ++j) {
-            add_observation(estimators[j], random(), random());
+            add_observation(estimators[j], get_sample(), get_sample());
         }
     }
     struct timeval duration = time_choose_strategy(evaluator, bytelen);
@@ -151,6 +176,16 @@ int main()
         }
         fprintf(stderr, "\n");
     }
+
+//#define CHECK_VALUES
+#ifdef CHECK_VALUES
+    set_debugging_on(1);
+    for (i = 0; i < NUM_METHODS; ++i) {
+        enum EvalMethod method = methods[i];
+        fprintf(stderr, "*** %s ***\n", get_method_name(method));
+        (void) run_test(5, method);
+    }
+#endif
 
 #if (defined(ANDROID) && defined(PROFILING_BUILD))
     moncleanup();
