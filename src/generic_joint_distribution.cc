@@ -373,7 +373,7 @@ evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg)
     // XXX: negligible performance impact, and it's actually broken.
     // XXX: that is, it doesn't generate the same result as the other methods.
     // XXX: passing for now.
-    evaluate(fn, strategy_arg, chooser_arg, 0, weightedSum, 1.0);
+    evaluateRecursive(fn, strategy_arg, chooser_arg, 0, weightedSum, 1.0);
 #elif defined(FLAT_LOOP)
     evaluateLoop(fn, strategy_arg, chooser_arg, weightedSum);
 #else
@@ -387,16 +387,16 @@ evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg)
 
 void
 GenericJointDistribution::Iterator::
-evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg,
-         size_t depth, double& weightedSum, double probability)
+evaluateRecursive(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg,
+                  size_t depth, double& weightedSum, double probability)
 {
     if (depth == num_iterators) {
         weightedSum += fn(distribution, strategy_arg, chooser_arg) * probability;
     } else {
         position[depth] = 0;
         while (position[depth] < end_position[depth]) {
-            evaluate(fn, strategy_arg, chooser_arg, depth + 1, weightedSum, 
-                     probability * iterators[depth]->probability());
+            evaluateRecursive(fn, strategy_arg, chooser_arg, depth + 1, weightedSum, 
+                              probability * iterators[depth]->probability());
             ++position[depth];
         }
     }

@@ -104,8 +104,8 @@ class GenericJointDistribution : public AbstractJointDistribution {
         std::vector<double> cached_probabilities;
 
 
-        void evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg,
-                      size_t depth, double& weightedSum, double probability);
+        void evaluateRecursive(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg,
+                               size_t depth, double& weightedSum, double probability);
         void evaluateLoop(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg,
                           double& weightedSum);
 
