@@ -168,6 +168,9 @@ IntNWJointDistribution::~IntNWJointDistribution()
 void
 IntNWJointDistribution::ensureErrorDistributionExists(Estimator *estimator)
 {
+    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
+    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
+
     string key = estimator->getName();
     if (estimatorErrorPlaceholders.count(key) > 0) {
         estimatorError[estimator] = estimatorErrorPlaceholders[key];
@@ -186,6 +189,9 @@ IntNWJointDistribution::ensureErrorDistributionExists(Estimator *estimator)
 void
 IntNWJointDistribution::getEstimatorErrorDistributions()
 {
+    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
+    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
+
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         if (singular_probabilities[i][0] != NULL) {
             return;
@@ -360,14 +366,14 @@ ensure_values_valid(double **saved_values, size_t max_i, size_t max_j,
 void
 IntNWJointDistribution::ensureValidMemoizedValues(eval_fn_type_t saved_value_type)
 {
-    size_t max_i, max_j, max_k, max_m;  /* counts for: */                          \
-    max_i = singular_error_count[0][0]; /* (strategy 0, estimator 0) */            \
-    max_j = singular_error_count[0][1]; /* (strategy 0, estimator 1) */            \
-    max_k = singular_error_count[1][0]; /* (strategy 1, estimator 2) */            \
-    max_m = singular_error_count[1][1]; /* (strategy 1, estimator 3) */            \
+    size_t max_i, max_j, max_k, max_m;  /* counts for: */
+    max_i = singular_error_count[0][0]; /* (strategy 0, estimator 0) */
+    max_j = singular_error_count[0][1]; /* (strategy 0, estimator 1) */
+    max_k = singular_error_count[1][0]; /* (strategy 1, estimator 2) */
+    max_m = singular_error_count[1][1]; /* (strategy 1, estimator 3) */
 
-    double **strategy_0_saved_values = singular_strategy_saved_values[0][saved_value_type];          \
-    double **strategy_1_saved_values = singular_strategy_saved_values[1][saved_value_type];          \
+    double **strategy_0_saved_values = singular_strategy_saved_values[0][saved_value_type];
+    double **strategy_1_saved_values = singular_strategy_saved_values[1][saved_value_type];
 
     ensure_values_valid(strategy_0_saved_values, max_i, max_j,
                         singular_strategies[0]->getEvalFn(saved_value_type));
@@ -390,6 +396,13 @@ IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, types
     } else abort();
 }
 
+// TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
+// TODO-BAYESIAN: relevant part of the posterior distribution calculation.
+// TOOD-BAYESIAN: specifically, I need to be able to replace the empirical
+// TOOD-BAYESIAN: joint-probability calculation with the posterior probability calculation.
+// TODO-BAYESIAN: I determined earlier today that the compiler is pretty good at
+// TODO-BAYESIAN: caching intermediate values in the plain multiplication,
+// TODO-BAYESIAN: so maybe I can push that into a function call.
 #define FN_BODY_WITH_COMBINER(COMBINER, saved_value_type)                          \
 {                                                                                  \
     for (size_t i = 0; i < singular_strategies.size(); ++i) {                      \
@@ -456,6 +469,13 @@ IntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_typ
 double
 IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 {
+    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
+    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
+    // TODO-BAYESIAN: specifically, it's bandwidth or latency stored in the
+    // TODO-BAYESIAN: distribution, rather than an error value, so
+    // TODO-BAYESIAN: just return the value.
+    // XXX-BAYESIAN:  yes, this may over-emphasize history.  known (potential) issue.
+
     double *estimator_error_values = estimatorErrorValues[estimator];
     size_t index = estimatorIndices[estimator];
     double estimate = estimator->getEstimate();
@@ -468,6 +488,11 @@ IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 void
 IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
 {
+    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
+    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
+    // TODO-BAYESIAN: specifically, update the empirically tracked parts of
+    // TODO-BAYESIAN: the posterior distribution.
+
     if (estimator->hasEstimate() && estimatorError.count(estimator) > 0) {
         // if there's a prior estimate, we can calculate an error sample
         double error = calculate_error(estimator->getEstimate(), value);
@@ -483,6 +508,9 @@ IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
 void
 IntNWJointDistribution::saveToFile(ofstream& out)
 {
+    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
+    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
+
     try {
         out << estimatorError.size() << " estimators" << endl;
         for (EstimatorErrorMap::iterator it = estimatorError.begin();
@@ -528,6 +556,9 @@ IntNWJointDistribution::getExistingEstimator(const string& key)
 void 
 IntNWJointDistribution::restoreFromFile(ifstream& in)
 {
+    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
+    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
+
     try {
         size_t num_estimators = 0;
         string dummy;

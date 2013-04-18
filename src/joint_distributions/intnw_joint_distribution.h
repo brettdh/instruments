@@ -12,6 +12,19 @@ class StatsDistribution;
 #include <map>
 #include <string>
 
+// TODO: parameterize the second template argument?
+// TODO: have a StatsDistribution subclass that 
+// TODO: internally calculates the Bayesian probability.
+// TODO: actually, I still need a joint distribution
+// TODO: (this is the *prior*) in addition to the 
+// TODO: likelihood matrix.  So I can reuse this joint distribution
+// TODO: for the prior and keep a separate joint distribution
+// TODO: for the likelihood values.
+// TODO: Now, the likelihood distribution should be 
+// TODO: isomorphic to the prior distribution...
+// TODO: seems like I should associate those somehow,
+// TODO: since they need to be associated when I do the weighted sum.
+// TODO: hmmm.....
 typedef small_map<Estimator *, StatsDistribution *> EstimatorErrorMap;
 typedef small_map<std::string, StatsDistribution *> EstimatorErrorPlaceholderMap;
 typedef small_map<Estimator *, double *> EstimatorErrorValuesMap;
