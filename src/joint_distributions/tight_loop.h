@@ -30,16 +30,16 @@
     double **strategy_1_saved_values = singular_strategy_saved_values[1][saved_value_type];          \
                                                                         \
     for (size_t i = 0; i < max_i; ++i) {                                           \
+        double prob_i = PROBABILITY_GETTER(singular_probabilities, 0, 0, i); \
         double *tmp_i = strategy_0_saved_values[i];                                \
         for (size_t j = 0; j < max_j; ++j) {                                       \
+            double prob_j = prob_i * PROBABILITY_GETTER(singular_probabilities, 0, 1, j); \
             double tmp_strategy_0 = tmp_i[j];                                      \
             assert(tmp_strategy_0 != DBL_MAX);                                     \
             for (size_t k = 0; k < max_k; ++k) {                                   \
-                double *tmp_k = strategy_1_saved_values[k];                        \
+                double prob_k = prob_j * PROBABILITY_GETTER(singular_probabilities, 1, 0, k); \
+                double *tmp_k = strategy_1_saved_values[k];             \
                 for (size_t m = 0; m < max_m; ++m) {                               \
-                    double prob_i = PROBABILITY_GETTER(singular_probabilities, 0, 0, i); \
-                    double prob_j = prob_i * PROBABILITY_GETTER(singular_probabilities, 0, 1, j); \
-                    double prob_k = prob_j * PROBABILITY_GETTER(singular_probabilities, 1, 0, k); \
                     double tmp_strategy_1 = tmp_k[m];                              \
                     assert(tmp_strategy_1 != DBL_MAX);                             \
                                                                                    \
