@@ -11,7 +11,7 @@
 // TODO-BAYESIAN: I determined earlier today that the compiler is pretty good at
 // TODO-BAYESIAN: caching intermediate values in the plain multiplication,
 // TODO-BAYESIAN: so maybe I can push that into a function call.
-#define FN_BODY_WITH_COMBINER(COMBINER, PROBABILITY_GETTER, saved_value_type) \
+#define FN_BODY_WITH_COMBINER(COMBINER, JOINT_PROBABILITY_GETTER, saved_value_type) \
 {                                                                                  \
     for (size_t i = 0; i < singular_strategies.size(); ++i) {                      \
         assert(singular_strategy_saved_values[i] != NULL);                         \
@@ -37,14 +37,11 @@
             for (size_t k = 0; k < max_k; ++k) {                                   \
                 double *tmp_k = strategy_1_saved_values[k];                        \
                 for (size_t m = 0; m < max_m; ++m) {                               \
-                    double prob_i = PROBABILITY_GETTER(singular_probabilities, 0, 0, i); \
-                    double prob_j = prob_i * PROBABILITY_GETTER(singular_probabilities, 0, 1, j); \
-                    double prob_k = prob_j * PROBABILITY_GETTER(singular_probabilities, 1, 0, k); \
                     double tmp_strategy_1 = tmp_k[m];                              \
                     assert(tmp_strategy_1 != DBL_MAX);                             \
                                                                                    \
                     double value = COMBINER(tmp_strategy_0, tmp_strategy_1);       \
-                    double probability = prob_k * PROBABILITY_GETTER(singular_probabilities, 1, 1, m); \
+                    double probability = JOINT_PROBABILITY_GETTER(singular_probabilities, i, j, k, m); \
                     weightedSum += (value * probability);                          \
                 }                                                                  \
             }                                                                      \
