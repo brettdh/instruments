@@ -328,13 +328,12 @@ IntNWJointDistribution::getSingularJointProbability(double **strategy_probabilit
 }
 
 static inline double
-get_joint_redundant_probability(double ***singular_probabilities,
-                                size_t i, size_t j, size_t k, size_t m)
+get_one_redundant_probability(double ***singular_probabilities,
+                              size_t strategy_index,
+                              size_t estimator_index,
+                              size_t distribution_index)
 {
-    return (singular_probabilities[0][0][i] *
-            singular_probabilities[0][1][j] *
-            singular_probabilities[1][0][k] *
-            singular_probabilities[1][1][m]);
+    return singular_probabilities[strategy_index][estimator_index][distribution_index];
 }
 
 #include <functional>
@@ -420,13 +419,13 @@ IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, types
 double
 IntNWJointDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
 {
-    FN_BODY_WITH_COMBINER(min, get_joint_redundant_probability, saved_value_type);
+    FN_BODY_WITH_COMBINER(min, get_one_redundant_probability, saved_value_type);
 }
 
 double
 IntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
 {
-    FN_BODY_WITH_COMBINER(sum, get_joint_redundant_probability, saved_value_type);
+    FN_BODY_WITH_COMBINER(sum, get_one_redundant_probability, saved_value_type);
 }
 
 
