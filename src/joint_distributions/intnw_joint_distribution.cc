@@ -75,35 +75,35 @@ static void destroy_array(double **array, size_t dim1)
     delete [] array;
 }
 
-static double *get_estimator_values(StatsDistribution *estimator_error, 
+static double *get_estimator_values(StatsDistribution *estimator_samples, 
                                     double (StatsDistribution::Iterator::*fn)(int))
 {
-    StatsDistribution::Iterator *it = estimator_error->getIterator();
+    StatsDistribution::Iterator *it = estimator_samples->getIterator();
     size_t len = it->totalCount();
     double *values = new double[len];
     for (size_t i = 0; i < len; ++i) {
         values[i] = (it->*fn)(i);
     }
     
-    estimator_error->finishIterator(it);
+    estimator_samples->finishIterator(it);
     return values;
 }
 
-static double *get_estimator_error_values(StatsDistribution *estimator_error)
+static double *get_estimator_samples_values(StatsDistribution *estimator_samples)
 {
-    return get_estimator_values(estimator_error, &StatsDistribution::Iterator::at);
+    return get_estimator_values(estimator_samples, &StatsDistribution::Iterator::at);
 }
 
-static double *get_estimator_error_probs(StatsDistribution *estimator_error)
+static double *get_estimator_samples_probs(StatsDistribution *estimator_samples)
 {
-    return get_estimator_values(estimator_error, &StatsDistribution::Iterator::probability);
+    return get_estimator_values(estimator_samples, &StatsDistribution::Iterator::probability);
 }
 
-static size_t get_estimator_samples_count(StatsDistribution *estimator_error)
+static size_t get_estimator_samples_count(StatsDistribution *estimator_samples)
 {
-    StatsDistribution::Iterator *it = estimator_error->getIterator();
+    StatsDistribution::Iterator *it = estimator_samples->getIterator();
     size_t len = it->totalCount();
-    estimator_error->finishIterator(it);
+    estimator_samples->finishIterator(it);
     return len;
 }
 
@@ -124,70 +124,70 @@ IntNWJointDistribution::IntNWJointDistribution(EmpiricalErrorEvalMethod eval_met
     assert(singular_strategies.size() == REDUNDANT_STRATEGY_CHILDREN);
     
     singular_probabilities = new double**[singular_strategy_estimators.size()];
-    singular_error_values = new double**[singular_strategy_estimators.size()];
-    singular_error_count = new size_t*[singular_strategy_estimators.size()];
+    singular_samples_values = new double**[singular_strategy_estimators.size()];
+    singular_samples_count = new size_t*[singular_strategy_estimators.size()];
     singular_strategy_saved_values = new double***[singular_strategy_estimators.size()];
     
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         singular_probabilities[i] = new double*[NUM_ESTIMATORS_SINGULAR];
-        singular_error_values[i] = new double*[NUM_ESTIMATORS_SINGULAR];
-        singular_error_count[i] = new size_t[NUM_ESTIMATORS_SINGULAR];
+        singular_samples_values[i] = new double*[NUM_ESTIMATORS_SINGULAR];
+        singular_samples_count[i] = new size_t[NUM_ESTIMATORS_SINGULAR];
         singular_strategy_saved_values[i] = new double**[NUM_SAVED_VALUE_TYPES];
         for (size_t j = 0; j < NUM_SAVED_VALUE_TYPES; ++j) {
             singular_strategy_saved_values[i][j] = NULL;
         }
         for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
             singular_probabilities[i][j] = NULL;
-            singular_error_values[i][j] = NULL;
-            singular_error_count[i][j] = 0;
+            singular_samples_values[i][j] = NULL;
+            singular_samples_count[i][j] = 0;
         }
     }
 }
 
 IntNWJointDistribution::~IntNWJointDistribution()
 {
-    clearEstimatorErrorDistributions();
+    clearEstimatorSamplesDistributions();
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         delete [] singular_probabilities[i];
-        delete [] singular_error_values[i];
-        delete [] singular_error_count[i];
+        delete [] singular_samples_values[i];
+        delete [] singular_samples_count[i];
         delete [] singular_strategy_saved_values[i];
     }
     delete [] singular_probabilities;
-    delete [] singular_error_values;
-    delete [] singular_error_count;
+    delete [] singular_samples_values;
+    delete [] singular_samples_count;
     delete [] singular_strategy_saved_values;
 
-    for (EstimatorErrorMap::iterator it = estimatorError.begin();
-         it != estimatorError.end(); ++it) {
+    for (EstimatorSamplesMap::iterator it = estimatorSamples.begin();
+         it != estimatorSamples.end(); ++it) {
         delete it->second;
     }
-    estimatorError.clear();
+    estimatorSamples.clear();
 }
 
 void
-IntNWJointDistribution::ensureErrorDistributionExists(Estimator *estimator)
+IntNWJointDistribution::ensureSamplesDistributionExists(Estimator *estimator)
 {
     // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
     // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
 
     string key = estimator->getName();
-    if (estimatorErrorPlaceholders.count(key) > 0) {
-        estimatorError[estimator] = estimatorErrorPlaceholders[key];
-        estimatorErrorPlaceholders.erase(key);
-    } else if (estimatorError.count(estimator) == 0) {
-        estimatorError[estimator] = createErrorDistribution();
+    if (estimatorSamplesPlaceholders.count(key) > 0) {
+        estimatorSamples[estimator] = estimatorSamplesPlaceholders[key];
+        estimatorSamplesPlaceholders.erase(key);
+    } else if (estimatorSamples.count(estimator) == 0) {
+        estimatorSamples[estimator] = createSamplesDistribution();
          
         // don't add a real error value to the distribution.
         // there's no error until we have at least two observations.
-        estimatorError[estimator]->addValue(no_error_value());
+        estimatorSamples[estimator]->addValue(no_error_value());
    }
     
-    assert(estimatorError.count(estimator) > 0);
+    assert(estimatorSamples.count(estimator) > 0);
 }
 
 void
-IntNWJointDistribution::getEstimatorErrorDistributions()
+IntNWJointDistribution::getEstimatorSamplesDistributions()
 {
     // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
     // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
@@ -199,31 +199,31 @@ IntNWJointDistribution::getEstimatorErrorDistributions()
 
         for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
             Estimator *estimator = singular_strategy_estimators[i][j];
-            ensureErrorDistributionExists(estimator);
-            StatsDistribution *distribution = estimatorError[estimator];
+            ensureSamplesDistributionExists(estimator);
+            StatsDistribution *distribution = estimatorSamples[estimator];
             ASSERT(distribution != NULL);
-            singular_probabilities[i][j] = get_estimator_error_probs(distribution);
-            singular_error_values[i][j] = get_estimator_error_values(distribution);
-            singular_error_count[i][j] = get_estimator_samples_count(distribution);
+            singular_probabilities[i][j] = get_estimator_samples_probs(distribution);
+            singular_samples_values[i][j] = get_estimator_samples_values(distribution);
+            singular_samples_count[i][j] = get_estimator_samples_count(distribution);
         }
     }
 
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
             Estimator *estimator = singular_strategy_estimators[i][j];
-            estimatorErrorValues[estimator] = singular_error_values[i][j];
+            estimatorSamplesValues[estimator] = singular_samples_values[i][j];
             estimatorIndices[estimator] = 0;
         }
         for (size_t j = 0; j < NUM_SAVED_VALUE_TYPES; ++j) {
-            singular_strategy_saved_values[i][j] = create_array(singular_error_count[i][0],
-                                                                singular_error_count[i][1],
+            singular_strategy_saved_values[i][j] = create_array(singular_samples_count[i][0],
+                                                                singular_samples_count[i][1],
                                                                 DBL_MAX);
         }
     }
 }
 
 void 
-IntNWJointDistribution::clearEstimatorErrorDistributions()
+IntNWJointDistribution::clearEstimatorSamplesDistributions()
 {
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         if (singular_probabilities[i][0] == NULL) {
@@ -231,20 +231,20 @@ IntNWJointDistribution::clearEstimatorErrorDistributions()
         }
         
         for (size_t j = 0; j < NUM_SAVED_VALUE_TYPES; ++j) {
-            destroy_array(singular_strategy_saved_values[i][j], singular_error_count[i][0]);
+            destroy_array(singular_strategy_saved_values[i][j], singular_samples_count[i][0]);
             singular_strategy_saved_values[i][j] = NULL;
         }
         
         for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
             delete [] singular_probabilities[i][j];
-            delete [] singular_error_values[i][j];
+            delete [] singular_samples_values[i][j];
             singular_probabilities[i][j] = NULL;
-            singular_error_values[i][j] = NULL;
+            singular_samples_values[i][j] = NULL;
             
-            singular_error_count[i][j] = 0;
+            singular_samples_count[i][j] = 0;
         }
     }
-    estimatorErrorValues.clear();
+    estimatorSamplesValues.clear();
     estimatorIndices.clear();
     cache.clear();
 }
@@ -253,7 +253,7 @@ void
 IntNWJointDistribution::setEvalArgs(void *strategy_arg_, void *chooser_arg_)
 {
     if (chooser_arg != chooser_arg_) {
-        clearEstimatorErrorDistributions();
+        clearEstimatorSamplesDistributions();
     }
 
     strategy_arg = strategy_arg_;
@@ -280,30 +280,30 @@ IntNWJointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 double 
 IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
-    getEstimatorErrorDistributions();
+    getEstimatorSamplesDistributions();
 
     size_t saved_value_type = get_saved_value_type(strategy, fn);
 
     
     double **cur_strategy_memo = NULL;
     double **strategy_probabilities = NULL;
-    size_t *error_count = NULL;
+    size_t *samples_count = NULL;
     vector<Estimator *> current_strategy_estimators;
     for (size_t i = 0; i < singular_strategies.size(); ++i) {
         if (strategy == singular_strategies[i]) {
             cur_strategy_memo = singular_strategy_saved_values[i][saved_value_type];
             current_strategy_estimators = singular_strategy_estimators[i];
-            error_count = singular_error_count[i];
+            samples_count = singular_samples_count[i];
             strategy_probabilities = singular_probabilities[i];
             break;
         }
     }
-    assert(error_count);
+    assert(samples_count);
     assert(cur_strategy_memo);
 
     size_t max_i, max_j;
-    max_i = error_count[0];
-    max_j = error_count[1];
+    max_i = samples_count[0];
+    max_j = samples_count[1];
 
     double weightedSum = 0.0;
     for (size_t i = 0; i < max_i; ++i) {
@@ -311,12 +311,29 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
         for (size_t j = 0; j < max_j; ++j) {
             estimatorIndices[current_strategy_estimators[1]] = j;
             double value = fn(this, strategy_arg, chooser_arg);
-            double probability = strategy_probabilities[0][i] * strategy_probabilities[1][j];
+            double probability = getSingularJointProbability(strategy_probabilities,
+                                                             i, j);
             cur_strategy_memo[i][j] = value;
             weightedSum += (value * probability);
         }
     }
     return weightedSum;
+}
+
+inline double
+IntNWJointDistribution::getSingularJointProbability(double **strategy_probabilities,
+                                                    size_t index0, size_t index1)
+{
+    return strategy_probabilities[0][index0] * strategy_probabilities[1][index1];
+}
+
+static inline double
+get_one_redundant_probability(double ***singular_probabilities,
+                              size_t strategy_index,
+                              size_t estimator_index,
+                              size_t distribution_index)
+{
+    return singular_probabilities[strategy_index][estimator_index][distribution_index];
 }
 
 #include <functional>
@@ -367,10 +384,10 @@ void
 IntNWJointDistribution::ensureValidMemoizedValues(eval_fn_type_t saved_value_type)
 {
     size_t max_i, max_j, max_k, max_m;  /* counts for: */
-    max_i = singular_error_count[0][0]; /* (strategy 0, estimator 0) */
-    max_j = singular_error_count[0][1]; /* (strategy 0, estimator 1) */
-    max_k = singular_error_count[1][0]; /* (strategy 1, estimator 2) */
-    max_m = singular_error_count[1][1]; /* (strategy 1, estimator 3) */
+    max_i = singular_samples_count[0][0]; /* (strategy 0, estimator 0) */
+    max_j = singular_samples_count[0][1]; /* (strategy 0, estimator 1) */
+    max_k = singular_samples_count[1][0]; /* (strategy 1, estimator 2) */
+    max_m = singular_samples_count[1][1]; /* (strategy 1, estimator 3) */
 
     double **strategy_0_saved_values = singular_strategy_saved_values[0][saved_value_type];
     double **strategy_1_saved_values = singular_strategy_saved_values[1][saved_value_type];
@@ -396,73 +413,19 @@ IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, types
     } else abort();
 }
 
-// TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
-// TODO-BAYESIAN: relevant part of the posterior distribution calculation.
-// TOOD-BAYESIAN: specifically, I need to be able to replace the empirical
-// TOOD-BAYESIAN: joint-probability calculation with the posterior probability calculation.
-// TODO-BAYESIAN: I determined earlier today that the compiler is pretty good at
-// TODO-BAYESIAN: caching intermediate values in the plain multiplication,
-// TODO-BAYESIAN: so maybe I can push that into a function call.
-#define FN_BODY_WITH_COMBINER(COMBINER, saved_value_type)                          \
-{                                                                                  \
-    for (size_t i = 0; i < singular_strategies.size(); ++i) {                      \
-        assert(singular_strategy_saved_values[i] != NULL);                         \
-        assert(singular_strategy_saved_values[i][saved_value_type] != NULL);      \
-    }                                                                              \
-                                                                                   \
-    double weightedSum = 0.0;                                                      \
-                                                                                   \
-    size_t max_i, max_j, max_k, max_m;  /* counts for: */                          \
-    max_i = singular_error_count[0][0]; /* (strategy 0, estimator 0) */            \
-    max_j = singular_error_count[0][1]; /* (strategy 0, estimator 1) */            \
-    max_k = singular_error_count[1][0]; /* (strategy 1, estimator 2) */            \
-    max_m = singular_error_count[1][1]; /* (strategy 1, estimator 3) */            \
-                                                                                   \
-    double *strategy_0_estimator_0_probs = singular_probabilities[0][0];           \
-    double *strategy_0_estimator_1_probs = singular_probabilities[0][1];           \
-    double *strategy_1_estimator_0_probs = singular_probabilities[1][0];           \
-    double *strategy_1_estimator_1_probs = singular_probabilities[1][1];           \
-                                                                                   \
-    double **strategy_0_saved_values = singular_strategy_saved_values[0][saved_value_type];          \
-    double **strategy_1_saved_values = singular_strategy_saved_values[1][saved_value_type];          \
-                                                                                   \
-    for (size_t i = 0; i < max_i; ++i) {                                           \
-        double *tmp_i = strategy_0_saved_values[i];                                \
-        double prob_i = strategy_0_estimator_0_probs[i];                           \
-        for (size_t j = 0; j < max_j; ++j) {                                       \
-            double tmp_strategy_0 = tmp_i[j];                                      \
-            assert(tmp_strategy_0 != DBL_MAX);                                     \
-            double prob_j = prob_i * strategy_0_estimator_1_probs[j];              \
-            for (size_t k = 0; k < max_k; ++k) {                                   \
-                double *tmp_k = strategy_1_saved_values[k];                        \
-                double prob_k = prob_j * strategy_1_estimator_0_probs[k];          \
-                for (size_t m = 0; m < max_m; ++m) {                               \
-                    double tmp_strategy_1 = tmp_k[m];                              \
-                    assert(tmp_strategy_1 != DBL_MAX);                             \
-                                                                                   \
-                    double value = COMBINER(tmp_strategy_0, tmp_strategy_1);       \
-                    double probability = prob_k * strategy_1_estimator_1_probs[m]; \
-                    /*fprintf(stderr, "probs: [%.10f %.10f %.10f %.10f]\n", prob_i, prob_j, prob_k, probability);*/ \
-                    weightedSum += (value * probability);                          \
-                    /*fprintf(stderr, "strategy1 value = %.10f  strategy2 value = %.10f\n", tmp_strategy_0, tmp_k[m]);*/ \
-                      /*fprintf(stderr, "value = %.10f prob = %.10f weightedSum = %.20f\n", value, probability, weightedSum);*/ \
-                }                                                                  \
-            }                                                                      \
-        }                                                                          \
-    }                                                                              \
-    return weightedSum;                                                            \
-}
+
+#include "tight_loop.h"
 
 double
 IntNWJointDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
 {
-    FN_BODY_WITH_COMBINER(min, saved_value_type);
+    FN_BODY_WITH_COMBINER(min, get_one_redundant_probability, saved_value_type);
 }
 
 double
 IntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
 {
-    FN_BODY_WITH_COMBINER(sum, saved_value_type);
+    FN_BODY_WITH_COMBINER(sum, get_one_redundant_probability, saved_value_type);
 }
 
 
@@ -476,11 +439,10 @@ IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
     // TODO-BAYESIAN: just return the value.
     // XXX-BAYESIAN:  yes, this may over-emphasize history.  known (potential) issue.
 
-    double *estimator_error_values = estimatorErrorValues[estimator];
+    double *estimator_samples_values = estimatorSamplesValues[estimator];
     size_t index = estimatorIndices[estimator];
     double estimate = estimator->getEstimate();
-    double error = estimator_error_values[index];
-    //double adjusted_value = estimate - error;
+    double error = estimator_samples_values[index];
     double adjusted_value = adjusted_estimate(estimate, error);
     return adjusted_value;
 }
@@ -493,16 +455,16 @@ IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
     // TODO-BAYESIAN: specifically, update the empirically tracked parts of
     // TODO-BAYESIAN: the posterior distribution.
 
-    if (estimator->hasEstimate() && estimatorError.count(estimator) > 0) {
+    if (estimator->hasEstimate() && estimatorSamples.count(estimator) > 0) {
         // if there's a prior estimate, we can calculate an error sample
         double error = calculate_error(estimator->getEstimate(), value);
-        estimatorError[estimator]->addValue(error);
+        estimatorSamples[estimator]->addValue(error);
         
         dbgprintf("IntNWJoint: Added error value to estimator %p: %f\n", estimator, error);
-    } else if (estimatorError.count(estimator) == 0) {
-        ensureErrorDistributionExists(estimator);
+    } else if (estimatorSamples.count(estimator) == 0) {
+        ensureSamplesDistributionExists(estimator);
     }
-    clearEstimatorErrorDistributions();
+    clearEstimatorSamplesDistributions();
 }
 
 void
@@ -512,9 +474,9 @@ IntNWJointDistribution::saveToFile(ofstream& out)
     // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
 
     try {
-        out << estimatorError.size() << " estimators" << endl;
-        for (EstimatorErrorMap::iterator it = estimatorError.begin();
-             it != estimatorError.end(); ++it) {
+        out << estimatorSamples.size() << " estimators" << endl;
+        for (EstimatorSamplesMap::iterator it = estimatorSamples.begin();
+             it != estimatorSamples.end(); ++it) {
             Estimator *estimator = it->first;
             StatsDistribution *dist = it->second;
             
@@ -529,7 +491,7 @@ struct MatchName {
     const string& key;
     Estimator *estimator;
     MatchName(const string& key_) : key(key_), estimator(NULL) {}
-    bool operator()(const EstimatorErrorMap::value_type& value) {
+    bool operator()(const EstimatorSamplesMap::value_type& value) {
         if (value.first->getName() == key) {
             assert(estimator == NULL); // should only be one; it's a map
             estimator = value.first;
@@ -542,12 +504,12 @@ struct MatchName {
 Estimator *
 IntNWJointDistribution::getExistingEstimator(const string& key)
 {
-    if (estimatorError.size() == 0) { 
+    if (estimatorSamples.size() == 0) { 
         return NULL;
     }
-    EstimatorErrorMap::iterator it = 
-        find_if(estimatorError.begin(), estimatorError.end(), MatchName(key));
-    if (it == estimatorError.end()) {
+    EstimatorSamplesMap::iterator it = 
+        find_if(estimatorSamples.begin(), estimatorSamples.end(), MatchName(key));
+    if (it == estimatorSamples.end()) {
         return NULL;
     }
     return it->first;
@@ -566,20 +528,20 @@ IntNWJointDistribution::restoreFromFile(ifstream& in)
         
         for (size_t i = 0; i < num_estimators; ++i) {
             string key;
-            StatsDistribution *dist = createErrorDistribution();
+            StatsDistribution *dist = createSamplesDistribution();
             key = dist->restoreFromFile(in);
             
             Estimator *estimator = getExistingEstimator(key);
             if (estimator) {
-                assert(estimatorError.count(estimator) > 0);
-                delete estimatorError[estimator];
-                estimatorError[estimator] = dist;
+                assert(estimatorSamples.count(estimator) > 0);
+                delete estimatorSamples[estimator];
+                estimatorSamples[estimator] = dist;
             } else {
-                estimatorErrorPlaceholders[key] = dist;
+                estimatorSamplesPlaceholders[key] = dist;
             }
         }
 
-        clearEstimatorErrorDistributions();
+        clearEstimatorSamplesDistributions();
     } catch (runtime_error& e) {
         dbgprintf("WARNING: failed to restore joint distribution: %s\n", e.what());
     }

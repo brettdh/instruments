@@ -24,7 +24,7 @@ class AbstractJointDistribution : public StrategyEvaluationContext {
     virtual void saveToFile(std::ofstream& out) = 0;
     virtual void restoreFromFile(std::ifstream& in) = 0;
   protected:
-    StatsDistribution *createErrorDistribution();
+    StatsDistribution *createSamplesDistribution();
   private:
     EmpiricalErrorEvalMethod eval_method;
 };

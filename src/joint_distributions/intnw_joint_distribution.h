@@ -25,9 +25,9 @@ class StatsDistribution;
 // TODO: seems like I should associate those somehow,
 // TODO: since they need to be associated when I do the weighted sum.
 // TODO: hmmm.....
-typedef small_map<Estimator *, StatsDistribution *> EstimatorErrorMap;
-typedef small_map<std::string, StatsDistribution *> EstimatorErrorPlaceholderMap;
-typedef small_map<Estimator *, double *> EstimatorErrorValuesMap;
+typedef small_map<Estimator *, StatsDistribution *> EstimatorSamplesMap;
+typedef small_map<std::string, StatsDistribution *> EstimatorSamplesPlaceholderMap;
+typedef small_map<Estimator *, double *> EstimatorSamplesValuesMap;
 typedef small_map<Estimator *, size_t> EstimatorIndicesMap;
 
 class IntNWJointDistribution : public AbstractJointDistribution {
@@ -44,21 +44,21 @@ class IntNWJointDistribution : public AbstractJointDistribution {
 
     virtual void saveToFile(std::ofstream& out);
     virtual void restoreFromFile(std::ifstream& in);
-  private:
+  protected:
     void *strategy_arg;
     void *chooser_arg;
 
-    EstimatorErrorMap estimatorError;
+    EstimatorSamplesMap estimatorSamples;
     
-    EstimatorErrorValuesMap estimatorErrorValues;
+    EstimatorSamplesValuesMap estimatorSamplesValues;
     EstimatorIndicesMap estimatorIndices;
 
     std::vector<Strategy *> singular_strategies;
     std::vector<std::vector<Estimator *> > singular_strategy_estimators;
     
     double ***singular_probabilities;
-    double ***singular_error_values;
-    size_t **singular_error_count;
+    double ***singular_samples_values;
+    size_t **singular_samples_count;
 
     double ****singular_strategy_saved_values;
 
@@ -67,18 +67,32 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     double singularStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
     double redundantStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
 
-    double redundantStrategyExpectedValueMin(size_t saved_value_type);
-    double redundantStrategyExpectedValueSum(size_t saved_value_type);
+    virtual double redundantStrategyExpectedValueMin(size_t saved_value_type);
+    virtual double redundantStrategyExpectedValueSum(size_t saved_value_type);
     
-    void getEstimatorErrorDistributions();
-    void clearEstimatorErrorDistributions();
+    void getEstimatorSamplesDistributions();
+    void clearEstimatorSamplesDistributions();
 
     void ensureValidMemoizedValues(eval_fn_type_t saved_value_type);
 
-    EstimatorErrorPlaceholderMap estimatorErrorPlaceholders;
+    EstimatorSamplesPlaceholderMap estimatorSamplesPlaceholders;
     Estimator *getExistingEstimator(const std::string& key);
 
-    void ensureErrorDistributionExists(Estimator *estimator);
+    void ensureSamplesDistributionExists(Estimator *estimator);
+
+    double getSingularJointProbability(double **strategy_probabilities,
+                                       size_t index0, size_t index1);
+
+    // first argument is the array of saved estimator distribution probabilities.
+    // first 2 index arguments specify which single probability component
+    // that we're computing.  
+    // Third argument is the index into the distribution for that estimator for that strategy.
+    typedef double (*redundant_probability_getter_fn_t)(double ***singular_probabilities,
+                                                        size_t strategy_index, 
+                                                        size_t estimator_index, 
+                                                        size_t distribution_index);
 };
+
+
 
 #endif /* _INTNW_JOINT_DISTRIBUTION_H_ */

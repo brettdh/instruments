@@ -217,7 +217,7 @@ GenericJointDistribution::observationAdded(Estimator *estimator, double value)
         double error = calculate_error(estimator->getEstimate(), value);
         estimatorError[estimator]->addValue(error);
     } else if (estimatorError.count(estimator) == 0) {
-        estimatorError[estimator] = createErrorDistribution();
+        estimatorError[estimator] = createSamplesDistribution();
         
         // don't add a real error value to the distribution.
         // there's no error until we have at least two observations.

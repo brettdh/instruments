@@ -147,12 +147,12 @@ int main()
     monstartup("libinstruments.so");
 #endif
 
-    const size_t NUM_METHODS = 3;
     enum EvalMethod methods[] = { 
-        CONFIDENCE_BOUNDS, 
+        CONFIDENCE_BOUNDS,
         EMPIRICAL_ERROR_ALL_SAMPLES,
         EMPIRICAL_ERROR_ALL_SAMPLES_INTNW
     };
+    const size_t NUM_METHODS = sizeof(methods) / sizeof(enum EvalMethod);
     
     fprintf(stderr, "%11s", "");
     for (i = 0; i < NUM_METHODS; ++i) {
