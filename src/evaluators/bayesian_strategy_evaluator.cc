@@ -1,4 +1,5 @@
 #include "bayesian_strategy_evaluator.h"
+#include "intnw_joint_distribution.h"
 #include "estimator.h"
 
 void 

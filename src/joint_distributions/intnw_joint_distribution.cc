@@ -177,13 +177,18 @@ IntNWJointDistribution::ensureSamplesDistributionExists(Estimator *estimator)
         estimatorSamplesPlaceholders.erase(key);
     } else if (estimatorSamples.count(estimator) == 0) {
         estimatorSamples[estimator] = createSamplesDistribution();
-         
-        // don't add a real error value to the distribution.
-        // there's no error until we have at least two observations.
-        estimatorSamples[estimator]->addValue(no_error_value());
+        addDefaultValue(estimator);
    }
     
     assert(estimatorSamples.count(estimator) > 0);
+}
+
+void
+IntNWJointDistribution::addDefaultValue(Estimator *estimator)
+{
+    // don't add a real error value to the distribution.
+    // there's no error until we have at least two observations.
+    estimatorSamples[estimator]->addValue(no_error_value());
 }
 
 void

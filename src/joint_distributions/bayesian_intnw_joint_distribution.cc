@@ -23,24 +23,14 @@ using std::vector; using std::ifstream; using std::ofstream; using std::find_if;
 using std::ostringstream; using std::endl;
 using std::runtime_error; using std::string;
 
-void
-BayesianIntNWJointDistribution::ensureSamplesDistributionExists(Estimator *estimator)
-{
-    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
-    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
 
-    string key = estimator->getName();
-    if (estimatorSamplePlaceholders.count(key) > 0) {
-        estimatorSamples[estimator] = estimatorSamplesPlaceholders[key];
-        estimatorSamplesPlaceholders.erase(key);
-    } else if (estimatorSamples.count(estimator) == 0) {
-        estimatorSamples[estimator] = createSamplesDistribution();
-         
-        estimatorSamples[estimator]->addValue(no_error_value());
-    }
-    
-    assert(estimatorSamples.count(estimator) > 0);
+void BayesianIntNWJointDistribution::addDefaultValue(Estimator *estimator)
+{
+    // samples are measurement values, so there's no default value;
+    // only get one when we get a measurement (unlike error, where we need
+    // to initially have a no-error sample in the distribution
 }
+
 
 double
 BayesianIntNWJointDistribution::getSingularJointProbability(double **strategy_probabilities,
@@ -49,11 +39,6 @@ BayesianIntNWJointDistribution::getSingularJointProbability(double **strategy_pr
     
 }
 
-double
-BayesianIntNWJointDistribution::getRedundantJointProbability()
-{
-    
-}
 
 double
 BayesianIntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
@@ -136,4 +121,16 @@ BayesianIntNWJointDistribution::restoreFromFile(ifstream& in)
     } catch (runtime_error& e) {
         dbgprintf("WARNING: failed to restore joint distribution: %s\n", e.what());
     }
+}
+
+double 
+BayesianIntNWJointDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
+{
+
+}
+
+double 
+BayesianIntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
+{
+
 }

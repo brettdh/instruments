@@ -80,17 +80,10 @@ class IntNWJointDistribution : public AbstractJointDistribution {
 
     void ensureSamplesDistributionExists(Estimator *estimator);
 
-    double getSingularJointProbability(double **strategy_probabilities,
-                                       size_t index0, size_t index1);
+    virtual double getSingularJointProbability(double **strategy_probabilities,
+                                               size_t index0, size_t index1);
 
-    // first argument is the array of saved estimator distribution probabilities.
-    // first 2 index arguments specify which single probability component
-    // that we're computing.  
-    // Third argument is the index into the distribution for that estimator for that strategy.
-    typedef double (*redundant_probability_getter_fn_t)(double ***singular_probabilities,
-                                                        size_t strategy_index, 
-                                                        size_t estimator_index, 
-                                                        size_t distribution_index);
+    virtual void addDefaultValue(Estimator *estimator);
 };
 
 

@@ -3,6 +3,8 @@
 
 #include "strategy_evaluator.h"
 
+class AbstractJointDistribution;
+
 class BayesianStrategyEvaluator : public StrategyEvaluator {
   public:
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
