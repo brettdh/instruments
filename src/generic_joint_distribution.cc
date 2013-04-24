@@ -19,9 +19,9 @@
 #include <vector>
 using std::vector; using std::min; using std::runtime_error;
 
-GenericJointDistribution::GenericJointDistribution(EmpiricalErrorEvalMethod eval_method_,
+GenericJointDistribution::GenericJointDistribution(StatsDistributionType dist_type_,
                                                    const vector<Strategy *>& strategies)
-    : AbstractJointDistribution(eval_method_)
+    : AbstractJointDistribution(dist_type_)
 {
     for (size_t i = 0; i < strategies.size(); ++i) {
         Strategy *strategy = strategies[i];

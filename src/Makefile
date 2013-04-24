@@ -23,6 +23,7 @@ OBJS := \
 	instruments.o \
 	generic_joint_distribution.o \
 	joint_distributions/intnw_joint_distribution.o \
+	joint_distributions/bayesian_intnw_posterior_distribution.o \
 	r_singleton.o \
 	resource_weights.o \
 	running_mean_estimator.o \
@@ -33,6 +34,7 @@ OBJS := \
 	strategy_evaluator.o \
 	timeops.o
 
+DEBUG_OBJS := $(OBJS:%.o=%_debug.o)
 
 CXXFLAGS := -g -Wall -Werror -I. -I./evaluators -I./joint_distributions -I../include -fpic -pthread $(R_CXXFLAGS)
 LDFLAGS := -lpthread $(R_LDLIBS) -L/usr/local/lib -lmocktime -Wl,--no-undefined
@@ -57,7 +59,7 @@ HEADERS := ../include/instruments.h
 $(LIB): $(OBJS)
 	g++  -shared -o $@ $^ $(LDFLAGS) $(OPTI_FLAGS)
 
-$(LIB_DEBUG): $(OBJS:%.o=%_debug.o)
+$(LIB_DEBUG): $(DEBUG_OBJS)
 	g++ -shared -o $@ $^ $(LDFLAGS)
 
 .libinstall: $(LIB)
@@ -71,7 +73,7 @@ $(LIB_DEBUG): $(OBJS:%.o=%_debug.o)
 install: .libinstall .hdrinstall
 
 clean:
-	rm -f $(OBJS) $(LIBRARIES) *~
+	rm -f $(OBJS) $(DEBUG_OBJS) $(LIBRARIES) *~
 
 include ../deps.mk
 

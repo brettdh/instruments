@@ -21,7 +21,8 @@ using std::ostringstream;
 
 EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator(EvalMethod method)
 {
-    eval_method = EmpiricalErrorEvalMethod(method & EMPIRICAL_ERROR_EVAL_METHOD_MASK);
+    jointDistribution = NULL;
+    dist_type = StatsDistributionType(method & STATS_DISTRIBUTION_TYPE_MASK);
     joint_distribution_type = JointDistributionType(method & JOINT_DISTRIBUTION_TYPE_MASK);
 }
 
@@ -37,16 +38,18 @@ EmpiricalErrorStrategyEvaluator::setStrategies(const instruments_strategy_t *str
 {
     // TODO: refactor.
     StrategyEvaluator::setStrategies(strategies_, num_strategies_);
-    jointDistribution = createJointDistribution();
+    delete jointDistribution;
+
+    jointDistribution = createJointDistribution(joint_distribution_type);
 }
 
 AbstractJointDistribution *
-EmpiricalErrorStrategyEvaluator::createJointDistribution()
+EmpiricalErrorStrategyEvaluator::createJointDistribution(JointDistributionType joint_distribution_type)
 {
     if (joint_distribution_type == INTNW_JOINT_DISTRIBUTION) {
-        return new IntNWJointDistribution(eval_method, strategies);
+        return new IntNWJointDistribution(dist_type, strategies);
     } else if (joint_distribution_type == GENERIC_JOINT_DISTRIBUTION) {
-        return new GenericJointDistribution(eval_method, strategies);
+        return new GenericJointDistribution(dist_type, strategies);
     } else abort();
     // TODO: other specialized eval methods
 }

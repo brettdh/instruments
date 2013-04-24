@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-enum EmpiricalErrorEvalMethod {
+enum StatsDistributionType {
     ALL_SAMPLES = 0x0, // default
     BINNED      = 0x1
 };
@@ -15,7 +15,7 @@ enum JointDistributionType {
     INTNW_JOINT_DISTRIBUTION = 0x10
 };
 
-extern const int EMPIRICAL_ERROR_EVAL_METHOD_MASK;
+extern const int STATS_DISTRIBUTION_TYPE_MASK;
 extern const int JOINT_DISTRIBUTION_TYPE_MASK;
 
 enum EvalMethod {
@@ -30,8 +30,8 @@ enum EvalMethod {
     EMPIRICAL_ERROR_BINNED_INTNW=(EMPIRICAL_ERROR_BINNED | 
                                   INTNW_JOINT_DISTRIBUTION),
 
-    BAYESIAN=0x200,          // Bayesian estimation of posterior 
-                             //   estimator distribution
+    BAYESIAN=(0x200 | BINNED), // Bayesian estimation of posterior 
+                               //   estimator distribution
     BAYESIAN_INTNW=(BAYESIAN | INTNW_JOINT_DISTRIBUTION),
 };
 

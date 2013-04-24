@@ -1,4 +1,4 @@
-#include "bayesian_intnw_joint_distribution.h"
+#include "bayesian_intnw_posterior_distribution.h"
 
 #include "stats_distribution.h"
 #include "stats_distribution_all_samples.h"
@@ -23,8 +23,17 @@ using std::vector; using std::ifstream; using std::ofstream; using std::find_if;
 using std::ostringstream; using std::endl;
 using std::runtime_error; using std::string;
 
+BayesianIntNWPosteriorDistribution::
+BayesianIntNWPosteriorDistribution(const std::vector<Strategy *>& strategies)
+    : IntNWJointDistribution(BINNED, strategies)
+{
+}
 
-void BayesianIntNWJointDistribution::addDefaultValue(Estimator *estimator)
+BayesianIntNWPosteriorDistribution::~BayesianIntNWPosteriorDistribution()
+{
+}
+
+void BayesianIntNWPosteriorDistribution::addDefaultValue(Estimator *estimator)
 {
     // samples are measurement values, so there's no default value;
     // only get one when we get a measurement (unlike error, where we need
@@ -33,15 +42,15 @@ void BayesianIntNWJointDistribution::addDefaultValue(Estimator *estimator)
 
 
 double
-BayesianIntNWJointDistribution::getSingularJointProbability(double **strategy_probabilities,
+BayesianIntNWPosteriorDistribution::getSingularJointProbability(double **strategy_probabilities,
                                                             size_t index0, size_t index1)
 {
-    
+    return 0.0; // TODO
 }
 
 
 double
-BayesianIntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
+BayesianIntNWPosteriorDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 {
     // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
     // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
@@ -50,14 +59,14 @@ BayesianIntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
     // TODO-BAYESIAN: just return the value.
     // XXX-BAYESIAN:  yes, this may over-emphasize history.  known (potential) issue.
 
-    double *estimator_sample_values = estimatorSampleValues[estimator];
+    double *estimator_sample_values = estimatorSamplesValues[estimator];
     size_t index = estimatorIndices[estimator];
     double sample = estimator_sample_values[index];
     return sample;
 }
 
 void
-BayesianIntNWJointDistribution::observationAdded(Estimator *estimator, double value)
+BayesianIntNWPosteriorDistribution::observationAdded(Estimator *estimator, double value)
 {
     // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
     // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
@@ -72,7 +81,7 @@ BayesianIntNWJointDistribution::observationAdded(Estimator *estimator, double va
 }
 
 void
-BayesianIntNWJointDistribution::saveToFile(ofstream& out)
+BayesianIntNWPosteriorDistribution::saveToFile(ofstream& out)
 {
     // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
     // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
@@ -92,7 +101,7 @@ BayesianIntNWJointDistribution::saveToFile(ofstream& out)
 }
 
 void 
-BayesianIntNWJointDistribution::restoreFromFile(ifstream& in)
+BayesianIntNWPosteriorDistribution::restoreFromFile(ifstream& in)
 {
     // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
     // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
@@ -124,13 +133,13 @@ BayesianIntNWJointDistribution::restoreFromFile(ifstream& in)
 }
 
 double 
-BayesianIntNWJointDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
+BayesianIntNWPosteriorDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
 {
-
+    return 0.0; // TODO
 }
 
 double 
-BayesianIntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
+BayesianIntNWPosteriorDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
 {
-
+    return 0.0; // TODO
 }

@@ -107,9 +107,9 @@ static size_t get_estimator_samples_count(StatsDistribution *estimator_samples)
     return len;
 }
 
-IntNWJointDistribution::IntNWJointDistribution(EmpiricalErrorEvalMethod eval_method,
+IntNWJointDistribution::IntNWJointDistribution(StatsDistributionType dist_type,
                                                const std::vector<Strategy *>& strategies)
-    : AbstractJointDistribution(eval_method)
+    : AbstractJointDistribution(dist_type)
 {
     strategy_arg = NULL;
     chooser_arg = NULL;

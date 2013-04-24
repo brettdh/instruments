@@ -12,7 +12,7 @@ StatsDistribution *
 AbstractJointDistribution::createSamplesDistribution()
 {
     // TODO: create the Bayesian variants.
-    switch (eval_method) {
+    switch (dist_type) {
     case ALL_SAMPLES:
         return new StatsDistributionAllSamples;
     case BINNED:

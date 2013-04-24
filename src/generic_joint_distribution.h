@@ -19,7 +19,7 @@ typedef small_map<Estimator *, StatsDistribution *> EstimatorErrorMap;
 
 class GenericJointDistribution : public AbstractJointDistribution {
   public:
-    GenericJointDistribution(EmpiricalErrorEvalMethod eval_method_,
+    GenericJointDistribution(StatsDistributionType dist_type_,
                       const std::vector<Strategy *>& strategies);
     ~GenericJointDistribution();
 

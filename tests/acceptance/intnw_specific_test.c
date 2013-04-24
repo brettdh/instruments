@@ -382,7 +382,7 @@ CTEST_DATA(bayesian_method_test) {
 
 CTEST_SETUP(bayesian_method_test)
 {
-    setup_common(&data->common_data, BAYESIAN);
+    setup_common(&data->common_data, BAYESIAN_INTNW);
 }
 
 CTEST_TEARDOWN(bayesian_method_test)
@@ -421,5 +421,61 @@ CTEST2(bayesian_method_test, test_both_networks_best)
 CTEST2(bayesian_method_test, test_save_restore)
 {
     test_save_restore(&data->common_data, "/tmp/bayesian_method_saved_evaluation_state.txt", 
-                      BAYESIAN);
+                      BAYESIAN_INTNW);
+}
+
+static double update_mean(double mean, double value, int n)
+{
+    return (mean * n + value) / (n + 1);
+}
+
+CTEST2(bayesian_method_test, test_proposal_example)
+{
+    set_debugging_on(1);
+    
+    struct common_test_data *cdata = &data->common_data;
+
+    double bandwidth1_steps[] = { 9, 9, 8, 9, 1, 1, 1, 1, 1 };
+    double bandwidth2_steps[] = { 5, 5, 4, 4, 5, 6, 5, 6, 6 };
+    instruments_strategy_t correct_strategy[] = {
+        cdata->strategies[0], // high-bandwidth network
+        cdata->strategies[0],
+        cdata->strategies[0],
+        cdata->strategies[2], // high bandwidth dropped; now redundant
+        cdata->strategies[2],
+        cdata->strategies[2],
+        cdata->strategies[2],
+        cdata->strategies[1], // dropped-bandwidth network now consistently worse
+    };
+
+    double avg_bandwidth1 = 0.0;
+    double avg_bandwidth2 = 0.0;
+    const int num_steps = sizeof(bandwidth1_steps) / sizeof(double);
+    int i;
+
+    // no latency variation for this test.
+    add_observation(cdata->estimators[1], 0.0, 0.0);
+    add_observation(cdata->estimators[3], 0.0, 0.0);
+
+    // HACK:
+    // make the two networks have the same small cost,
+    // so that the instances in this example where the
+    // redundant strategy is best still show that benefit > cost.
+    // (in the example in my presentation, cost was zero.)
+    cdata->args[0].is_cellular = 1;
+    cdata->args[1].is_cellular = 1;
+
+    for (i = 0; i < num_steps; ++i) {
+        avg_bandwidth1 = update_mean(avg_bandwidth1, bandwidth1_steps[i], i);
+        avg_bandwidth2 = update_mean(avg_bandwidth2, bandwidth2_steps[i], i);
+
+        add_observation(cdata->estimators[0], bandwidth1_steps[i], avg_bandwidth1);
+        add_observation(cdata->estimators[2], bandwidth2_steps[i], avg_bandwidth2);
+
+        if (i > 0) {
+            // skip the first one; I won't have a decision until
+            // after the second estimator update.
+            assert_correct_strategy(cdata, correct_strategy[i], 50);
+        }
+    }
 }

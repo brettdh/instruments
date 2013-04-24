@@ -88,6 +88,7 @@ SUPPORTOBJS := \
 	instruments.o \
 	generic_joint_distribution.o \
 	intnw_joint_distribution.o \
+	bayesian_intnw_posterior_distribution.o \
 	r_singleton.o \
 	resource_weights.o \
 	running_mean_estimator.o \

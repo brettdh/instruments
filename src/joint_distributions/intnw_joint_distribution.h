@@ -32,7 +32,7 @@ typedef small_map<Estimator *, size_t> EstimatorIndicesMap;
 
 class IntNWJointDistribution : public AbstractJointDistribution {
   public:
-    IntNWJointDistribution(EmpiricalErrorEvalMethod eval_method, 
+    IntNWJointDistribution(StatsDistributionType dist_type, 
                            const std::vector<Strategy *>& strategies);
     ~IntNWJointDistribution();
 

@@ -12,7 +12,7 @@ class StatsDistribution;
 
 class AbstractJointDistribution : public StrategyEvaluationContext {
   public:
-    AbstractJointDistribution(EmpiricalErrorEvalMethod eval_method_) : eval_method(eval_method_) {}
+    AbstractJointDistribution(StatsDistributionType dist_type_) : dist_type(dist_type_) {}
     virtual ~AbstractJointDistribution() {}
 
     virtual void setEvalArgs(void *strategy_arg_, void *chooser_arg_) = 0;
@@ -26,7 +26,7 @@ class AbstractJointDistribution : public StrategyEvaluationContext {
   protected:
     StatsDistribution *createSamplesDistribution();
   private:
-    EmpiricalErrorEvalMethod eval_method;
+    StatsDistributionType dist_type;
 };
 
 

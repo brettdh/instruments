@@ -24,12 +24,13 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
     virtual void observationAdded(Estimator *estimator, double value);
     virtual void setStrategies(const instruments_strategy_t *strategies_,
                                size_t num_strategies_);
-  private:
-    EmpiricalErrorEvalMethod eval_method;
-    JointDistributionType joint_distribution_type;
-    AbstractJointDistribution *jointDistribution;
 
-    AbstractJointDistribution *createJointDistribution();
+    virtual AbstractJointDistribution *createJointDistribution(JointDistributionType type);
+    
+    JointDistributionType joint_distribution_type;
+  private:
+    StatsDistributionType dist_type;
+    AbstractJointDistribution *jointDistribution;
 };
 
 #endif

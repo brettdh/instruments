@@ -1,35 +1,25 @@
 #include "bayesian_strategy_evaluator.h"
-#include "intnw_joint_distribution.h"
+#include "bayesian_intnw_posterior_distribution.h"
 #include "estimator.h"
 
-void 
-BayesianStrategyEvaluator::observationAdded(Estimator *estimator, double value)
+#include <stdlib.h>
+
+BayesianStrategyEvaluator::BayesianStrategyEvaluator(EvalMethod method)
+    : EmpiricalErrorStrategyEvaluator(method)
 {
-    // ignore values, trust the estimator
 }
 
-double
-BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                         void *strategy_arg, void *chooser_arg)
+BayesianStrategyEvaluator::~BayesianStrategyEvaluator()
 {
-    // no weighted sum; just trust the estimators and evaluate the function
-    return fn(this, strategy_arg, chooser_arg);
 }
 
-double
-BayesianStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
-{
-    // this evaluator assumes that the estimators are perfectly accurate,
-    //  so here we just return the value.
-    return estimator->getEstimate();
-}
 
-void BayesianStrategyEvaluator::saveToFile(const char *filename)
+AbstractJointDistribution *
+BayesianStrategyEvaluator::createJointDistribution(JointDistributionType joint_distribution_type)
 {
-    // TODO
-}
-
-void BayesianStrategyEvaluator::restoreFromFile(const char *filename)
-{
-    // TODO
+    // the "joint" distribution here is really the Bayesian posterior distribution
+    if (joint_distribution_type == INTNW_JOINT_DISTRIBUTION) {
+        return new BayesianIntNWPosteriorDistribution(strategies);
+    } else abort();
+    // TODO: other specialized eval methods
 }
