@@ -2,3 +2,5 @@
 *.o
 libs
 obj
+Makefile
+*.make

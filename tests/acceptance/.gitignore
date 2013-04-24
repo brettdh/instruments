@@ -1,2 +1,3 @@
 run_tests
 run_perf_test
+*_debug
