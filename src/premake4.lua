@@ -13,7 +13,6 @@ project "InstrumentsLibrary"
   buildoptions { R_buildoptions(), "-Wall" }
   linkoptions { R_linkoptions() }
   
-  configurations { "Debug", "Release" }
   configuration "Debug"
     targetname "instruments_debug"
 

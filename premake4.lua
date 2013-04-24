@@ -1,4 +1,6 @@
 solution "Instruments"
+  configurations { "Debug", "Release" }
+  
   includedirs { "./include" }
 
   include "src"

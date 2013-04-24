@@ -5,12 +5,14 @@ project "AcceptanceTests"
   excludes { "performance_test.c" }
   
   includedirs { "../include", "../../include", "../../src" }
+  libdirs { "../../src" }
   links { "InstrumentsLibrary" }
+  linkoptions { "-Wl,-rpath,../../src" }
+  targetname "run_tests"
 
   configuration "Debug"
-    targetname "run_tests_debug"
-  configuration "Release"
-    targetname "run_tests"
+    targetsuffix "_debug"
+    flags { "Symbols" }
 
 project "PerformanceTests"
   kind "ConsoleApp"
@@ -18,9 +20,11 @@ project "PerformanceTests"
   files { "performance_test.c" }
 
   includedirs { "../include", "../../include", "../../src" }
+  libdirs { "../../src" }
   links { "InstrumentsLibrary" }
+  linkoptions { "-Wl,-rpath,../../src" }
+  targetname "run_perf_test"
 
   configuration "Debug"
-    targetname "run_perf_test_debug"
-  configuration "Release"
-    targetname "run_perf_test"
+    targetsuffix "_debug"
+    flags { "Symbols" }

@@ -61,7 +61,6 @@ project "InstrumentsTests"
   
   targetname "run_unit_tests"
   
-  configurations { "Debug", "Release" }
   configuration "Debug"
     targetsuffix "_debug"
 
@@ -77,8 +76,6 @@ project "MultiArrayPerfTest"
 
   targetname "multi_array_perf_test"
 
-  configurations { "Debug", "Release" }
-  
   configuration "Debug"
     targetsuffix "_debug"
 
@@ -95,8 +92,6 @@ project "MultiArrayPerfTestDeeper"
 
   targetname "multi_array_perf_test_deeper"
 
-  configurations { "Debug", "Release" }
-  
   configuration "Debug"
     targetsuffix "_debug"
 
