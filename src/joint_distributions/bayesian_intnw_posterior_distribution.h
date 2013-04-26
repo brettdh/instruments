@@ -13,6 +13,9 @@ class StatsDistribution;
 #include <map>
 #include <string>
 
+class BayesianLikelihood;
+class BayesianNormalizer;
+
 class BayesianIntNWPosteriorDistribution : public IntNWJointDistribution {
   public:
     BayesianIntNWPosteriorDistribution(const std::vector<Strategy *>& strategies);
@@ -31,6 +34,10 @@ class BayesianIntNWPosteriorDistribution : public IntNWJointDistribution {
                                                size_t index0, size_t index1);
 
     virtual void addDefaultValue(Estimator *estimator);
+
+  private:
+    BayesianLikelihood *likelihood;
+    BayesianNormalizer *normalizer;
 };
 
 #endif /* _BAYESIAN_POSTERIOR_DISTRIBUTION_H_ */

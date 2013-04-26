@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 BayesianStrategyEvaluator::BayesianStrategyEvaluator(EvalMethod method)
-    : EmpiricalErrorStrategyEvaluator(method)
+    : EmpiricalErrorStrategyEvaluator(method), simple_evaluator(NULL)
 {
 }
 
@@ -22,4 +22,21 @@ BayesianStrategyEvaluator::createJointDistribution(JointDistributionType joint_d
         return new BayesianIntNWPosteriorDistribution(strategies);
     } else abort();
     // TODO: other specialized eval methods
+}
+
+void
+BayesianStrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
+                                         size_t num_strategies)
+{
+    StrategyEvaluator::setStrategies(new_strategies, num_strategies);
+    if (!simple_evaluator) {
+        simple_evaluator = new TrustedOracleStrategyEvaluator;
+    }
+    simple_evaluator->setStrategies(new_strategies, num_strategies);
+}
+
+Strategy *
+BayesianStrategyEvaluator::getBestSingularStrategy(void *chooser_arg)
+{
+    return simple_evaluator->chooseStrategy(chooser_arg);
 }

@@ -11,14 +11,12 @@
 // TODO-BAYESIAN: I determined earlier today that the compiler is pretty good at
 // TODO-BAYESIAN: caching intermediate values in the plain multiplication,
 // TODO-BAYESIAN: so maybe I can push that into a function call.
-#define FN_BODY_WITH_COMBINER(COMBINER, PROBABILITY_GETTER, saved_value_type) \
-{                                                                                  \
+#define FN_BODY_WITH_COMBINER(weightedSum, COMBINER,                    \
+                              PROBABILITY_GETTER, JOINT_PROBABILITY_GETTER, saved_value_type) \
     for (size_t i = 0; i < singular_strategies.size(); ++i) {                      \
         assert(singular_strategy_saved_values[i] != NULL);                         \
         assert(singular_strategy_saved_values[i][saved_value_type] != NULL);      \
     }                                                                              \
-                                                                                   \
-    double weightedSum = 0.0;                                                      \
                                                                                    \
     size_t max_i, max_j, max_k, max_m;  /* counts for: */                          \
     max_i = singular_samples_count[0][0]; /* (strategy 0, estimator 0) */            \
@@ -44,14 +42,13 @@
                     assert(tmp_strategy_1 != DBL_MAX);                             \
                                                                                    \
                     double value = COMBINER(tmp_strategy_0, tmp_strategy_1);       \
-                    double probability = prob_k * PROBABILITY_GETTER(singular_probabilities, 1, 1, m); \
+                    double probability = (prob_k * PROBABILITY_GETTER(singular_probabilities, 1, 1, m) * \
+                                          JOINT_PROBABILITY_GETTER(i, j, k, m));   \
                     weightedSum += (value * probability);                          \
                 }                                                                  \
             }                                                                      \
         }                                                                          \
-    }                                                                              \
-    return weightedSum;                                                            \
-}
+    }
 
 
 #endif

@@ -23,6 +23,22 @@ using std::vector; using std::ifstream; using std::ofstream; using std::find_if;
 using std::ostringstream; using std::endl;
 using std::runtime_error; using std::string;
 
+typedef double (*combiner_fn_t)(double, double);
+
+class BayesianLikelihood {
+  public:
+    BayesianLikelihood(BayesianIntNWPosteriorDistribution *parent);
+    void addDecision(Strategy *winner);
+    double getWeightedSumSingular(Strategy *strategy, combiner_fn_t combiner);
+    double getWeightedSumRedundant(Strategy *best_singular, combiner_fn_t combiner);
+};
+
+class BayesianNormalizer {
+  public:
+    void addDecision(Strategy *winner);
+    double getValue(Strategy *winner);
+};
+
 BayesianIntNWPosteriorDistribution::
 BayesianIntNWPosteriorDistribution(const std::vector<Strategy *>& strategies)
     : IntNWJointDistribution(BINNED, strategies)
@@ -43,7 +59,7 @@ void BayesianIntNWPosteriorDistribution::addDefaultValue(Estimator *estimator)
 
 double
 BayesianIntNWPosteriorDistribution::getSingularJointProbability(double **strategy_probabilities,
-                                                            size_t index0, size_t index1)
+                                                                size_t index0, size_t index1)
 {
     return 0.0; // TODO
 }
@@ -78,6 +94,10 @@ BayesianIntNWPosteriorDistribution::observationAdded(Estimator *estimator, doubl
     }
     estimatorSamples[estimator]->addValue(value);
     clearEstimatorSamplesDistributions();
+
+    Strategy *winner = evaluator->getBestSingularStrategy(chooser_arg);
+    likelihood->addDecision(winner);
+    normalizer->addDecision(winner);
 }
 
 void
@@ -132,14 +152,86 @@ BayesianIntNWPosteriorDistribution::restoreFromFile(ifstream& in)
     }
 }
 
+static inline double
+get_one_redundant_probability(double ***singular_probabilities,
+                              size_t strategy_index,
+                              size_t estimator_index,
+                              size_t distribution_index)
+{
+    return singular_probabilities[strategy_index][estimator_index][distribution_index];
+}
+
+inline double
+BayesianIntNWPosteriorDistribution::
+bayesianJointProbability(size_t i, size_t j, size_t k, size_t m)
+{
+    // indices point into the prior and the likelihood distributions.
+
+    // Bayesian posterior probability calculation:
+    // posterior = prior * likelihood / normalizer
+    // prior is calculated partially at each loop level, by get_one_redundant_probability
+    // here we return likelihood, which gets multiplied into the prior
+    // inside the loop.
+    // the normalizing factor doesn't depend on the estimator distribution,
+    // so it can be pulled out of the loop and applied later.
+    return likelihood->getValue(chosenSingularStrategy, i, j, k, m);
+}
+
+#include <functional>
+
+static inline double min(double a, double b)
+{
+    return (a < b) ? a : b;
+}
+
+static inline double sum(double a, double b)
+{
+    return a + b;
+}
+
 double 
 BayesianIntNWPosteriorDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
 {
-    return 0.0; // TODO
+    return likelihood->getWeightedSum(bestSingularStrategy, min) * normalizer->getValue(bestSingularStrategy);
 }
 
 double 
 BayesianIntNWPosteriorDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
 {
-    return 0.0; // TODO
+    return likelihood->getWeightedSum(bestSingularStrategy, sum) * normalizer->getValue(bestSingularStrategy);
+}
+
+BayesianLikelihood::BayesianLikelihood(BayesianIntNWPosteriorDistribution *parent_)
+    : parent(parent_)
+{
+    
+}
+
+
+void 
+BayesianLikelihood::addDecision(Strategy *winner)
+{
+
+}
+
+double 
+BayesianLikelihood::getWeightedSumSingular(Strategy *winner, combiner_fn_t combiner)
+{
+
+}
+
+double 
+BayesianLikelihood::getWeightedSumRedundant(Strategy *winner, combiner_fn_t combiner)
+{
+
+}
+
+void
+BayesianNormalizer::addDecision(Strategy *winner)
+{
+}
+
+double
+BayesianNormalizer::getValue(Strategy *winner)
+{
 }

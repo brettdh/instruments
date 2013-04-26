@@ -419,18 +419,38 @@ IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, types
 }
 
 
+// indices are 4-way loop indices.
+static inline double noop_joint_probability(size_t i, size_t j, size_t k, size_t m)
+{
+    // the joint probability is already calculated in the product of the
+    //  singular probabilities.
+    return 1.0;
+}
+
 #include "tight_loop.h"
 
 double
 IntNWJointDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
 {
-    FN_BODY_WITH_COMBINER(min, get_one_redundant_probability, saved_value_type);
+    double weightedSum = 0.0;
+    FN_BODY_WITH_COMBINER(weightedSum,
+                          min,
+                          get_one_redundant_probability, 
+                          noop_joint_probability,
+                          saved_value_type);
+    return weightedSum;
 }
 
 double
 IntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
 {
-    FN_BODY_WITH_COMBINER(sum, get_one_redundant_probability, saved_value_type);
+    double weightedSum = 0.0;
+    FN_BODY_WITH_COMBINER(weightedSum, 
+                          sum,
+                          get_one_redundant_probability, 
+                          noop_joint_probability, 
+                          saved_value_type);
+    return weightedSum;
 }
 
 
