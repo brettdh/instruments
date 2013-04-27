@@ -19,6 +19,8 @@ class StatsDistributionBinned : public StatsDistribution {
     virtual void appendToFile(const std::string& name, std::ofstream& out);
     virtual std::string restoreFromFile(std::ifstream& in);
 
+    double getProbability(double value);
+
     class Iterator : StatsDistribution::Iterator {
       public:
         virtual double probability();
