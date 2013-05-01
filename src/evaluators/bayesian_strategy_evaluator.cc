@@ -1,33 +1,62 @@
 #include "bayesian_strategy_evaluator.h"
-#include "bayesian_intnw_posterior_distribution.h"
 #include "estimator.h"
+#include "stats_distribution_binned.h"
+
+#include <vector>
+#include <map>
+#include <functional>
+#include <stdexcept>
+using std::vector; using std::map;
+using std::runtime_error;
 
 #include <stdlib.h>
+#include <assert.h>
+#include <math.h>
 
 typedef double (*combiner_fn_t)(double, double);
 
-template <double threshold>
-static int cmp_vectors(const vector<double>& first, const vector<double>& second)
-{
-    assert(first.size() == second.size());
-    for (size_t i = 0; i < first.size(); ++i) {
-        double diff = first[i] - second[i];
-        if (fabs(first[i] - second[i]) > threshold) {
-            return (diff < 0.0 ? -1 : 1);
+class CmpVectors {
+    constexpr static double THRESHOLD = 0.0001;
+    
+  public:
+    int operator()(const vector<double>& first, const vector<double>& second) const {
+        assert(first.size() == second.size());
+        for (size_t i = 0; i < first.size(); ++i) {
+            double diff = first[i] - second[i];
+            if (fabs(first[i] - second[i]) > THRESHOLD) {
+                return (diff < 0.0 ? -1 : 1);
+            }
         }
+        return 0;
     }
-    return 0;
-}
+};
 
 class BayesianStrategyEvaluator::Likelihood {
   public:
-    BayesianLikelihood(BayesianStrategyEvaluator *evaluator_);
+    Likelihood(BayesianStrategyEvaluator *evaluator_);
     void addDecision(Strategy *winner, Estimator *estimator, double value);
-    double getWeightedSum(Strategy *strategy, Strategy *best_singular, combiner_fn_t combiner=NULL);
+    double getWeightedSum(Strategy *strategy, typesafe_eval_fn_t fn,
+                          void *strategy_arg, void *chooser_arg, combiner_fn_t combiner);
+    double getCurrentEstimatorSample(Estimator *estimator);
   private:
     BayesianStrategyEvaluator *evaluator;
-    map<vector<double>, DecisionsHistogram *, cmp_vectors<0.0001> > distribution;
-    map<Estimator *, double> lastObservation;
+    map<Estimator *, double> last_observation;
+
+    // for use during iterated weighted sum.
+    map<Estimator *, double> currentEstimatorSamples;
+    
+    // Each value_type is a map of likelihood-value-tuples to 
+    //   their likeihood decision histograms.
+    // I keep these separately for each strategy for easy lookup
+    //   and iteration over only those estimators that matter
+    //   for the current strategy.
+    map<Strategy *, map<vector<double>, DecisionsHistogram *, CmpVectors> > likelihood_per_strategy;
+
+    vector<double> getCurrentEstimatorKey(Strategy *strategy);
+    void forEachEstimator(Strategy *strategy, const vector<double>& key,
+                          std::function<void(Estimator *, double)> fn);
+    void setEstimatorSamples(Strategy *strategy, const vector<double>& key);
+    double jointPriorProbability(Strategy *strategy, const vector<double>& key);
 };
 
 class BayesianStrategyEvaluator::DecisionsHistogram {
@@ -55,15 +84,15 @@ BayesianStrategyEvaluator::setStrategies(const instruments_strategy_t *new_strat
 {
     StrategyEvaluator::setStrategies(new_strategies, num_strategies);
     if (!simple_evaluator) {
-        simple_evaluator = new TrustedOracleStrategyEvaluator;
+        simple_evaluator = StrategyEvaluator::create(new_strategies, num_strategies, 
+                                                     TRUSTED_ORACLE);
     }
-    simple_evaluator->setStrategies(new_strategies, num_strategies);
 }
 
 Strategy *
 BayesianStrategyEvaluator::getBestSingularStrategy(void *chooser_arg)
 {
-    return simple_evaluator->chooseStrategy(chooser_arg);
+    return (Strategy *) simple_evaluator->chooseStrategy(chooser_arg);
 }
 
 
@@ -75,10 +104,7 @@ BayesianStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
     // TODO-BAYESIAN: just return the value.
     // XXX-BAYESIAN:  yes, this may over-emphasize history.  known (potential) issue.
 
-    double *estimator_sample_values = estimatorSamplesValues[estimator];
-    size_t index = estimatorIndices[estimator];
-    double sample = estimator_sample_values[index];
-    return sample;
+    return likelihood->getCurrentEstimatorSample(estimator);
 }
 
 void 
@@ -106,13 +132,6 @@ BayesianStrategyEvaluator::createStatsDistribution()
 }
 
 
-double
-BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                         void *strategy_arg, void *chooser_arg)
-{
-    // TODO: here is the crux of the loop.
-}
-
 #include <functional>
 
 static inline double min(double a, double b)
@@ -125,35 +144,46 @@ static inline double sum(double a, double b)
     return a + b;
 }
 
-double 
-BayesianIntNWPosteriorDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
+combiner_fn_t
+get_combiner_fn(typesafe_eval_fn_t fn)
 {
-    return likelihood->getWeightedSum(bestSingularStrategy, min) * normalizer->getValue(bestSingularStrategy);
+    if (fn == redundant_strategy_minimum_time) {
+        return min;
+    } else if (fn == redundant_strategy_total_energy_cost ||
+               fn == redundant_strategy_total_data_cost) {
+        return sum;
+    } else {
+        return NULL;
+    }
 }
 
-double 
-BayesianIntNWPosteriorDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
+double
+BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
+                                         void *strategy_arg, void *chooser_arg_)
 {
-    return likelihood->getWeightedSum(bestSingularStrategy, sum) * normalizer->getValue(bestSingularStrategy);
+    chooser_arg = chooser_arg_;
+    Strategy *bestSingular = getBestSingularStrategy(chooser_arg);
+    double normalizing_factor = normalizer->getValue(bestSingular);
+    return likelihood->getWeightedSum(strategy, fn, strategy_arg, chooser_arg,
+                                      get_combiner_fn(fn)) * normalizing_factor;
 }
 
-BayesianStrategyEvaluator::BayesianLikelihood::BayesianLikelihood(BayesianStrategyEvaluator *evaluator_)
+BayesianStrategyEvaluator::Likelihood::Likelihood(BayesianStrategyEvaluator *evaluator_)
     : evaluator(evaluator_)
 {
-    
 }
-
 
 void 
 BayesianStrategyEvaluator::Likelihood::addDecision(Strategy *winner, Estimator *estimator, double observation)
 {
-    // TODO: update correct count in correct bin of the likelihood distribution.
-    lastObservation[estimator] = observation;
+    last_observation[estimator] = observation;
 
     // for each strategy:
     //     get the strategy's current key (vector of bins, based on estimator values) 
     //     look up the histogram in that strategy's map
-    for (Strategy *strategy : strategies) {
+    //     add a count to the decisions histogram
+    for (Strategy *strategy : evaluator->strategies) {
+        auto& likelihood = likelihood_per_strategy[strategy];
         vector<double> key = getCurrentEstimatorKey(strategy);
         if (likelihood.count(key) == 0) {
             likelihood[key] = new DecisionsHistogram;
@@ -164,14 +194,86 @@ BayesianStrategyEvaluator::Likelihood::addDecision(Strategy *winner, Estimator *
     }
 }
 
-double 
-BayesianStrategyEvaluator::Likelihood::getWeightedSum(Strategy *strategy, Strategy *bestSingular, combiner_fn_t combiner)
+void
+BayesianStrategyEvaluator::Likelihood::forEachEstimator(Strategy *strategy, const vector<double>& key,
+                                                        std::function<void(Estimator *, double)> fn)
 {
-    if (strategy->isRedundant()) {
-        // TODO: iterate over child strategies, combine sums
-    } else {
-        // TODO: iterate over likelihood pairs
+    vector<Estimator *> estimators = strategy->getEstimators();
+    assert(estimators.size() == key.size());
+    int i = 0;
+    for (double sample : key) {
+        Estimator *estimator = estimators[i++];
+        fn(estimator, sample);
     }
+}
+
+void
+BayesianStrategyEvaluator::Likelihood::setEstimatorSamples(Strategy *strategy, const vector<double>& key)
+{
+    forEachEstimator(strategy, key, [&](Estimator *estimator, double sample) {
+            currentEstimatorSamples[estimator] = sample;
+        });
+}
+
+vector<double>
+BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorKey(Strategy *strategy)
+{
+    vector<Estimator *> estimators = strategy->getEstimators();
+    vector<double> key;
+    for (Estimator *estimator : estimators) {
+        key.push_back(estimator->getEstimate());
+    }
+    return key;
+}
+
+double 
+BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorSample(Estimator *estimator)
+{
+    assert(currentEstimatorSamples.count(estimator) > 0);
+    return currentEstimatorSamples[estimator];
+}
+
+
+double
+BayesianStrategyEvaluator::Likelihood::jointPriorProbability(Strategy *strategy, const vector<double>& key)
+{
+    double probability = 1.0;
+    forEachEstimator(strategy, key, [&](Estimator *estimator, double sample) {
+            assert(evaluator->estimatorSamples.count(estimator) > 0);
+            probability *= evaluator->estimatorSamples[estimator]->getProbability(sample);
+        });
+    return probability;
+}
+
+double 
+BayesianStrategyEvaluator::Likelihood::getWeightedSum(Strategy *strategy, typesafe_eval_fn_t fn,
+                                                      void *strategy_arg, void *chooser_arg, combiner_fn_t combiner)
+{
+    Strategy *bestSingular = evaluator->getBestSingularStrategy(chooser_arg);
+    double weightedSum = 0.0;
+
+    auto& likelihood = likelihood_per_strategy[strategy];
+    for (auto& map_pair : likelihood) {
+        auto key = map_pair.first;
+        DecisionsHistogram *histogram = map_pair.second;
+
+        double combined = 0.0;
+        bool first = true;
+        for (Strategy *cur_strategy : evaluator->strategies) {
+            setEstimatorSamples(cur_strategy, key);
+            double value = fn(evaluator, strategy_arg, chooser_arg);
+            if (first) {
+                first = false;
+                combined = value;
+            } else {
+                combined = combiner(combined, value);
+            }
+        }
+        weightedSum += (combined
+                        * jointPriorProbability(strategy, key)
+                        * histogram->getValue(bestSingular));
+    }
+    return weightedSum;
 }
 
 
@@ -194,5 +296,20 @@ double
 BayesianStrategyEvaluator::DecisionsHistogram::getValue(Strategy *winner)
 {
     assert(total > 0);
-    return decision[winner] / ((double) total);
+    return decisions[winner] / ((double) total);
+}
+
+
+void
+BayesianStrategyEvaluator::saveToFile(const char *filename)
+{
+    // TODO
+    throw runtime_error("NOT IMPLEMENTED");
+}
+
+void
+BayesianStrategyEvaluator::restoreFromFile(const char *filename)
+{
+    // TODO
+    throw runtime_error("NOT IMPLEMENTED");
 }

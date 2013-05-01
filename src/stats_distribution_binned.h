@@ -19,6 +19,7 @@ class StatsDistributionBinned : public StatsDistribution {
     virtual void appendToFile(const std::string& name, std::ofstream& out);
     virtual std::string restoreFromFile(std::ifstream& in);
 
+    // return the probability of the bin where value falls.
     double getProbability(double value);
 
     class Iterator : StatsDistribution::Iterator {
@@ -67,7 +68,10 @@ class StatsDistributionBinned : public StatsDistribution {
     void calculateBins();
     bool binsAreSet();
 
+    size_t getIndex(double value);
     void updateBin(int index, double value);
+    double probabilityAtIndex(size_t index);
+
 
     std::string r_samples_name;
     void initRInside();

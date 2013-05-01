@@ -62,6 +62,19 @@ StatsDistributionBinned::addValue(double value)
 }
 
 double 
+StatsDistributionBinned::getProbability(double value)
+{
+    size_t index = getIndex(value);
+    return probabilityAtIndex(index);
+}
+
+double
+StatsDistributionBinned::probabilityAtIndex(size_t index)
+{
+    return (double(counts[index]) / all_samples_sorted.size());
+}
+
+double 
 StatsDistributionBinned::Iterator::probability()
 {
     return probability(index);
@@ -70,8 +83,7 @@ StatsDistributionBinned::Iterator::probability()
 inline double 
 StatsDistributionBinned::Iterator::probability(int pos)
 {
-    return (double(distribution->counts[pos]) / 
-            distribution->all_samples_sorted.size());
+    return distribution->probabilityAtIndex(pos);
 }
 
 inline double
@@ -254,9 +266,7 @@ StatsDistributionBinned::addToHistogram(double value)
     assertValidHistogram();
     
     if (binsAreSet()) {
-        vector<double>::iterator pos = 
-            lower_bound(breaks.begin(), breaks.end(), value);
-        size_t index = int(pos - breaks.begin());
+        size_t index = getIndex(value);
         updateBin(index, value);
     } else {
         // no histogram yet; ignore.
@@ -264,6 +274,15 @@ StatsDistributionBinned::addToHistogram(double value)
     all_samples_sorted.insert(value);
 
     assertValidHistogram();
+}
+
+size_t
+StatsDistributionBinned::getIndex(double value)
+{
+    vector<double>::iterator pos = 
+        lower_bound(breaks.begin(), breaks.end(), value);
+    size_t index = int(pos - breaks.begin());
+    return index;
 }
 
 void

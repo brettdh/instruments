@@ -1,10 +1,12 @@
 #ifndef BAYESIAN_STRATEGY_EVALUATOR_H_INCL
 #define BAYESIAN_STRATEGY_EVALUATOR_H_INCL
 
-#include "empirical_error_strategy_evaluator.h"
-#include "eval_method.h"
+#include "strategy_evaluator.h"
 
-class AbstractJointDistribution;
+class Estimator;
+class StatsDistributionBinned;
+
+#include <map>
 
 /* The Bayesian strategy evaluator shares some basic things in common
  * with the brute-force method -- namely, its use of empirical distributions
@@ -24,7 +26,7 @@ class AbstractJointDistribution;
  */
 class BayesianStrategyEvaluator : public StrategyEvaluator {
   public:
-    BayesianStrategyEvaluator(EvalMethod method);
+    BayesianStrategyEvaluator();
     virtual ~BayesianStrategyEvaluator();
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
@@ -39,12 +41,24 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
                                size_t num_strategies_);
     
   private:
-    
+    // for answering "which strategy wins?" based only on estimator values
+    StrategyEvaluator *simple_evaluator; // will use TRUSTED_ORACLE
 
     class Likelihood;
     class DecisionsHistogram;
     Likelihood *likelihood;
     DecisionsHistogram *normalizer;
+
+    // last chooser arg passed into expectedValue
+    //  (used to make decisions for updating likelihood distribution when
+    //   estimator values change).
+    void *chooser_arg;
+    
+    std::map<Estimator *, StatsDistributionBinned *> estimatorSamples;
+
+    StatsDistributionBinned *createStatsDistribution();
+
+    Strategy *getBestSingularStrategy(void *chooser_arg);
 };
 
 #endif

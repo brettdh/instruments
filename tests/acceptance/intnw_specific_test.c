@@ -382,7 +382,7 @@ CTEST_DATA(bayesian_method_test) {
 
 CTEST_SETUP(bayesian_method_test)
 {
-    setup_common(&data->common_data, BAYESIAN_INTNW);
+    setup_common(&data->common_data, BAYESIAN);
 }
 
 CTEST_TEARDOWN(bayesian_method_test)
@@ -421,7 +421,7 @@ CTEST2(bayesian_method_test, test_both_networks_best)
 CTEST2(bayesian_method_test, test_save_restore)
 {
     test_save_restore(&data->common_data, "/tmp/bayesian_method_saved_evaluation_state.txt", 
-                      BAYESIAN_INTNW);
+                      BAYESIAN);
 }
 
 static double update_mean(double mean, double value, int n)

@@ -353,19 +353,6 @@ static inline double sum(double a, double b)
     return a + b;
 }
 
-typedef double (*combiner_fn_t)(double, double);
-
-combiner_fn_t
-combiner_fn(typesafe_eval_fn_t fn)
-{
-    if (fn == redundant_strategy_minimum_time) {
-        return min;
-    } else if (fn == redundant_strategy_total_energy_cost ||
-               fn == redundant_strategy_total_data_cost) {
-        return sum;
-    } else abort();
-}
-
 static void ensure_valid(double& memoized_value)
 {
     if (memoized_value == DBL_MAX) {
