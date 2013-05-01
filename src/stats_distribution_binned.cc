@@ -33,22 +33,44 @@ StatsDistributionBinned::initRInside()
 StatsDistributionBinned::StatsDistributionBinned()
 {
     initRInside();
+    preset_breaks = false;
 }
 
-StatsDistributionBinned::StatsDistributionBinned(vector<double> breaks_)
+StatsDistributionBinned::StatsDistributionBinned(vector<double> new_breaks)
 {
-    initRInside();
+    //initRInside();
     
-    breaks = breaks_;
+    preset_breaks = true;
+    setBreaks(new_breaks);
+    
+    assertValidHistogram();
+}
+
+void
+StatsDistributionBinned::setBreaks(const vector<double>& new_breaks)
+{
+    breaks = new_breaks;
     counts.resize(breaks.size() + 1, 0);
+    mids.clear();
     mids.push_back(0.0);
     for (size_t i = 0; i < breaks.size() - 1; ++i) {
         double mid = (breaks[i] + breaks[i+1]) / 2.0;
         mids.push_back(mid);
     }
     mids.push_back(0.0);
-    
-    assertValidHistogram();
+}
+
+// construct a regular histogram with num_bins bins ranging from min to max.
+// e.g. min=0, max=10, num_bins=4 results in 
+//      breaks: [0, 2.5, 5, 7.5, 10], the endpoints of 4 bins.
+StatsDistributionBinned::StatsDistributionBinned(double min, double max, size_t num_bins)
+{
+    vector<double> new_breaks;
+    double width = (max - min) / num_bins;
+    for (size_t i = 0; i <= num_bins; ++i) {
+        new_breaks.push_back(min + i * width);
+    }
+    setBreaks(new_breaks);
 }
 
 void 
@@ -244,7 +266,7 @@ StatsDistributionBinned::binsAreSet()
 bool
 StatsDistributionBinned::shouldRebin()
 {
-    return ((all_samples_sorted.size() % histogram_threshold) == 0);
+    return (!preset_breaks && (all_samples_sorted.size() % histogram_threshold) == 0);
 }
 
 void
