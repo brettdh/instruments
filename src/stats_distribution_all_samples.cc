@@ -6,9 +6,16 @@
 #include <fstream>
 #include <stdexcept>
 #include <iomanip>
+#include <algorithm>
 using std::string; using std::ifstream; using std::ofstream;
 using std::endl; using std::setprecision;
-using std::runtime_error;
+using std::runtime_error; using std::count;
+
+double
+StatsDistributionAllSamples::getProbability(double value)
+{
+    return ((double) count(values.begin(), values.end(), value)) / values.size();
+}
 
 void 
 StatsDistributionAllSamples::addValue(double value)

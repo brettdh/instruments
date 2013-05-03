@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <assert.h>
+#include <stdlib.h>
 #include <sys/types.h>
 
 template <typename T>
@@ -27,11 +28,13 @@ class MultiDimensionArray {
 template <typename T>
 MultiDimensionArray<T>::MultiDimensionArray(const std::vector<size_t>& dimensions_, 
                                             const T& initial_value)
+    : the_array(NULL)
 {
-    assert(dimensions_.size() > 0);
     dimensions = dimensions_;
     num_dimensions = dimensions.size();
-    the_array = initializeArray(initial_value);
+    if (num_dimensions > 0) {
+        the_array = initializeArray(initial_value);
+    }
 }
 
 template <typename T>

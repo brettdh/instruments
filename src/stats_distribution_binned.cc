@@ -1,4 +1,6 @@
 #include "stats_distribution_binned.h"
+#include "estimator.h"
+
 #include <assert.h>
 #include <sstream>
 #include <fstream>
@@ -40,7 +42,6 @@ StatsDistributionBinned::StatsDistributionBinned(vector<double> new_breaks)
 {
     //initRInside();
     
-    preset_breaks = true;
     setBreaks(new_breaks);
     
     assertValidHistogram();
@@ -49,6 +50,7 @@ StatsDistributionBinned::StatsDistributionBinned(vector<double> new_breaks)
 void
 StatsDistributionBinned::setBreaks(const vector<double>& new_breaks)
 {
+    preset_breaks = true;
     breaks = new_breaks;
     counts.resize(breaks.size() + 1, 0);
     mids.clear();
@@ -73,6 +75,18 @@ StatsDistributionBinned::StatsDistributionBinned(double min, double max, size_t 
     setBreaks(new_breaks);
 }
 
+StatsDistributionBinned *
+StatsDistributionBinned::create(Estimator *estimator)
+{
+    if (estimator && estimator->hasRangeHints()) {
+        EstimatorRangeHints hints = estimator->getRangeHints();
+        return new StatsDistributionBinned(hints.min, hints.max, hints.num_bins);
+    } else {
+        return new StatsDistributionBinned;
+    }
+}
+
+
 void 
 StatsDistributionBinned::addValue(double value)
 {
@@ -86,13 +100,28 @@ StatsDistributionBinned::addValue(double value)
 double 
 StatsDistributionBinned::getProbability(double value)
 {
-    size_t index = getIndex(value);
-    return probabilityAtIndex(index);
+    if (binsAreSet()) {
+        return probabilityAtIndex(getIndex(value));
+    } else {
+        return all_samples.getProbability(value);
+    }
 }
+
+double 
+StatsDistributionBinned::getBinnedValue(double value)
+{
+    if (binsAreSet()) {
+        return mids[getIndex(value)];
+    } else {
+        return value;
+    }
+}
+
 
 double
 StatsDistributionBinned::probabilityAtIndex(size_t index)
 {
+    assert(index < counts.size());
     return (double(counts[index]) / all_samples_sorted.size());
 }
 

@@ -1,13 +1,15 @@
 #include "bayesian_strategy_evaluator.h"
 #include "estimator.h"
 #include "stats_distribution_binned.h"
+#include "debug.h"
 
 #include <vector>
 #include <map>
 #include <functional>
 #include <stdexcept>
+#include <sstream>
 using std::vector; using std::map;
-using std::runtime_error;
+using std::runtime_error; using std::ostringstream;
 
 #include <stdlib.h>
 #include <assert.h>
@@ -24,8 +26,8 @@ class CmpVectors {
         assert(first.size() == second.size());
         for (size_t i = 0; i < first.size(); ++i) {
             double diff = first[i] - second[i];
-            if (fabs(diff) > THRESHOLD && diff < 0.0) {
-                return true;
+            if (fabs(diff) > THRESHOLD) {
+                return diff < 0.0;
             }
         }
         return false;
@@ -35,7 +37,7 @@ class CmpVectors {
 class BayesianStrategyEvaluator::Likelihood {
   public:
     Likelihood(BayesianStrategyEvaluator *evaluator_);
-    void addDecision(Strategy *winner, Estimator *estimator, double value);
+    void addDecision(Strategy *winner, Estimator *estimator, double observation);
     double getWeightedSum(Strategy *strategy, typesafe_eval_fn_t fn,
                           void *strategy_arg, void *chooser_arg);
     double getCurrentEstimatorSample(Estimator *estimator);
@@ -89,6 +91,7 @@ BayesianStrategyEvaluator::setStrategies(const instruments_strategy_t *new_strat
     if (!simple_evaluator) {
         simple_evaluator = StrategyEvaluator::create(new_strategies, num_strategies, 
                                                      TRUSTED_ORACLE);
+        simple_evaluator->setSilent(true);
     }
 }
 
@@ -117,9 +120,8 @@ BayesianStrategyEvaluator::getBestSingularStrategy(void *chooser_arg)
 double 
 BayesianStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
 {
-    // TODO-BAYESIAN: specifically, it's bandwidth or latency stored in the
-    // TODO-BAYESIAN: distribution, rather than an error value, so
-    // TODO-BAYESIAN: just return the value.
+    // it's bandwidth or latency stored in the distribution, rather
+    // than an error value, so just return the value.
     // XXX-BAYESIAN:  yes, this may over-emphasize history.  known (potential) issue.
 
     return likelihood->getCurrentEstimatorSample(estimator);
@@ -129,7 +131,7 @@ void
 BayesianStrategyEvaluator::observationAdded(Estimator *estimator, double value)
 {
     if (estimatorSamples.count(estimator) == 0) {
-        estimatorSamples[estimator] = createStatsDistribution();
+        estimatorSamples[estimator] = createStatsDistribution(estimator);
     }
     estimatorSamples[estimator]->addValue(value);
 
@@ -138,17 +140,16 @@ BayesianStrategyEvaluator::observationAdded(Estimator *estimator, double value)
         assert(!winner->isRedundant());
         // TrustedOracleStrategyEvaluator will not pick a redundant strategy,
         // because it has the same time as the lowest singular strategy; thus benefit == 0.
-        
-        likelihood->addDecision(winner, estimator, value);
-        normalizer->addDecision(winner);
     }
+    
+    likelihood->addDecision(winner, estimator, value);
+    normalizer->addDecision(winner);
 }
 
 StatsDistributionBinned *
-BayesianStrategyEvaluator::createStatsDistribution()
+BayesianStrategyEvaluator::createStatsDistribution(Estimator *estimator)
 {
-    // TODO: choose bin size.
-    return new StatsDistributionBinned;
+    return StatsDistributionBinned::create(estimator);
 }
 
 
@@ -185,6 +186,7 @@ BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t 
     Strategy *bestSingular = getBestSingularStrategy(chooser_arg);
     assert(bestSingular);
     double normalizing_factor = normalizer->getValue(bestSingular);
+    dbgprintf("[bayesian] normalizing factor = %f\n", normalizing_factor);
     return normalizing_factor * likelihood->getWeightedSum(strategy, fn, strategy_arg, chooser_arg);
 }
 
@@ -197,6 +199,8 @@ void
 BayesianStrategyEvaluator::Likelihood::addDecision(Strategy *winner, Estimator *estimator, double observation)
 {
     last_observation[estimator] = observation;
+    
+    if (!winner) return;
 
     // for each strategy:
     //     get the strategy's current key (vector of bins, based on estimator values) 
@@ -241,7 +245,12 @@ BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorKey(Strategy *strategy
     vector<Estimator *> estimators = strategy->getEstimators();
     vector<double> key;
     for (Estimator *estimator : estimators) {
-        key.push_back(estimator->getEstimate());
+        assert(last_observation.count(estimator) > 0);
+        assert(evaluator->estimatorSamples.count(estimator) > 0);
+        
+        double obs = last_observation[estimator];
+        double bin_mid = evaluator->estimatorSamples[estimator]->getBinnedValue(obs);
+        key.push_back(bin_mid);
     }
     return key;
 }
@@ -280,9 +289,18 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(Strategy *strategy, typesa
 
         setEstimatorSamples(strategy, key);
         double value = fn(evaluator, strategy_arg, chooser_arg);
-        weightedSum += (value
-                        * jointPriorProbability(strategy, key)
-                        * histogram->getValue(bestSingular));
+        double prior = jointPriorProbability(strategy, key);
+        double likelihood_coeff = histogram->getValue(bestSingular);
+        
+        ostringstream s;
+        s << "[bayesian] key: [ ";
+        for (double v : key) {
+            s << v << " ";
+        }
+        s << "]  prior: " << prior << "  likelihood_coeff: " << likelihood_coeff;
+        dbgprintf("%s\n", s.str().c_str());
+        
+        weightedSum += (value * prior * likelihood_coeff);
     }
     return weightedSum;
 }
@@ -296,6 +314,8 @@ BayesianStrategyEvaluator::DecisionsHistogram::DecisionsHistogram()
 void
 BayesianStrategyEvaluator::DecisionsHistogram::addDecision(Strategy *winner)
 {
+    if (!winner) return;
+    
     if (decisions.count(winner) == 0) {
         decisions[winner] = 0;
     }

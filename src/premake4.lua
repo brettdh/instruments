@@ -10,7 +10,7 @@ project "InstrumentsLibrary"
   flags { "Symbols", "FatalWarnings" }
   links { "pthread", "mocktime" }
 
-  buildoptions { R_buildoptions(), "-Wall" }
+  buildoptions { R_buildoptions(), "-Wall", "-std=gnu++0x" }
   linkoptions { R_linkoptions() }
   
   configuration "Debug"

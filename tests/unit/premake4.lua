@@ -55,7 +55,7 @@ project "InstrumentsTests"
   flags { "Symbols", "FatalWarnings" }
   links { "mocktime", "cppunit" }
 
-  buildoptions { R_buildoptions(), "-Wall" }
+  buildoptions { R_buildoptions(), "-Wall", "-std=gnu++0x" }
   linkoptions { R_linkoptions() }
   
   targetname "run_unit_tests"

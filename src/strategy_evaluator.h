@@ -27,6 +27,9 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     static StrategyEvaluator *create(const instruments_strategy_t *strategies,
                                      size_t num_strategies, EvalMethod type);
 
+    void setSilent(bool silent_);
+    bool isSilent();
+
     // TODO: declare this not-thread-safe?  that seems reasonable.
     instruments_strategy_t chooseStrategy(void *chooser_arg);
     
@@ -55,6 +58,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     double calculateTime(Strategy *strategy, void *chooser_arg);
     double calculateCost(Strategy *strategy, void *chooser_arg);
     Strategy *currentStrategy;
+    bool silent;
 };
 
 #endif

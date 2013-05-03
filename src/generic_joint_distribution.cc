@@ -217,7 +217,7 @@ GenericJointDistribution::observationAdded(Estimator *estimator, double value)
         double error = calculate_error(estimator->getEstimate(), value);
         estimatorError[estimator]->addValue(error);
     } else if (estimatorError.count(estimator) == 0) {
-        estimatorError[estimator] = createSamplesDistribution();
+        estimatorError[estimator] = createSamplesDistribution(estimator);
         
         // don't add a real error value to the distribution.
         // there's no error until we have at least two observations.
@@ -300,7 +300,9 @@ GenericJointDistribution::saveMemoizedValue(MultiDimensionArray<double> *memo,
     assert(iterator);
     assert(iterator->numStrategies() == 1);
     size_t strategy_index = 0;
-    memo->at(iterator->strategyPosition(strategy_index)) = value;
+    if (!iterator->isDone()) {
+        memo->at(iterator->strategyPosition(strategy_index)) = value;
+    }
 }
 
 GenericJointDistribution::Iterator::Iterator(GenericJointDistribution *distribution_, Strategy *strategy)
@@ -355,8 +357,8 @@ GenericJointDistribution::Iterator::Iterator(GenericJointDistribution *distribut
     if (!strategy->isRedundant()) { 
         distribution->setEmptyMemos(strategy, end_position);
     }
-    done = false;
     num_iterators = iterators.size();
+    done = (num_iterators == 0);
     cached_probabilities.resize(num_iterators);
     setCachedProbabilities(0);
 }
@@ -368,6 +370,10 @@ double
 GenericJointDistribution::Iterator::
 evaluate(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg)
 {
+    if (num_iterators == 0) {
+        return fn(distribution, strategy_arg, chooser_arg);
+    }
+
     double weightedSum = 0.0;
 #if defined(RECURSION)
     // XXX: negligible performance impact, and it's actually broken.
@@ -505,6 +511,9 @@ GenericJointDistribution::Iterator::~Iterator()
 inline double
 GenericJointDistribution::Iterator::currentEstimatorError(Estimator *estimator)
 {
+    if (iteratorIndices.count(estimator) == 0) {
+        return no_error_value();
+    }
     size_t index = iteratorIndices[estimator];
     return iterators[index]->at(position[index]);
 }

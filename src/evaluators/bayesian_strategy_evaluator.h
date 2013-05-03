@@ -56,7 +56,7 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
     
     std::map<Estimator *, StatsDistributionBinned *> estimatorSamples;
 
-    StatsDistributionBinned *createStatsDistribution();
+    StatsDistributionBinned *createStatsDistribution(Estimator *estimator);
 
     Strategy *getBestSingularStrategy(void *chooser_arg);
 };

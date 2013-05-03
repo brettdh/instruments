@@ -36,7 +36,7 @@ Estimator::create(EstimatorType type, string name)
 }
 
 Estimator::Estimator(const string& name_)
- : name(name_), has_estimate(false)
+    : name(name_), has_estimate(false), has_range_hints(false)
 {
     if (name.empty()) {
         throw runtime_error("Estimator name must not be empty");
@@ -77,4 +77,26 @@ string
 Estimator::getName()
 {
     return name;
+}
+
+bool 
+Estimator::hasRangeHints()
+{
+    return has_range_hints;
+}
+
+EstimatorRangeHints 
+Estimator::getRangeHints()
+{
+    assert(hasRangeHints());
+    return range_hints;
+}
+
+void 
+Estimator::setRangeHints(double min, double max, size_t num_bins)
+{
+    range_hints.min = min;
+    range_hints.max = max;
+    range_hints.num_bins = num_bins;
+    has_range_hints = true;
 }

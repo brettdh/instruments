@@ -1,0 +1,12 @@
+{
+   zlib_inflation_from_R_maybe
+   Memcheck:Cond
+   fun:inflateReset2
+   obj:*
+}
+{
+   something_i_dont_understand_from_R_maybe
+   Memcheck:Cond
+   fun:__wcslen_sse2
+   obj:*
+}

@@ -8,6 +8,12 @@
 
 class StrategyEvaluator;
 
+struct EstimatorRangeHints {
+    double min;
+    double max;
+    size_t num_bins;
+};
+
 /* Pure virtual base class for all types of estimators.
  * Takes in values, returns an estimate.
  * Possible ways to implement this:
@@ -30,6 +36,10 @@ class Estimator {
     virtual ~Estimator() {}
 
     virtual std::string getName();
+
+    bool hasRangeHints();
+    EstimatorRangeHints getRangeHints();
+    void setRangeHints(double min, double max, size_t num_bins);
   protected:
     Estimator(const std::string& name_);
 
@@ -42,6 +52,9 @@ class Estimator {
 
     small_set<StrategyEvaluator*> subscribers;
     const static EstimatorType DEFAULT_TYPE = RUNNING_MEAN;
+
+    bool has_range_hints;
+    EstimatorRangeHints range_hints;
 };
 
 #endif

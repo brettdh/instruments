@@ -8,11 +8,15 @@
 
 #include <RInside.h>
 
+class Estimator;
+
 class StatsDistributionBinned : public StatsDistribution {
   public:
     StatsDistributionBinned();
     StatsDistributionBinned(std::vector<double> breaks);
     StatsDistributionBinned(double min, double max, size_t num_bins);
+
+    static StatsDistributionBinned *create(Estimator *estimator);
     
     virtual void addValue(double value);
     virtual void appendToFile(const std::string& name, std::ofstream& out);
@@ -20,6 +24,9 @@ class StatsDistributionBinned : public StatsDistribution {
 
     // return the probability of the bin where value falls.
     double getProbability(double value);
+
+    // finds the bin where value falls and returns its midpoint.
+    double getBinnedValue(double value);
 
     class Iterator : StatsDistribution::Iterator {
       public:

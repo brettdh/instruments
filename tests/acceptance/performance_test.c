@@ -72,6 +72,12 @@ static void reset_prng()
     last_sample = -1.0;
 }
 
+
+static double normal_mean = 5.0;
+static double normal_stddev = 1.0;
+
+// Box-Muller transform to get normally-distributed samples 
+//  from uniformly-distributed samples.
 static double get_sample()
 {
     if (last_sample < 0.0) {
@@ -80,7 +86,9 @@ static double get_sample()
     double cur_sample = get_unit_uniform_sample();
     double normal_sample = sqrt(-2 * log(last_sample)) * cos(2 * M_PI * cur_sample);
     last_sample = cur_sample;
-    return normal_sample + 5.0;
+
+    // convert N(0, 1) to N(m, s)
+    return normal_stddev * normal_sample + normal_mean;
 }
 
 #define NUM_ESTIMATORS 4
@@ -93,6 +101,10 @@ static struct timeval run_test(int num_samples, enum EvalMethod method)
     for (i = 0; i < NUM_ESTIMATORS; ++i) {
         snprintf(name, 64, "estimator-%d", i);
         estimators[i] = create_external_estimator(name);
+
+        // set bin hints for bayesian method -- scale with num_samples
+        double range = normal_stddev * 2.0;
+        set_estimator_range_hints(estimators[i], normal_mean - range, normal_mean + range, num_samples);
     }
 
     struct strategy_args args[2] = {
@@ -149,6 +161,7 @@ int main()
 
     enum EvalMethod methods[] = { 
         CONFIDENCE_BOUNDS,
+        BAYESIAN,
         EMPIRICAL_ERROR_ALL_SAMPLES,
         EMPIRICAL_ERROR_ALL_SAMPLES_INTNW
     };

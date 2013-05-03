@@ -9,7 +9,7 @@
 #include <stdexcept>
 
 StatsDistribution *
-AbstractJointDistribution::createSamplesDistribution()
+AbstractJointDistribution::createSamplesDistribution(Estimator *estimator)
 {
     // TODO: create the Bayesian variants.
     switch (dist_type) {
@@ -19,7 +19,7 @@ AbstractJointDistribution::createSamplesDistribution()
 #ifdef ANDROID
         throw std::runtime_error("Binned distribution not yet supported.");
 #else
-        return new StatsDistributionBinned;
+        return StatsDistributionBinned::create(estimator);
 #endif
     default:
         abort();

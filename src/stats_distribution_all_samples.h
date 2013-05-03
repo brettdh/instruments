@@ -7,6 +7,7 @@
 class StatsDistributionAllSamples : public StatsDistribution {
   public:
     virtual void addValue(double value);
+    double getProbability(double value);
     virtual void appendToFile(const std::string& name, std::ofstream& out);
     virtual std::string restoreFromFile(std::ifstream& in);
 

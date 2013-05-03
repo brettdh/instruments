@@ -146,7 +146,7 @@ create_external_estimator(const char *name)
     return new ExternalEstimator(name);
 }
 
-void free_external_estimator(instruments_estimator_t est_handle)
+void free_external_estimator(instruments_external_estimator_t est_handle)
 {
     Estimator *estimator = static_cast<Estimator *>(est_handle);
     delete estimator;
@@ -157,4 +157,18 @@ void add_observation(instruments_external_estimator_t est_handle,
 {
     ExternalEstimator *estimator = static_cast<ExternalEstimator *>(est_handle);
     estimator->addObservation(observation, new_estimate);
+}
+
+
+void set_estimator_range_hints(instruments_estimator_t est_handle,
+                               double min, double max, size_t num_bins)
+{
+    Estimator *estimator = static_cast<Estimator *>(est_handle);
+    estimator->setRangeHints(min, max, num_bins);
+}
+
+int estimator_has_range_hints(instruments_estimator_t est_handle)
+{
+    Estimator *estimator = static_cast<Estimator *>(est_handle);
+    return estimator->hasRangeHints() ? 1 : 0;
 }
