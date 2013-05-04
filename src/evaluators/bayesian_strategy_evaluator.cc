@@ -34,6 +34,14 @@ class CmpVectors {
     }
 };
 
+class VectorsEqual {
+    CmpVectors less;
+  public:
+    bool operator()(const vector<double>& first, const vector<double>& second) const {
+        return !(less(first, second) || less(second, first));
+    }
+};
+
 class BayesianStrategyEvaluator::Likelihood {
   public:
     Likelihood(BayesianStrategyEvaluator *evaluator_);
@@ -66,7 +74,7 @@ class BayesianStrategyEvaluator::DecisionsHistogram {
   public:
     DecisionsHistogram();
     void addDecision(Strategy *winner);
-    double getValue(Strategy *winner);
+    double getValue(Strategy *winner, bool ensure_nonzero=false);
   private:
     size_t total;
     map<Strategy *, size_t> decisions;
@@ -185,9 +193,10 @@ BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t 
     chooser_arg = chooser_arg_;
     Strategy *bestSingular = getBestSingularStrategy(chooser_arg);
     assert(bestSingular);
-    double normalizing_factor = normalizer->getValue(bestSingular);
+    double normalizing_factor = normalizer->getValue(bestSingular, true);
     dbgprintf("[bayesian] normalizing factor = %f\n", normalizing_factor);
-    return normalizing_factor * likelihood->getWeightedSum(strategy, fn, strategy_arg, chooser_arg);
+    assert(normalizing_factor > 0.0);
+    return likelihood->getWeightedSum(strategy, fn, strategy_arg, chooser_arg) / normalizing_factor;
 }
 
 BayesianStrategyEvaluator::Likelihood::Likelihood(BayesianStrategyEvaluator *evaluator_)
@@ -282,6 +291,12 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(Strategy *strategy, typesa
     assert(bestSingular);
     double weightedSum = 0.0;
 
+    auto cur_key = getCurrentEstimatorKey(strategy);
+    VectorsEqual vec_eq;
+
+    // XXX: is this causing a difference from what I expect?
+    // XXX:  maybe I should be iterating over the joint distribution?
+    // XXX:  I *think* it makes sense to separate them by strategy...
     auto& strategy_likelihood = likelihood_per_strategy[strategy];
     for (auto& map_pair : strategy_likelihood) {
         auto key = map_pair.first;
@@ -290,7 +305,9 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(Strategy *strategy, typesa
         setEstimatorSamples(strategy, key);
         double value = fn(evaluator, strategy_arg, chooser_arg);
         double prior = jointPriorProbability(strategy, key);
-        double likelihood_coeff = histogram->getValue(bestSingular);
+
+        bool ensure_nonzero = vec_eq(cur_key, key);
+        double likelihood_coeff = histogram->getValue(bestSingular, ensure_nonzero);
         
         ostringstream s;
         s << "[bayesian] key: [ ";
@@ -316,18 +333,22 @@ BayesianStrategyEvaluator::DecisionsHistogram::addDecision(Strategy *winner)
 {
     if (!winner) return;
     
-    if (decisions.count(winner) == 0) {
-        decisions[winner] = 0;
-    }
     decisions[winner]++;
     total++;
 }
 
 double
-BayesianStrategyEvaluator::DecisionsHistogram::getValue(Strategy *winner)
+BayesianStrategyEvaluator::DecisionsHistogram::getValue(Strategy *winner, bool ensure_nonzero)
 {
+    assert(winner);
     assert(total > 0);
-    return decisions[winner] / ((double) total);
+    size_t cur_decisions = decisions[winner];
+    size_t cur_total = total;
+    if (cur_decisions == 0 && ensure_nonzero) {
+        ++cur_decisions;
+        ++cur_total;
+    }
+    return cur_decisions / ((double) cur_total);
 }
 
 
