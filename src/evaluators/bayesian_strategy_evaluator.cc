@@ -109,7 +109,8 @@ class BayesianStrategyEvaluator::Likelihood {
     // I keep these separately for each strategy for easy lookup
     //   and iteration over only those estimators that matter
     //   for the current strategy.
-    map<Strategy *, map<vector<double>, DecisionsHistogram *, CmpVectors> > likelihood_per_strategy;
+    typedef map<vector<double>, DecisionsHistogram *, CmpVectors> LikelihoodMap;
+    map<Strategy *, LikelihoodMap> likelihood_per_strategy;
 
     vector<double> getCurrentEstimatorKey(Strategy *strategy);
     void forEachEstimator(Strategy *strategy, const vector<double>& key,
