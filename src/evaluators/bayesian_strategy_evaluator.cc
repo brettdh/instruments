@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <functional>
+#include <algorithm>
 #include <stdexcept>
 #include <fstream>
 #include <sstream>
@@ -15,7 +16,7 @@ using std::runtime_error; using std::ostringstream;
 using std::istringstream; using std::ostream;
 using std::string; using std::setprecision;
 using std::ifstream; using std::ofstream; using std::endl;
-using std::pair;
+using std::pair; using std::any_of;
 
 #include <stdlib.h>
 #include <assert.h>

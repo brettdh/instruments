@@ -13,13 +13,13 @@ using std::vector; using std::ifstream; using std::ofstream;
 using std::runtime_error;
 
 #include "small_set.h"
+#include "timeops.h"
 
+#ifndef ANDROID
 #include <RInside.h>
 using Rcpp::as;
 
 #include "r_singleton.h"
-
-#include "timeops.h"
 
 void
 StatsDistributionBinned::initRInside()
@@ -31,17 +31,26 @@ StatsDistributionBinned::initRInside()
     oss << "samples_" << hex << this;
     r_samples_name = oss.str();
 }
+#endif
+
+class NoRInsideOnAndroid : public runtime_error {
+  public:
+    NoRInsideOnAndroid() :
+        runtime_error("Can't auto-determine histogram bins on Android. (no R)") {}
+};
 
 StatsDistributionBinned::StatsDistributionBinned()
 {
+#ifdef ANDROID
+    throw NoRInsideOnAndroid();
+#else
     initRInside();
     preset_breaks = false;
+#endif
 }
 
 StatsDistributionBinned::StatsDistributionBinned(vector<double> new_breaks)
 {
-    //initRInside();
-    
     setBreaks(new_breaks);
     
     assertValidHistogram();
@@ -221,6 +230,9 @@ void mark_timepoint(const char *msg)
 
 void StatsDistributionBinned::calculateBins()
 {
+#ifdef ANDROID
+    throw NoRInsideOnAndroid();
+#else
     assertValidHistogram();
 
     vector<double> samples(all_samples_sorted.begin(), all_samples_sorted.end());
@@ -262,6 +274,7 @@ void StatsDistributionBinned::calculateBins()
     assertValidHistogram();
     
     //printHistogram();
+#endif
 }
 
 void

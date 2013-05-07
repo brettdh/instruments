@@ -6,7 +6,7 @@
 #include "stats_distribution.h"
 #include "stats_distribution_all_samples.h"
 
-#include <RInside.h>
+class RInside;
 
 class Estimator;
 

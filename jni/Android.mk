@@ -8,7 +8,7 @@ ifneq ($(my_PROFILING_BUILD),)
 endif
 
 common_CFLAGS:=-g -O3 -Wall -Werror -DANDROID
-common_CXXFLAGS:=$(common_CFLAGS) # -std=gnu++0x
+common_CXXFLAGS:=$(common_CFLAGS) -std=gnu++0x
 INSTRUMENTS_INCLUDES := \
 	$(LOCAL_PATH)/../include \
 	$(LOCAL_PATH)/../src \
@@ -59,11 +59,11 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	running_mean_estimator.cc \
 	stats_distribution.cc \
 	stats_distribution_all_samples.cc \
+	stats_distribution_binned.cc \
 	strategy.cc \
 	strategy_evaluator.cc \
 	timeops.cc)
 #	r_singleton.cc \
-#	stats_distribution_binned.cc \
 
 LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(MOCKTIME_INCLUDES) $(LIBPT_INCLUDES)
 LOCAL_CXXFLAGS := $(common_CXXFLAGS)
