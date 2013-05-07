@@ -24,16 +24,22 @@ StrategyEvaluator::StrategyEvaluator()
 {
 }
 
+StrategyEvaluator::~StrategyEvaluator()
+{
+    for (Estimator *estimator : subscribed_estimators) {
+        estimator->unsubscribe(this);
+    }
+}
+
 void
 StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
                                  size_t num_strategies)
 {
     strategies.clear();
-    //estimators.clear();
     
     for (size_t i = 0; i < num_strategies; ++i) {
         Strategy *strategy = (Strategy *)new_strategies[i];
-        strategy->getAllEstimators(this);
+        strategy->getAllEstimators(this); // subscribes this to all estimators
         strategies.push_back(strategy);
     }
 }
@@ -41,8 +47,15 @@ StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
 void
 StrategyEvaluator::addEstimator(Estimator *estimator)
 {
-    //estimators.insert(estimator);
     estimator->subscribe(this);
+    subscribed_estimators.insert(estimator);
+}
+
+void
+StrategyEvaluator::removeEstimator(Estimator *estimator)
+{
+    // estimator is letting me know it's going away; don't call unsubscribe
+    subscribed_estimators.erase(estimator);
 }
 
 bool

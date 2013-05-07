@@ -34,6 +34,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     instruments_strategy_t chooseStrategy(void *chooser_arg);
     
     void addEstimator(Estimator *estimator);
+    void removeEstimator(Estimator *estimator);
     bool usesEstimator(Estimator *estimator);
 
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
@@ -44,7 +45,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     virtual void saveToFile(const char *filename) = 0;
     virtual void restoreFromFile(const char *filename) = 0;
 
-    virtual ~StrategyEvaluator() {}
+    virtual ~StrategyEvaluator();
   protected:
     StrategyEvaluator();
     virtual void setStrategies(const instruments_strategy_t *strategies,
@@ -60,6 +61,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     double calculateCost(Strategy *strategy, void *chooser_arg);
     Strategy *currentStrategy;
     bool silent;
+
+    small_set<Estimator *> subscribed_estimators;
 };
 
 #endif

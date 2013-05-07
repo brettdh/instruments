@@ -53,17 +53,13 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
     Likelihood *likelihood;
     DecisionsHistogram *normalizer;
 
-    // last chooser arg passed into expectedValue
-    //  (used to make decisions for updating likelihood distribution when
-    //   estimator values change).
-    void *last_chooser_arg;
-    
     std::map<Estimator *, StatsDistributionBinned *> estimatorSamples;
     std::map<Estimator *, double> last_estimator_values;
 
     StatsDistributionBinned *createStatsDistribution(Estimator *estimator);
 
     Strategy *getBestSingularStrategy(void *chooser_arg);
+    bool uninitializedStrategiesExist();
 
     // A list of all observations, for simplifying save/restore.
     struct stored_observation {

@@ -14,7 +14,7 @@ struct EstimatorRangeHints {
     size_t num_bins;
 };
 
-/* Pure virtual base class for all types of estimators.
+/* Pure virtual base class for all types of estimators.{}
  * Takes in values, returns an estimate.
  * Possible ways to implement this:
  * 1) Return last observation
@@ -30,10 +30,11 @@ class Estimator {
     void addObservation(double value);
     
     void subscribe(StrategyEvaluator *subscriber);
+    void unsubscribe(StrategyEvaluator *unsubscriber);
 
     bool hasEstimate();
     virtual double getEstimate() = 0;
-    virtual ~Estimator() {}
+    virtual ~Estimator();
 
     virtual std::string getName();
 

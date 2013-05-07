@@ -50,6 +50,13 @@ Estimator::Estimator(const string& name_)
     }
 }
 
+Estimator::~Estimator()
+{
+    for (StrategyEvaluator *subscriber : subscribers) {
+        subscriber->removeEstimator(this);
+    }
+}
+
 bool estimate_is_valid(double estimate)
 {
     return estimate != DBL_MAX;
@@ -90,6 +97,12 @@ void
 Estimator::subscribe(StrategyEvaluator *subscriber)
 {
     subscribers.insert(subscriber);
+}
+
+void
+Estimator::unsubscribe(StrategyEvaluator *unsubscriber)
+{
+    subscribers.erase(unsubscriber);
 }
 
 string
