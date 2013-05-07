@@ -39,7 +39,7 @@ static double data_cost(instruments_context_t ctx, void *strategy_arg, void *cho
     if (args->fake_cost >= 0.0) return args->fake_cost;
 
     // see below for reason for these costs.
-    return (args->is_cellular ? 0.97 : 10.0);
+    return (args->is_cellular ? 0.97 : 0.5);
 }
 
 #define NUM_ESTIMATORS 4
@@ -90,6 +90,7 @@ create_estimators_and_strategies(instruments_external_estimator_t *estimators,
 static void setup_common(struct common_test_data *cdata, enum EvalMethod method)
 {
     set_fixed_resource_weights(0.0, 1.0);
+    set_debugging_on(0);
 
     cdata->evaluator = NULL;
     create_estimators_and_strategies(cdata->estimators, cdata->strategies, 
@@ -247,6 +248,8 @@ static void test_both_networks_best(struct common_test_data *cdata)
     int num_samples = 50;
     int i;
     
+    //set_debugging_on(1);
+
     set_estimator_range_hints(cdata->estimators[0], 500, 9500, 9);
     set_estimator_range_hints(cdata->estimators[1], -1, 1, 1);
     set_estimator_range_hints(cdata->estimators[2], 500, 9500, 9);
@@ -301,6 +304,10 @@ static void test_save_restore(struct common_test_data *cdata, const char *filena
                                      new_data.args, &new_data.evaluator,
                                      eval_method);
     add_last_estimates(new_data.estimators);
+    if (eval_method == BAYESIAN) {
+        // do it again, so that the bayesian method can make a decision.
+        add_last_estimates(new_data.estimators);
+    }
 
     // before restore, there's no error, so using the higher-bandwidth network is best
     assert_correct_strategy(&new_data, new_data.strategies[1], bytelen);
@@ -451,7 +458,7 @@ CTEST2(bayesian_method_test, test_one_network_wins)
     assert_correct_strategy(cdata, cdata->strategies[0], bytelen);
 }
 
-CTEST2_SKIP(bayesian_method_test, test_each_network_wins)
+CTEST2(bayesian_method_test, test_each_network_wins)
 {
     struct common_test_data *cdata = &data->common_data;
     init_network_params(cdata, 5000, 1.0, 2500, 0.2);
@@ -466,12 +473,12 @@ CTEST2_SKIP(bayesian_method_test, test_each_network_wins)
     assert_correct_strategy(cdata, cdata->strategies[1], 3999);
 }
 
-CTEST2_SKIP(bayesian_method_test, test_both_networks_best)
+CTEST2(bayesian_method_test, test_both_networks_best)
 {
     test_both_networks_best(&data->common_data);
 }
 
-CTEST2_SKIP(bayesian_method_test, test_save_restore)
+CTEST2(bayesian_method_test, test_save_restore)
 {
     test_save_restore(&data->common_data, "/tmp/bayesian_method_saved_evaluation_state.txt", 
                       BAYESIAN);
@@ -484,7 +491,7 @@ static double update_mean(double mean, double value, int n)
 
 CTEST2(bayesian_method_test, test_proposal_example)
 {
-    set_debugging_on(1);
+    //set_debugging_on(1);
     
     struct common_test_data *cdata = &data->common_data;
 
@@ -523,6 +530,7 @@ CTEST2(bayesian_method_test, test_proposal_example)
     cdata->args[0].fake_cost = 0.5;
     cdata->args[1].fake_cost = 0.5;
 
+    //fprintf(stderr, "\n");
     for (i = 0; i < num_steps; ++i) {
         avg_bandwidth1 = update_mean(avg_bandwidth1, bandwidth1_steps[i], i);
         avg_bandwidth2 = update_mean(avg_bandwidth2, bandwidth2_steps[i], i);
@@ -532,7 +540,7 @@ CTEST2(bayesian_method_test, test_proposal_example)
                  bandwidth1_steps[i], avg_bandwidth1,
                  bandwidth2_steps[i], avg_bandwidth2);
         CTEST_LOG(msg);
-        fprintf(stderr, "%s\n", msg);
+        //fprintf(stderr, "%s\n", msg);
 
         add_observation(cdata->estimators[0], bandwidth1_steps[i], avg_bandwidth1);
         add_observation(cdata->estimators[2], bandwidth2_steps[i], avg_bandwidth2);

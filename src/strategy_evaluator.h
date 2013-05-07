@@ -38,7 +38,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
 
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg) = 0;
-    virtual void observationAdded(Estimator *estimator, double value) = 0;
+    virtual void observationAdded(Estimator *estimator, double observation, 
+                                  double old_estimate, double new_estimate) { /* ignore by default */ }
 
     virtual void saveToFile(const char *filename) = 0;
     virtual void restoreFromFile(const char *filename) = 0;

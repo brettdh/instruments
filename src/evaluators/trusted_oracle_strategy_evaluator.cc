@@ -1,12 +1,6 @@
 #include "trusted_oracle_strategy_evaluator.h"
 #include "estimator.h"
 
-void 
-TrustedOracleStrategyEvaluator::observationAdded(Estimator *estimator, double value)
-{
-    // ignore values, trust the estimator
-}
-
 double
 TrustedOracleStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                               void *strategy_arg, void *chooser_arg)

@@ -263,10 +263,10 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
                                                              EMPIRICAL_ERROR);
     estimator1->addObservation(0.0);
     estimator2->addObservation(0.0);
-    // first observation adds error of zero to distribution;
-    //  doesn't call getEstimate.
-    CPPUNIT_ASSERT_EQUAL(2, estimator1->getCount());
-    CPPUNIT_ASSERT_EQUAL(2, estimator2->getCount());
+    // first observation adds no-error value to distribution;
+    //  calls getEstimate to pass new estimate to subscribers.
+    CPPUNIT_ASSERT_EQUAL(3, estimator1->getCount());
+    CPPUNIT_ASSERT_EQUAL(3, estimator2->getCount());
 
     // chooseStrategy should not call getEstimate
     //  when a strategy doesn't use the estimator.
@@ -274,17 +274,18 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     (void)evaluator->chooseStrategy(NULL);
     int estimator1_count = estimator1->getCount();
     int estimator2_count = estimator2->getCount();
-    CPPUNIT_ASSERT(estimator1_count >= 3);
-    CPPUNIT_ASSERT(estimator1_count <= 4);
-    CPPUNIT_ASSERT(estimator2_count >= 3);
-    CPPUNIT_ASSERT(estimator2_count <= 4);
+    CPPUNIT_ASSERT(estimator1_count >= 4);
+    CPPUNIT_ASSERT(estimator1_count <= 5);
+    CPPUNIT_ASSERT(estimator2_count >= 4);
+    CPPUNIT_ASSERT(estimator2_count <= 5);
 
     estimator1->addObservation(0.0);
     estimator2->addObservation(0.0);
     // second observation adds error based on last value of estimator,
-    //  so it does call getEstimate.
-    CPPUNIT_ASSERT_EQUAL(estimator1_count + 1, estimator1->getCount());
-    CPPUNIT_ASSERT_EQUAL(estimator2_count + 1, estimator2->getCount());
+    //  so it does call getEstimate - once before and once after
+    //  storing the new observation.
+    CPPUNIT_ASSERT_EQUAL(estimator1_count + 2, estimator1->getCount());
+    CPPUNIT_ASSERT_EQUAL(estimator2_count + 2, estimator2->getCount());
     estimator1_count = estimator1->getCount();
     estimator2_count = estimator2->getCount();
 

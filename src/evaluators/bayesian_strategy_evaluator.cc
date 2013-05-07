@@ -7,13 +7,38 @@
 #include <map>
 #include <functional>
 #include <stdexcept>
+#include <fstream>
 #include <sstream>
-using std::vector; using std::map;
+#include <iomanip>
+using std::vector; using std::map; using std::make_pair;
 using std::runtime_error; using std::ostringstream;
+using std::istringstream; using std::ostream;
+using std::string; using std::setprecision;
+using std::ifstream; using std::ofstream; using std::endl;
 
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+
+static inline double my_fabs(double x)
+{
+    // trick GDB into not being stupid.
+    return ((double (*)(double)) fabs)(x);
+}
+
+static ostream&
+print_vector(ostream& os, const vector<double>& vec)
+{
+    os << "[ ";
+    for (const double& v : vec) {
+        if (my_fabs(v - 3000.0) < 0.001) {
+            dbgprintf("WAT\n");
+        }
+        os << v << " ";
+    }
+    os << "]";
+    return os;
+}
 
 typedef double (*combiner_fn_t)(double, double);
 
@@ -42,6 +67,24 @@ class VectorsEqual {
     }
 };
 
+class BayesianStrategyEvaluator::SimpleEvaluator : public StrategyEvaluator {
+  public:
+    SimpleEvaluator(const instruments_strategy_t *new_strategies,
+                    size_t num_strategies);
+    virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
+                                 void *strategy_arg, void *chooser_arg);
+    virtual double getAdjustedEstimatorValue(Estimator *estimator);
+
+    // nothing to save/restore.
+    virtual void saveToFile(const char *filename) {}
+    virtual void restoreFromFile(const char *filename) {}
+
+    void setEstimatorValue(Estimator *estimator, double value);
+    void clear();
+  private:
+    map<Estimator *, double> estimator_values;
+};
+
 class BayesianStrategyEvaluator::Likelihood {
   public:
     Likelihood(BayesianStrategyEvaluator *evaluator_);
@@ -49,6 +92,7 @@ class BayesianStrategyEvaluator::Likelihood {
     double getWeightedSum(Strategy *strategy, typesafe_eval_fn_t fn,
                           void *strategy_arg, void *chooser_arg);
     double getCurrentEstimatorSample(Estimator *estimator);
+    void clear();
   private:
     BayesianStrategyEvaluator *evaluator;
     map<Estimator *, double> last_observation;
@@ -75,13 +119,14 @@ class BayesianStrategyEvaluator::DecisionsHistogram {
     DecisionsHistogram();
     void addDecision(Strategy *winner);
     double getValue(Strategy *winner, bool ensure_nonzero=false);
+    void clear();
   private:
     size_t total;
     map<Strategy *, size_t> decisions;
 };
 
 BayesianStrategyEvaluator::BayesianStrategyEvaluator()
-    : simple_evaluator(NULL)
+    : simple_evaluator(NULL), last_chooser_arg(NULL)
 {
     likelihood = new Likelihood(this);
     normalizer = new DecisionsHistogram;
@@ -89,6 +134,23 @@ BayesianStrategyEvaluator::BayesianStrategyEvaluator()
 
 BayesianStrategyEvaluator::~BayesianStrategyEvaluator()
 {
+    clearDistributions();
+    delete likelihood;
+    delete normalizer;
+}
+
+void
+BayesianStrategyEvaluator::clearDistributions()
+{
+    for (auto& p : estimatorSamples) {
+        StatsDistributionBinned *distribution = p.second;
+        delete distribution;
+    }
+    estimatorSamples.clear();
+    last_estimator_values.clear();
+
+    likelihood->clear();
+    normalizer->clear();
 }
 
 void
@@ -97,8 +159,7 @@ BayesianStrategyEvaluator::setStrategies(const instruments_strategy_t *new_strat
 {
     StrategyEvaluator::setStrategies(new_strategies, num_strategies);
     if (!simple_evaluator) {
-        simple_evaluator = StrategyEvaluator::create(new_strategies, num_strategies, 
-                                                     TRUSTED_ORACLE);
+        simple_evaluator = new SimpleEvaluator(new_strategies, num_strategies);
         simple_evaluator->setSilent(true);
     }
 }
@@ -121,6 +182,7 @@ BayesianStrategyEvaluator::getBestSingularStrategy(void *chooser_arg)
     if (any_of(strategies.begin(), strategies.end(), has_uninitialized_estimators)) {
         return NULL;
     }
+    
     return (Strategy *) simple_evaluator->chooseStrategy(chooser_arg);
 }
 
@@ -136,22 +198,31 @@ BayesianStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
 }
 
 void 
-BayesianStrategyEvaluator::observationAdded(Estimator *estimator, double value)
+BayesianStrategyEvaluator::observationAdded(Estimator *estimator, double observation,
+                                            double old_estimate, double new_estimate)
 {
-    if (estimatorSamples.count(estimator) == 0) {
-        estimatorSamples[estimator] = createStatsDistribution(estimator);
-    }
-    estimatorSamples[estimator]->addValue(value);
-
-    Strategy *winner = getBestSingularStrategy(chooser_arg);
+    Strategy *winner = getBestSingularStrategy(last_chooser_arg);
     if (winner) {
         assert(!winner->isRedundant());
-        // TrustedOracleStrategyEvaluator will not pick a redundant strategy,
+        // SimpleEvaluator will not pick a redundant strategy,
         // because it has the same time as the lowest singular strategy; thus benefit == 0.
     }
     
-    likelihood->addDecision(winner, estimator, value);
+    const string& name = estimator->getName();
+    if (estimators_by_name.count(name) == 0) {
+        estimators_by_name[name] = estimator;
+    }
+    if (estimatorSamples.count(estimator) == 0) {
+        estimatorSamples[estimator] = createStatsDistribution(estimator);
+    }
+    estimatorSamples[estimator]->addValue(observation);
+
+    likelihood->addDecision(winner, estimator, observation);
     normalizer->addDecision(winner);
+
+    ordered_observations.push_back({estimator->getName(), observation, old_estimate, new_estimate});
+
+    simple_evaluator->setEstimatorValue(estimator, new_estimate);
 }
 
 StatsDistributionBinned *
@@ -188,9 +259,9 @@ get_combiner_fn(typesafe_eval_fn_t fn)
 
 double
 BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                         void *strategy_arg, void *chooser_arg_)
+                                         void *strategy_arg, void *chooser_arg)
 {
-    chooser_arg = chooser_arg_;
+    last_chooser_arg = chooser_arg;
     Strategy *bestSingular = getBestSingularStrategy(chooser_arg);
     assert(bestSingular);
     double normalizing_factor = normalizer->getValue(bestSingular, true);
@@ -224,6 +295,12 @@ BayesianStrategyEvaluator::Likelihood::addDecision(Strategy *winner, Estimator *
         DecisionsHistogram *histogram = strategy_likelihood[key];
         assert(histogram);
         histogram->addDecision(winner);
+
+        ostringstream s;
+        s << "[bayesian] key: ";
+        print_vector(s, key);
+        s << " new likelihood_coeff: " << histogram->getValue(winner);
+        dbgprintf("%s\n", s.str().c_str());
     }
 }
 
@@ -310,11 +387,9 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(Strategy *strategy, typesa
         double likelihood_coeff = histogram->getValue(bestSingular, ensure_nonzero);
         
         ostringstream s;
-        s << "[bayesian] key: [ ";
-        for (double v : key) {
-            s << v << " ";
-        }
-        s << "]  prior: " << prior << "  likelihood_coeff: " << likelihood_coeff;
+        s << "[bayesian] key: ";
+        print_vector(s, key);
+        s << "  prior: " << prior << "  likelihood_coeff: " << likelihood_coeff;
         dbgprintf("%s\n", s.str().c_str());
         
         weightedSum += (value * prior * likelihood_coeff);
@@ -322,10 +397,30 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(Strategy *strategy, typesa
     return weightedSum;
 }
 
+void
+BayesianStrategyEvaluator::Likelihood::clear()
+{
+    last_observation.clear();
+    currentEstimatorSamples.clear();
+    for (auto& p : likelihood_per_strategy) {
+        for (auto& q : p.second) {
+            DecisionsHistogram *histogram = q.second;
+            delete histogram;
+        }
+    }
+    likelihood_per_strategy.clear();
+}
 
 BayesianStrategyEvaluator::DecisionsHistogram::DecisionsHistogram()
     : total(0)
 {
+}
+
+void
+BayesianStrategyEvaluator::DecisionsHistogram::clear()
+{
+    total = 0;
+    decisions.clear();
 }
 
 void
@@ -352,16 +447,152 @@ BayesianStrategyEvaluator::DecisionsHistogram::getValue(Strategy *winner, bool e
 }
 
 
+static int PRECISION = 20;
+
+static void write_estimate(ostream& out, double estimate)
+{
+    if (estimate_is_valid(estimate)) {
+        out << estimate << " ";
+    } else {
+        out << "(invalid) ";
+    }
+}
+
+static std::istream&
+read_estimate(std::istream& in, double& estimate)
+{
+    string estimate_str;
+    if (in >> estimate_str) {
+        istringstream s(estimate_str);
+        if (!(s >> estimate)) {
+            estimate = invalid_estimate();
+        }
+    }
+    return in;
+}
+
 void
 BayesianStrategyEvaluator::saveToFile(const char *filename)
 {
-    // TODO
-    throw runtime_error("NOT IMPLEMENTED");
+    ostringstream err("Failed to open ");
+    err << filename;
+
+    ofstream out(filename);
+    check(out, err.str());
+
+    out << estimators_by_name.size() << " estimators" << endl;
+    out << "name hint_min hint_max hint_num_bins" << endl;
+    for (auto& p : estimators_by_name) {
+        const string& name = p.first;
+        Estimator *estimator = p.second;
+        out << name << " ";
+        if (estimator->hasRangeHints()) {
+            EstimatorRangeHints hints = estimator->getRangeHints();
+            out << hints.min << " " << hints.max << " " << hints.num_bins;
+        } else {
+            out << "none none none";
+        }
+        out << endl;
+    }
+    out << endl;
+
+    out << ordered_observations.size() << " observations" << endl;
+    out << "name observation old_estimate new_estimate" << endl;
+    for (const stored_observation& obs : ordered_observations) {
+        out << obs.name << " " << setprecision(PRECISION) 
+            << obs.observation << " ";
+        write_estimate(out, obs.old_estimate);
+        write_estimate(out, obs.new_estimate);
+        out << endl;
+
+        check(out, "Failed to save bayesian evaluator to file");
+    }
+    out.close();
 }
 
 void
 BayesianStrategyEvaluator::restoreFromFile(const char *filename)
 {
-    // TODO
-    throw runtime_error("NOT IMPLEMENTED");
+    dbgprintf("Restoring Bayesian distribution from %s\n", filename);
+
+    clearDistributions();
+    
+    ostringstream err("Failed to open ");
+    err << filename;
+        
+    ifstream in(filename);
+    check(in, err.str());
+
+    size_t i = 0;
+    size_t num_observations;
+    string name;
+    double old_estimate;
+    double new_estimate;
+    double observation;
+    string header;
+
+    size_t num_estimators;
+    check(in >> num_estimators >> header, "Failed to read num_estimators");
+    check(getline(in, header), "Unexpected EOF"); // consume newline
+    check(getline(in, header), "Failed to read estimators-header");
+    for (i = 0; i < num_estimators; ++i) {
+        string line;
+        check(getline(in, line), "Failed to get an estimator's hints or lack thereof");
+        istringstream iss(line);
+        check(iss >> name, "Failed to get estimator name");
+        EstimatorRangeHints hints;
+        Estimator *estimator = getEstimator(name);
+        if (iss >> hints.min >> hints.max >> hints.num_bins) {
+            estimator->setRangeHints(hints.min, hints.max, hints.num_bins);
+        } // else: no hints, ignore line
+    }
+    check(getline(in, header), "Missing blank line"); // ignore blank line
+    
+    check(in >> num_observations >> header, "Failed to read num_observations");
+    check(getline(in, header), "Unexpected EOF"); // consume newline
+    check(getline(in, header), "Failed to read header"); // ignore header
+    i = 0;
+    while ((in >> name >> observation) && 
+           read_estimate(in, old_estimate) &&
+           read_estimate(in, new_estimate)) {
+        Estimator *estimator = getEstimator(name);
+        observationAdded(estimator, observation, old_estimate, new_estimate);
+        ++i;
+    }
+    in.close();
+    check(num_observations == i, "Got wrong number of observations");
+}
+
+Estimator *
+BayesianStrategyEvaluator::getEstimator(const string& name)
+{
+    assert(estimators_by_name.count(name) > 0);
+    return estimators_by_name[name];
+}
+
+BayesianStrategyEvaluator::SimpleEvaluator::SimpleEvaluator(const instruments_strategy_t *new_strategies,
+                                                            size_t num_strategies)
+
+{
+    StrategyEvaluator::setStrategies(new_strategies, num_strategies);
+}
+
+double 
+BayesianStrategyEvaluator::SimpleEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn,
+                                                          void *strategy_arg, void *chooser_arg)
+{
+    return fn(this, strategy_arg, chooser_arg);
+}
+ 
+double 
+BayesianStrategyEvaluator::SimpleEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
+{
+    assert(estimator_values.count(estimator) > 0);
+    return estimator_values[estimator];
+}
+
+void
+BayesianStrategyEvaluator::SimpleEvaluator::setEstimatorValue(Estimator *estimator, double value)
+{
+    estimator_values[estimator] = value;
 }

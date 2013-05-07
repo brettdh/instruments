@@ -1,14 +1,16 @@
 #include "external_estimator.h"
 
 ExternalEstimator::ExternalEstimator(const std::string& name)
-    : Estimator(name), lastValue(0.0)
+    : Estimator(name), lastValue(0.0), stagedValue(0.0)
 {
 }
 
 void ExternalEstimator::addObservation(double observation, double new_value)
 {
+    // stage it, so I can update at the right moment
+    stagedValue = new_value;
+    
     Estimator::addObservation(observation);
-    lastValue = new_value;
 }
 
 double ExternalEstimator::getEstimate()
@@ -18,6 +20,7 @@ double ExternalEstimator::getEstimate()
 
 void ExternalEstimator::storeNewObservation(double observation)
 {
-    /* ignore; the new estimator value is provided in 
+    /* the new estimator value is provided in 
      *  the overloaded addObservation above */
+    lastValue = stagedValue;
 }

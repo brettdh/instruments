@@ -23,7 +23,7 @@ using std::pair; using std::make_pair;
 class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
   public:
     ErrorConfidenceBounds(Estimator *estimator_=NULL);
-    void observationAdded(double value);
+    void observationAdded(double observation, double old_estimate, double new_estimate);
     double getBound(BoundType type);
     void saveToFile(ofstream& out);
     string restoreFromFile(ifstream& in);
@@ -109,7 +109,9 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBoundDistance()
 }
 
 void
-ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(double value)
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(double observation, 
+                                                                           double old_estimate,
+                                                                           double new_estimate)
 {
     dbgprintf("Getting error sample from estimator %p\n", estimator);
 
@@ -119,8 +121,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
      * which cites Knuth's /The Art of Computer Programming/, Volume 1.
      */
     ++num_samples;
-    double estimate = estimator->getEstimate();
-    double error = calculate_error(estimate, value);
+    double error = calculate_error(old_estimate, observation);
     error = log(error); // natural logarithm
     
     double delta = error - error_mean;
@@ -135,7 +136,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
 
     bounds[0] = exp(error_mean - bound_distance);
     bounds[1] = exp(error_mean + bound_distance);
-    if (adjusted_estimate(estimate, bounds[0]) < adjusted_estimate(estimate, bounds[1])) {
+    if (adjusted_estimate(old_estimate, bounds[0]) < adjusted_estimate(old_estimate, bounds[1])) {
         error_bounds[LOWER] = bounds[0];
         error_bounds[UPPER] = bounds[1];
     } else {
@@ -146,7 +147,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
               estimator, exp(error));
     dbgprintf("n=%4zu; error bounds: [%f, %f]\n", 
               num_samples, error_bounds[LOWER], error_bounds[UPPER]);
-    if (adjusted_estimate(estimate, error_bounds[LOWER]) < 0.0) {
+    if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
         // PROBLEMATIC.
         assert(false); // TODO: figure out what to do here.
     }
@@ -202,9 +203,10 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
 }
 
 void 
-ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double value)
+ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double observation, 
+                                                    double old_estimate, double new_estimate)
 {
-    dbgprintf("Adding observation %f to estimator %p\n", value, estimator);
+    dbgprintf("Adding observation %f to estimator %p\n", observation, estimator);
     
     assert(estimator);
     string name = estimator->getName();
@@ -229,10 +231,10 @@ ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double
         estimators_by_name[name] = estimator;
     }
     
-    if (estimator->hasEstimate()) {
+    if (estimate_is_valid(old_estimate)) {
         dbgprintf("Adding observation %f to estimator-bounds %p\n",
-                  value, bounds);
-        bounds->observationAdded(value);
+                  observation, bounds);
+        bounds->observationAdded(observation, old_estimate, new_estimate);
     }
 
     clearCache();

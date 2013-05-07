@@ -209,12 +209,13 @@ GenericJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 }
 
 void 
-GenericJointDistribution::observationAdded(Estimator *estimator, double value)
+GenericJointDistribution::observationAdded(Estimator *estimator, double observation,
+                                           double old_estimate, double new_estimate)
 {
     clearMemos();
     
-    if (estimator->hasEstimate()) {
-        double error = calculate_error(estimator->getEstimate(), value);
+    if (estimate_is_valid(old_estimate)) {
+        double error = calculate_error(old_estimate, observation);
         estimatorError[estimator]->addValue(error);
     } else if (estimatorError.count(estimator) == 0) {
         estimatorError[estimator] = createSamplesDistribution(estimator);

@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <float.h>
 #include "estimator.h"
 #include "last_observation_estimator.h"
 #include "running_mean_estimator.h"
@@ -49,16 +50,34 @@ Estimator::Estimator(const string& name_)
     }
 }
 
-void
-Estimator::addObservation(double value)
+bool estimate_is_valid(double estimate)
 {
+    return estimate != DBL_MAX;
+}
+
+double invalid_estimate()
+{
+    double e = DBL_MAX;
+    assert(!estimate_is_valid(e));
+    return e;
+}
+
+void
+Estimator::addObservation(double observation)
+{
+    double old_estimate = invalid_estimate(), new_estimate = invalid_estimate();
+    if (has_estimate) {
+        old_estimate = getEstimate();
+    }
+    storeNewObservation(observation);
+    has_estimate = true;
+    new_estimate = getEstimate();
+
     for (small_set<StrategyEvaluator*>::const_iterator it = subscribers.begin();
          it != subscribers.end(); ++it) {
         StrategyEvaluator *subscriber = *it;
-        subscriber->observationAdded(this, value);
+        subscriber->observationAdded(this, observation, old_estimate, new_estimate);
     }
-    storeNewObservation(value);
-    has_estimate = true;
 }
 
 bool

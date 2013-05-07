@@ -57,4 +57,7 @@ class Estimator {
     EstimatorRangeHints range_hints;
 };
 
+bool estimate_is_valid(double estimate);
+double invalid_estimate();
+
 #endif

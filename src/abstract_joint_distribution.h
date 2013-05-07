@@ -19,7 +19,8 @@ class AbstractJointDistribution : public StrategyEvaluationContext {
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn) = 0;
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator) = 0;
-    virtual void observationAdded(Estimator *estimator, double value) = 0;
+    virtual void observationAdded(Estimator *estimator, double observation, 
+                                  double old_estimate, double new_estimate) = 0;
 
     virtual void saveToFile(std::ofstream& out) = 0;
     virtual void restoreFromFile(std::ifstream& in) = 0;

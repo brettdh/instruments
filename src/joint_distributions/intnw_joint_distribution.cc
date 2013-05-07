@@ -168,9 +168,6 @@ IntNWJointDistribution::~IntNWJointDistribution()
 void
 IntNWJointDistribution::ensureSamplesDistributionExists(Estimator *estimator)
 {
-    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
-    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
-
     string key = estimator->getName();
     if (estimatorSamplesPlaceholders.count(key) > 0) {
         estimatorSamples[estimator] = estimatorSamplesPlaceholders[key];
@@ -194,9 +191,6 @@ IntNWJointDistribution::addDefaultValue(Estimator *estimator)
 void
 IntNWJointDistribution::getEstimatorSamplesDistributions()
 {
-    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
-    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
-
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         if (singular_probabilities[i][0] != NULL) {
             return;
@@ -444,13 +438,6 @@ IntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_typ
 double
 IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 {
-    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
-    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
-    // TODO-BAYESIAN: specifically, it's bandwidth or latency stored in the
-    // TODO-BAYESIAN: distribution, rather than an error value, so
-    // TODO-BAYESIAN: just return the value.
-    // XXX-BAYESIAN:  yes, this may over-emphasize history.  known (potential) issue.
-
     double *estimator_samples_values = estimatorSamplesValues[estimator];
     size_t index = estimatorIndices[estimator];
     double estimate = estimator->getEstimate();
@@ -460,19 +447,15 @@ IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 }
 
 void
-IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
+IntNWJointDistribution::observationAdded(Estimator *estimator, double observation,
+                                         double old_estimate, double new_estimate)
 {
-    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
-    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
-    // TODO-BAYESIAN: specifically, update the empirically tracked parts of
-    // TODO-BAYESIAN: the posterior distribution.
-
-    if (estimator->hasEstimate() && estimatorSamples.count(estimator) > 0) {
+    if (estimate_is_valid(old_estimate) && estimatorSamples.count(estimator) > 0) {
         // if there's a prior estimate, we can calculate an error sample
-        double error = calculate_error(estimator->getEstimate(), value);
+        double error = calculate_error(old_estimate, observation);
         estimatorSamples[estimator]->addValue(error);
         
-        dbgprintf("IntNWJoint: Added error value to estimator %p: %f\n", estimator, error);
+        dbgprintf("IntNWJoint: Added error observation to estimator %p: %f\n", estimator, error);
     } else if (estimatorSamples.count(estimator) == 0) {
         ensureSamplesDistributionExists(estimator);
     }
@@ -482,9 +465,6 @@ IntNWJointDistribution::observationAdded(Estimator *estimator, double value)
 void
 IntNWJointDistribution::saveToFile(ofstream& out)
 {
-    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
-    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
-
     try {
         out << estimatorSamples.size() << " estimators" << endl;
         for (EstimatorSamplesMap::iterator it = estimatorSamples.begin();
@@ -530,9 +510,6 @@ IntNWJointDistribution::getExistingEstimator(const string& key)
 void 
 IntNWJointDistribution::restoreFromFile(ifstream& in)
 {
-    // TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
-    // TODO-BAYESIAN: relevant part of the posterior distribution calculation.
-
     try {
         size_t num_estimators = 0;
         string dummy;
