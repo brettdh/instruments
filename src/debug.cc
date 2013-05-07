@@ -69,6 +69,11 @@ void set_debugging_on(int debug_on)
     debugging = debug_on;
 }
 
+int is_debugging_on()
+{
+    return debugging;
+}
+
 void dbgprintf_always(const char *fmt, ...)
 {
     va_list ap;

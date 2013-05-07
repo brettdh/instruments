@@ -21,6 +21,7 @@
     } while (0)
 
 CDECL void set_debugging_on(int debug_on);
+CDECL int is_debugging_on();
 
 CDECL void dbgprintf(const char *format, ...)
   __attribute__((format(printf, 1, 2)));

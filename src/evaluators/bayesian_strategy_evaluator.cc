@@ -296,11 +296,13 @@ BayesianStrategyEvaluator::Likelihood::addDecision(Strategy *winner, Estimator *
         assert(histogram);
         histogram->addDecision(winner);
 
-        ostringstream s;
-        s << "[bayesian] key: ";
-        print_vector(s, key);
-        s << " new likelihood_coeff: " << histogram->getValue(winner);
-        dbgprintf("%s\n", s.str().c_str());
+        if (is_debugging_on()) {
+            ostringstream s;
+            s << "[bayesian] key: ";
+            print_vector(s, key);
+            s << " new likelihood_coeff: " << histogram->getValue(winner);
+            dbgprintf("%s\n", s.str().c_str());
+        }
     }
 }
 
@@ -386,11 +388,13 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(Strategy *strategy, typesa
         bool ensure_nonzero = vec_eq(cur_key, key);
         double likelihood_coeff = histogram->getValue(bestSingular, ensure_nonzero);
         
-        ostringstream s;
-        s << "[bayesian] key: ";
-        print_vector(s, key);
-        s << "  prior: " << prior << "  likelihood_coeff: " << likelihood_coeff;
-        dbgprintf("%s\n", s.str().c_str());
+        if (is_debugging_on()) {
+            ostringstream s;
+            s << "[bayesian] key: ";
+            print_vector(s, key);
+            s << "  prior: " << prior << "  likelihood_coeff: " << likelihood_coeff;
+            dbgprintf("%s\n", s.str().c_str());
+        }
         
         weightedSum += (value * prior * likelihood_coeff);
     }
