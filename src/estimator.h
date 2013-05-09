@@ -1,18 +1,13 @@
 #ifndef ESTIMATOR_H_INCL
 #define ESTIMATOR_H_INCL
 
+#include "estimator_range_hints.h"
 #include "estimator_type.h"
 #include "small_set.h"
 
 #include <string>
 
 class StrategyEvaluator;
-
-struct EstimatorRangeHints {
-    double min;
-    double max;
-    size_t num_bins;
-};
 
 /* Pure virtual base class for all types of estimators.{}
  * Takes in values, returns an estimate.
