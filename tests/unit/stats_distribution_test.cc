@@ -50,24 +50,40 @@ StatsDistributionTest::testHistogram()
     delete dist;
 }
 
+
+static vector<double> breaks = {1.0,2.0,3.0,4.0,5.0};
+
 void
-StatsDistributionTest::testHistogramWithKnownBins()
+StatsDistributionTest::testHistogramWithKnownBinsExplicit()
 {
-    double b[] = {1.0,2.0,3.0,4.0,5.0};
-    const size_t numbreaks = sizeof(b) / sizeof(double);
-    vector<double> breaks(b, b + numbreaks);
-    
     StatsDistribution *dist = new StatsDistributionBinned(breaks);
-    for (size_t i = 0; i < numbreaks; ++i) {
-        dist->addValue(b[i] + 0.5);
+    testHistogramWithKnownBins(dist);
+    delete dist;
+}
+
+void
+StatsDistributionTest::testHistogramWithKnownBinsRange()
+{
+    StatsDistribution *dist = new StatsDistributionBinned(breaks[0], 
+                                                          breaks[breaks.size() - 1], 
+                                                          breaks.size() - 1);
+    testHistogramWithKnownBins(dist);
+    delete dist;
+}
+
+void
+StatsDistributionTest::testHistogramWithKnownBins(StatsDistribution *dist)
+{
+    for (size_t i = 0; i < breaks.size(); ++i) {
+        dist->addValue(breaks[i] + 0.5);
         sanityCheckPDF(dist);
     }
-    dist->addValue(b[0] - 0.5);
+    dist->addValue(breaks[0] - 0.5);
     sanityCheckPDF(dist);
 
-    const size_t count = numbreaks + 1;
+    const size_t count = breaks.size() + 1;
 
-    double expected_values[count] = {0.5, 1.5, 2.5, 3.5, 4.5, 5.5};
+    vector<double> expected_values = {0.5, 1.5, 2.5, 3.5, 4.5, 5.5};
 
     StatsDistribution::Iterator *it;
     int i = 0;
@@ -76,8 +92,6 @@ StatsDistributionTest::testHistogramWithKnownBins()
         CPPUNIT_ASSERT_DOUBLES_EQUAL(expected_values[i], it->value(), 0.001);
     }
     dist->finishIterator(it);
-
-    delete dist;
 }
 
 void

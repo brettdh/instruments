@@ -202,4 +202,21 @@ CDECL void free_external_estimator(instruments_external_estimator_t estimator);
 CDECL void add_observation(instruments_external_estimator_t estimator, 
                            double observation, double new_estimate);
 
+
+/** Set hints for binning estimator values in a histogram.
+ *
+ *  The framework may decide to store estimator values in a histogram
+ *  for the purpose of computing probability-weighted sums.
+ *  This gives the framework a hint about reasonable values to use
+ *  when choosing the bins (e.g. based on historical measurements).
+ *
+ * @param 
+ */
+CDECL void set_estimator_range_hints(instruments_estimator_t estimator,
+                                     double min, double max, size_t num_bins);
+
+/** Return 1 iff estimator already has range hints set; else return 0.
+ */
+CDECL int estimator_has_range_hints(instruments_estimator_t estimator);
+
 #endif

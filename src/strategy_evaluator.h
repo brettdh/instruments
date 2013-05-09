@@ -27,20 +27,25 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     static StrategyEvaluator *create(const instruments_strategy_t *strategies,
                                      size_t num_strategies, EvalMethod type);
 
+    void setSilent(bool silent_);
+    bool isSilent();
+
     // TODO: declare this not-thread-safe?  that seems reasonable.
     instruments_strategy_t chooseStrategy(void *chooser_arg);
     
     void addEstimator(Estimator *estimator);
+    void removeEstimator(Estimator *estimator);
     bool usesEstimator(Estimator *estimator);
 
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg) = 0;
-    virtual void observationAdded(Estimator *estimator, double value) = 0;
+    virtual void observationAdded(Estimator *estimator, double observation, 
+                                  double old_estimate, double new_estimate) { /* ignore by default */ }
 
     virtual void saveToFile(const char *filename) = 0;
     virtual void restoreFromFile(const char *filename) = 0;
 
-    virtual ~StrategyEvaluator() {}
+    virtual ~StrategyEvaluator();
   protected:
     StrategyEvaluator();
     virtual void setStrategies(const instruments_strategy_t *strategies,
@@ -55,6 +60,9 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     double calculateTime(Strategy *strategy, void *chooser_arg);
     double calculateCost(Strategy *strategy, void *chooser_arg);
     Strategy *currentStrategy;
+    bool silent;
+
+    small_set<Estimator *> subscribed_estimators;
 };
 
 #endif

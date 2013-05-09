@@ -1,4 +1,6 @@
 #include "stats_distribution_binned.h"
+#include "estimator.h"
+
 #include <assert.h>
 #include <sstream>
 #include <fstream>
@@ -11,13 +13,13 @@ using std::vector; using std::ifstream; using std::ofstream;
 using std::runtime_error;
 
 #include "small_set.h"
+#include "timeops.h"
 
+#ifndef ANDROID
 #include <RInside.h>
 using Rcpp::as;
 
 #include "r_singleton.h"
-
-#include "timeops.h"
 
 void
 StatsDistributionBinned::initRInside()
@@ -29,27 +31,70 @@ StatsDistributionBinned::initRInside()
     oss << "samples_" << hex << this;
     r_samples_name = oss.str();
 }
+#endif
+
+class NoRInsideOnAndroid : public runtime_error {
+  public:
+    NoRInsideOnAndroid() :
+        runtime_error("Can't auto-determine histogram bins on Android. (no R)") {}
+};
 
 StatsDistributionBinned::StatsDistributionBinned()
 {
+#ifdef ANDROID
+    throw NoRInsideOnAndroid();
+#else
     initRInside();
+    preset_breaks = false;
+#endif
 }
 
-StatsDistributionBinned::StatsDistributionBinned(vector<double> breaks_)
+StatsDistributionBinned::StatsDistributionBinned(vector<double> new_breaks)
 {
-    initRInside();
+    setBreaks(new_breaks);
     
-    breaks = breaks_;
+    assertValidHistogram();
+}
+
+void
+StatsDistributionBinned::setBreaks(const vector<double>& new_breaks)
+{
+    preset_breaks = true;
+    breaks = new_breaks;
     counts.resize(breaks.size() + 1, 0);
+    mids.clear();
     mids.push_back(0.0);
     for (size_t i = 0; i < breaks.size() - 1; ++i) {
         double mid = (breaks[i] + breaks[i+1]) / 2.0;
         mids.push_back(mid);
     }
     mids.push_back(0.0);
-    
-    assertValidHistogram();
 }
+
+// construct a regular histogram with num_bins bins ranging from min to max.
+// e.g. min=0, max=10, num_bins=4 results in 
+//      breaks: [0, 2.5, 5, 7.5, 10], the endpoints of 4 bins.
+StatsDistributionBinned::StatsDistributionBinned(double min, double max, size_t num_bins)
+{
+    vector<double> new_breaks;
+    double width = (max - min) / num_bins;
+    for (size_t i = 0; i <= num_bins; ++i) {
+        new_breaks.push_back(min + i * width);
+    }
+    setBreaks(new_breaks);
+}
+
+StatsDistributionBinned *
+StatsDistributionBinned::create(Estimator *estimator)
+{
+    if (estimator && estimator->hasRangeHints()) {
+        EstimatorRangeHints hints = estimator->getRangeHints();
+        return new StatsDistributionBinned(hints.min, hints.max, hints.num_bins);
+    } else {
+        return new StatsDistributionBinned;
+    }
+}
+
 
 void 
 StatsDistributionBinned::addValue(double value)
@@ -62,6 +107,34 @@ StatsDistributionBinned::addValue(double value)
 }
 
 double 
+StatsDistributionBinned::getProbability(double value)
+{
+    if (binsAreSet()) {
+        return probabilityAtIndex(getIndex(value));
+    } else {
+        return all_samples.getProbability(value);
+    }
+}
+
+double 
+StatsDistributionBinned::getBinnedValue(double value)
+{
+    if (binsAreSet()) {
+        return mids[getIndex(value)];
+    } else {
+        return value;
+    }
+}
+
+
+double
+StatsDistributionBinned::probabilityAtIndex(size_t index)
+{
+    assert(index < counts.size());
+    return (double(counts[index]) / all_samples_sorted.size());
+}
+
+double 
 StatsDistributionBinned::Iterator::probability()
 {
     return probability(index);
@@ -70,8 +143,7 @@ StatsDistributionBinned::Iterator::probability()
 inline double 
 StatsDistributionBinned::Iterator::probability(int pos)
 {
-    return (double(distribution->counts[pos]) / 
-            distribution->all_samples_sorted.size());
+    return distribution->probabilityAtIndex(pos);
 }
 
 inline double
@@ -158,6 +230,9 @@ void mark_timepoint(const char *msg)
 
 void StatsDistributionBinned::calculateBins()
 {
+#ifdef ANDROID
+    throw NoRInsideOnAndroid();
+#else
     assertValidHistogram();
 
     vector<double> samples(all_samples_sorted.begin(), all_samples_sorted.end());
@@ -199,6 +274,7 @@ void StatsDistributionBinned::calculateBins()
     assertValidHistogram();
     
     //printHistogram();
+#endif
 }
 
 void
@@ -232,7 +308,7 @@ StatsDistributionBinned::binsAreSet()
 bool
 StatsDistributionBinned::shouldRebin()
 {
-    return ((all_samples_sorted.size() % histogram_threshold) == 0);
+    return (!preset_breaks && (all_samples_sorted.size() % histogram_threshold) == 0);
 }
 
 void
@@ -254,9 +330,7 @@ StatsDistributionBinned::addToHistogram(double value)
     assertValidHistogram();
     
     if (binsAreSet()) {
-        vector<double>::iterator pos = 
-            lower_bound(breaks.begin(), breaks.end(), value);
-        size_t index = int(pos - breaks.begin());
+        size_t index = getIndex(value);
         updateBin(index, value);
     } else {
         // no histogram yet; ignore.
@@ -264,6 +338,15 @@ StatsDistributionBinned::addToHistogram(double value)
     all_samples_sorted.insert(value);
 
     assertValidHistogram();
+}
+
+size_t
+StatsDistributionBinned::getIndex(double value)
+{
+    vector<double>::iterator pos = 
+        lower_bound(breaks.begin(), breaks.end(), value);
+    size_t index = int(pos - breaks.begin());
+    return index;
 }
 
 void

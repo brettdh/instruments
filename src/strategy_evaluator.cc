@@ -20,8 +20,15 @@
 using std::vector;
 
 StrategyEvaluator::StrategyEvaluator()
-    : currentStrategy(NULL)
+    : currentStrategy(NULL), silent(false)
 {
+}
+
+StrategyEvaluator::~StrategyEvaluator()
+{
+    for (Estimator *estimator : subscribed_estimators) {
+        estimator->unsubscribe(this);
+    }
 }
 
 void
@@ -29,11 +36,10 @@ StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
                                  size_t num_strategies)
 {
     strategies.clear();
-    //estimators.clear();
     
     for (size_t i = 0; i < num_strategies; ++i) {
         Strategy *strategy = (Strategy *)new_strategies[i];
-        strategy->getAllEstimators(this);
+        strategy->getAllEstimators(this); // subscribes this to all estimators
         strategies.push_back(strategy);
     }
 }
@@ -41,8 +47,15 @@ StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
 void
 StrategyEvaluator::addEstimator(Estimator *estimator)
 {
-    //estimators.insert(estimator);
     estimator->subscribe(this);
+    subscribed_estimators.insert(estimator);
+}
+
+void
+StrategyEvaluator::removeEstimator(Estimator *estimator)
+{
+    // estimator is letting me know it's going away; don't call unsubscribe
+    subscribed_estimators.erase(estimator);
 }
 
 bool
@@ -87,8 +100,8 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
         evaluator = new EmpiricalErrorStrategyEvaluator(type);
     } else if (type == CONFIDENCE_BOUNDS) {
         evaluator = new ConfidenceBoundsStrategyEvaluator;
-    } else if (type & BAYESIAN) {
-        evaluator = new BayesianStrategyEvaluator(type);
+    } else if (type == BAYESIAN) {
+        evaluator = new BayesianStrategyEvaluator;
     } else {
         // TODO: implement the rest.
         assert(false);
@@ -110,6 +123,17 @@ StrategyEvaluator::calculateCost(Strategy *strategy, void *chooser_arg)
     return strategy->calculateCost(this, chooser_arg);
 }
 
+void
+StrategyEvaluator::setSilent(bool silent_)
+{
+    silent = silent_;
+}
+
+bool 
+StrategyEvaluator::isSilent()
+{
+    return silent;
+}
 
 instruments_strategy_t
 StrategyEvaluator::chooseStrategy(void *chooser_arg)
@@ -157,13 +181,15 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
             double redundant_cost = calculateCost(currentStrategy, chooser_arg);
             double net_benefit = benefit - (redundant_cost - best_singular_cost);
 
-            dbgprintf("Best singular strategy time: %f\n", best_singular_time);
-            dbgprintf("Redundant strategy time: %f\n", redundant_time);
-            dbgprintf("Redundant strategy benefit: %f\n", benefit);
-            dbgprintf("Best-time singular strategy cost: %f\n", best_singular_cost);
-            dbgprintf("Redundant strategy cost: %f\n", redundant_cost);
-            dbgprintf("Redundant strategy additional cost: %f\n", 
-                      redundant_cost - best_singular_cost);
+            if (!silent) {
+                dbgprintf("Best singular strategy time: %f\n", best_singular_time);
+                dbgprintf("Redundant strategy time: %f\n", redundant_time);
+                dbgprintf("Redundant strategy benefit: %f\n", benefit);
+                dbgprintf("Best-time singular strategy cost: %f\n", best_singular_cost);
+                dbgprintf("Redundant strategy cost: %f\n", redundant_cost);
+                dbgprintf("Redundant strategy additional cost: %f\n", 
+                          redundant_cost - best_singular_cost);
+            }
             assert(redundant_cost >= best_singular_cost);
 
             if (net_benefit > 0.0 && 

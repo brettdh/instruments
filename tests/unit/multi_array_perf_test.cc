@@ -12,10 +12,11 @@ using std::vector;
 
 int main()
 {
-    const size_t iterations = 30*30;
+    const size_t num_samples = 50;
+    const size_t iterations = num_samples * num_samples;
 
     size_t size = 2;
-    const size_t rowlen = 30;
+    const size_t rowlen = num_samples;
     vector<size_t> dims;
     dims.resize(size, rowlen);
 

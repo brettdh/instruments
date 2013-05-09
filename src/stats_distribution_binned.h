@@ -6,18 +6,27 @@
 #include "stats_distribution.h"
 #include "stats_distribution_all_samples.h"
 
-#include <RInside.h>
+class RInside;
+
+class Estimator;
 
 class StatsDistributionBinned : public StatsDistribution {
   public:
     StatsDistributionBinned();
-    
-    // for testing only
     StatsDistributionBinned(std::vector<double> breaks);
+    StatsDistributionBinned(double min, double max, size_t num_bins);
 
+    static StatsDistributionBinned *create(Estimator *estimator);
+    
     virtual void addValue(double value);
     virtual void appendToFile(const std::string& name, std::ofstream& out);
     virtual std::string restoreFromFile(std::ifstream& in);
+
+    // return the probability of the bin where value falls.
+    double getProbability(double value);
+
+    // finds the bin where value falls and returns its midpoint.
+    double getBinnedValue(double value);
 
     class Iterator : StatsDistribution::Iterator {
       public:
@@ -58,6 +67,9 @@ class StatsDistributionBinned : public StatsDistribution {
     
     // TODO: set this in a principled way.
     static const size_t histogram_threshold = 50; // "enough" samples
+    bool preset_breaks; // true iff the breaks were set explicitly via constructor
+
+    void setBreaks(const std::vector<double>& new_breaks);
 
     void addToHistogram(double value);
     void addToTail(int& count, double& mid, double value);
@@ -65,7 +77,10 @@ class StatsDistributionBinned : public StatsDistribution {
     void calculateBins();
     bool binsAreSet();
 
+    size_t getIndex(double value);
     void updateBin(int index, double value);
+    double probabilityAtIndex(size_t index);
+
 
     std::string r_samples_name;
     void initRInside();

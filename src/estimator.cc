@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <assert.h>
+#include <float.h>
 #include "estimator.h"
 #include "last_observation_estimator.h"
 #include "running_mean_estimator.h"
@@ -36,7 +37,7 @@ Estimator::create(EstimatorType type, string name)
 }
 
 Estimator::Estimator(const string& name_)
- : name(name_), has_estimate(false)
+    : name(name_), has_estimate(false), has_range_hints(false)
 {
     if (name.empty()) {
         throw runtime_error("Estimator name must not be empty");
@@ -49,16 +50,41 @@ Estimator::Estimator(const string& name_)
     }
 }
 
-void
-Estimator::addObservation(double value)
+Estimator::~Estimator()
 {
+    for (StrategyEvaluator *subscriber : subscribers) {
+        subscriber->removeEstimator(this);
+    }
+}
+
+bool estimate_is_valid(double estimate)
+{
+    return estimate != DBL_MAX;
+}
+
+double invalid_estimate()
+{
+    double e = DBL_MAX;
+    assert(!estimate_is_valid(e));
+    return e;
+}
+
+void
+Estimator::addObservation(double observation)
+{
+    double old_estimate = invalid_estimate(), new_estimate = invalid_estimate();
+    if (has_estimate) {
+        old_estimate = getEstimate();
+    }
+    storeNewObservation(observation);
+    has_estimate = true;
+    new_estimate = getEstimate();
+
     for (small_set<StrategyEvaluator*>::const_iterator it = subscribers.begin();
          it != subscribers.end(); ++it) {
         StrategyEvaluator *subscriber = *it;
-        subscriber->observationAdded(this, value);
+        subscriber->observationAdded(this, observation, old_estimate, new_estimate);
     }
-    storeNewObservation(value);
-    has_estimate = true;
 }
 
 bool
@@ -73,8 +99,36 @@ Estimator::subscribe(StrategyEvaluator *subscriber)
     subscribers.insert(subscriber);
 }
 
+void
+Estimator::unsubscribe(StrategyEvaluator *unsubscriber)
+{
+    subscribers.erase(unsubscriber);
+}
+
 string
 Estimator::getName()
 {
     return name;
+}
+
+bool 
+Estimator::hasRangeHints()
+{
+    return has_range_hints;
+}
+
+EstimatorRangeHints 
+Estimator::getRangeHints()
+{
+    assert(hasRangeHints());
+    return range_hints;
+}
+
+void 
+Estimator::setRangeHints(double min, double max, size_t num_bins)
+{
+    range_hints.min = min;
+    range_hints.max = max;
+    range_hints.num_bins = num_bins;
+    has_range_hints = true;
 }

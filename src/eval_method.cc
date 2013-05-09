@@ -17,8 +17,7 @@ static NameMap::value_type names_initializer[] = {
     NameMap::value_type(TRUSTED_ORACLE, "trusted-oracle"),
     NameMap::value_type(CONFIDENCE_BOUNDS, "prob-bounds"),
     NameMap::value_type(BAYESIAN, "bayesian"),
-    NameMap::value_type(BAYESIAN_INTNW, "bayesian-intnw"),
-
+    
     NameMap::value_type(EMPIRICAL_ERROR, "empirical-error"),
     NameMap::value_type(EMPIRICAL_ERROR_ALL_SAMPLES, "ee-all-samples"),
     NameMap::value_type(EMPIRICAL_ERROR_BINNED, "ee-binned"),

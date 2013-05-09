@@ -14,6 +14,7 @@ class ExternalEstimator : public Estimator {
 
   private:
     double lastValue;
+    double stagedValue;
 };
 
 #endif

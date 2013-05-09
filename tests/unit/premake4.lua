@@ -34,7 +34,6 @@ project "InstrumentsTests"
      "goal_adaptive_resource_weight.cc",
      "instruments.cc",
      "joint_distributions/intnw_joint_distribution.cc",
-     "joint_distributions/bayesian_intnw_posterior_distribution.cc",
      "r_singleton.cc",
      "resource_weights.cc",
      "running_mean_estimator.cc",
@@ -56,7 +55,7 @@ project "InstrumentsTests"
   flags { "Symbols", "FatalWarnings" }
   links { "mocktime", "cppunit" }
 
-  buildoptions { R_buildoptions(), "-Wall" }
+  buildoptions { R_buildoptions(), "-Wall", "-std=gnu++0x" }
   linkoptions { R_linkoptions() }
   
   targetname "run_unit_tests"
