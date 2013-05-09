@@ -12,6 +12,7 @@
 #include "small_set.h"
 
 #include "debug.h"
+using instruments::dbgprintf;
 
 Strategy::Strategy(eval_fn_t time_fn_, 
                    eval_fn_t energy_cost_fn_, 

@@ -108,8 +108,8 @@ struct TimeFunctionBody {
     ~TimeFunctionBody() {
         TIME(end);
         TIMEDIFF(begin, end, diff);
-        dbgprintf("%s took %lu.%06lu seconds\n", str,
-                  diff.tv_sec, diff.tv_usec);
+        instruments::dbgprintf("%s took %lu.%06lu seconds\n", str,
+                               diff.tv_sec, diff.tv_usec);
     }
 #endif
 };

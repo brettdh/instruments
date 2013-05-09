@@ -2,23 +2,25 @@
 #define EVAL_METHOD_H_INCL
 
 #ifdef __cplusplus
-extern "C" {
+#define CDECL extern "C"
+#else
+#define CDECL
 #endif
 
-enum StatsDistributionType {
+CDECL enum StatsDistributionType {
     ALL_SAMPLES = 0x0, // default
     BINNED      = 0x1
 };
 
-enum JointDistributionType {
+CDECL enum JointDistributionType {
     GENERIC_JOINT_DISTRIBUTION = 0x00, // default
     INTNW_JOINT_DISTRIBUTION = 0x10
 };
 
-extern const int STATS_DISTRIBUTION_TYPE_MASK;
-extern const int JOINT_DISTRIBUTION_TYPE_MASK;
+CDECL const int STATS_DISTRIBUTION_TYPE_MASK;
+CDECL const int JOINT_DISTRIBUTION_TYPE_MASK;
 
-enum EvalMethod {
+CDECL enum EvalMethod {
     TRUSTED_ORACLE,    // No error evaluation; estimators assumed perfect
     CONFIDENCE_BOUNDS, // probabilistic bounds on predictor error
     BAYESIAN,          // Bayesian estimation of posterior 
@@ -33,11 +35,16 @@ enum EvalMethod {
                                   INTNW_JOINT_DISTRIBUTION),
 };
 
-const char *
+CDECL const char *
 get_method_name(enum EvalMethod method);
 
+CDECL enum EvalMethod
+get_method(const char *method_name);
+
 #ifdef __cplusplus
-}
+#include <vector>
+#include <string>
+std::vector<std::string> get_all_method_names();
 #endif
 
 #endif

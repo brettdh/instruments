@@ -5,6 +5,7 @@
 #include "estimator.h"
 #include "error_calculation.h"
 #include "debug.h"
+using instruments::dbgprintf;
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -2,6 +2,7 @@
 #include "estimator.h"
 #include "stats_distribution_binned.h"
 #include "debug.h"
+using instruments::dbgprintf;
 
 #include <vector>
 #include <map>

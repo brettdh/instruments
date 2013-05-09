@@ -74,7 +74,7 @@ int is_debugging_on()
     return debugging;
 }
 
-void dbgprintf_always(const char *fmt, ...)
+void instruments::dbgprintf_always(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -82,7 +82,7 @@ void dbgprintf_always(const char *fmt, ...)
     va_end(ap);
 }
 
-void dbgprintf(const char *fmt, ...)
+void instruments::dbgprintf(const char *fmt, ...)
 {
     if (debugging) {
         va_list ap;

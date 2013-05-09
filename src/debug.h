@@ -23,10 +23,18 @@
 CDECL void set_debugging_on(int debug_on);
 CDECL int is_debugging_on();
 
+#ifdef __cplusplus
+namespace instruments {
+#endif
+
 CDECL void dbgprintf(const char *format, ...)
   __attribute__((format(printf, 1, 2)));
 CDECL void dbgprintf_always(const char *format, ...)
   __attribute__((format(printf, 1, 2)));
+
+#ifdef __cplusplus
+}
+#endif
 
 #ifdef __cplusplus
 void check(bool success, const std::string& msg);

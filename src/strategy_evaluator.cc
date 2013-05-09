@@ -10,6 +10,7 @@
 #include "small_set.h"
 
 #include "debug.h"
+using instruments::dbgprintf;
 
 #include <stdio.h>
 #include <stdlib.h>
