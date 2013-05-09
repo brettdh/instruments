@@ -42,9 +42,9 @@ CDECL enum EvalMethod
 get_method(const char *method_name);
 
 #ifdef __cplusplus
-#include <vector>
+#include <set>
 #include <string>
-std::vector<std::string> get_all_method_names();
+std::set<std::string> get_all_method_names();
 #endif
 
 #endif

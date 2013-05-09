@@ -5,10 +5,10 @@ using instruments::dbgprintf;
 #include <assert.h>
 
 #include <string>
-#include <vector>
 #include <map>
-using std::vector;
+#include <set>
 using std::map;
+using std::set;
 using std::pair;
 using std::string;
 
@@ -52,11 +52,11 @@ get_method(const char *method_name)
     abort();
 }
 
-vector<string> get_all_method_names()
+set<string> get_all_method_names()
 {
-    vector<string> method_names;
+    set<string> method_names;
     for (auto& p : names) {
-        method_names.push_back(p.second);
+        method_names.insert(p.second);
     }
     return method_names;
 }
