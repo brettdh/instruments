@@ -386,6 +386,10 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     // XXX: is this causing a difference from what I expect?
     // XXX:  maybe I should be iterating over the joint distribution?
     // XXX:  I *think* it makes sense to separate them by strategy...
+    
+    // XXX: actually, this may be screwing up the normalization.
+    // TODO: figure out the right way and see if it makes a difference.
+
     auto& strategy_likelihood = likelihood_per_strategy[strategy];
     for (auto& map_pair : strategy_likelihood) {
         auto key = map_pair.first;

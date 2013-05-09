@@ -7,8 +7,11 @@
 #include "estimator.h"
 #include "resource_weights.h"
 
+#include <algorithm>
 #include <vector>
 #include <set>
+using std::find;
+
 #include "small_set.h"
 
 #include "debug.h"
@@ -191,6 +194,16 @@ Strategy::getChildStrategies()
 {
     return child_strategies;
 }
+
+bool 
+Strategy::includes(Strategy *child)
+{
+    // yes, it's O(n), but n is tiny.
+    auto begin = child_strategies.begin();
+    auto end = child_strategies.end();
+    return find(begin, end, child) != end;
+}
+
 
 bool
 Strategy::childrenAreDisjoint()

@@ -43,6 +43,7 @@ class Strategy {
     std::vector<Estimator *> getEstimators();
 
     const std::vector<Strategy *>& getChildStrategies();
+    bool includes(Strategy *child);
     bool childrenAreDisjoint();
 
   private:

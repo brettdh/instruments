@@ -178,6 +178,13 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
         if (currentStrategy->isRedundant()) {
             double redundant_time = calculateTime(currentStrategy, chooser_arg);
             double benefit = best_singular_time - redundant_time;
+
+            if (currentStrategy->includes(best_singular)) {
+                // because the redundant strategy includes the best singular strategy,
+                //  the singular strategy can never have a lower time.
+                // if it does, the strategy evaluator is broken.
+                assert(benefit >= 0.0); 
+            }
             
             double redundant_cost = calculateCost(currentStrategy, chooser_arg);
             double net_benefit = benefit - (redundant_cost - best_singular_cost);
