@@ -2,7 +2,8 @@
 #include "estimator.h"
 #include "stats_distribution_binned.h"
 #include "debug.h"
-using instruments::dbgprintf;
+using namespace instruments;
+using namespace instruments;
 
 #include <vector>
 #include <map>
@@ -279,7 +280,7 @@ BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t 
     tmp_simple_evaluator.setSilent(true);
     
     double normalizing_factor = normalizer->getWinnerProbability(&tmp_simple_evaluator, chooser_arg, true);
-    //dbgprintf("[bayesian] normalizing factor = %f\n", normalizing_factor);
+    dbgprintf(INFO, "[bayesian] normalizing factor = %f\n", normalizing_factor);
     assert(normalizing_factor > 0.0);
     double likelihood_value = likelihood->getWeightedSum(&tmp_simple_evaluator, strategy, 
                                                          fn, strategy_arg, chooser_arg);
@@ -402,12 +403,12 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         bool ensure_nonzero = vec_eq(cur_key, key);
         double likelihood_coeff = histogram->getWinnerProbability(tmp_simple_evaluator, chooser_arg, ensure_nonzero);
         
-        if (is_debugging_on()) {
+        if (is_debugging_on(DEBUG)) {
             ostringstream s;
             s << "[bayesian] key: ";
             print_vector(s, key);
             s << "  prior: " << prior << "  likelihood_coeff: " << likelihood_coeff;
-            dbgprintf("%s\n", s.str().c_str());
+            dbgprintf(DEBUG, "%s\n", s.str().c_str());
         }
         
         weightedSum += (value * prior * likelihood_coeff);
@@ -539,7 +540,7 @@ BayesianStrategyEvaluator::saveToFile(const char *filename)
 void
 BayesianStrategyEvaluator::restoreFromFile(const char *filename)
 {
-    dbgprintf("Restoring Bayesian distribution from %s\n", filename);
+    dbgprintf(INFO, "Restoring Bayesian distribution from %s\n", filename);
 
     clearDistributions();
     

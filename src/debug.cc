@@ -14,6 +14,8 @@ using std::ostringstream; using std::string;
 using std::setw; using std::setfill;
 using std::runtime_error;
 
+using namespace instruments;
+
 #ifdef ANDROID
 #define INSTRUMENTS_LOGFILE "/sdcard/intnw/instruments.log"
 #include <android/log.h>
@@ -62,16 +64,16 @@ static void vdbgprintf(bool plain, const char *fmt, va_list ap)
 #endif
 }
 
-static bool debugging = true;
+static DebugLevel debug_level = INFO;
 
-void set_debugging_on(int debug_on)
+void instruments::set_debug_level(enum DebugLevel level)
 {
-    debugging = debug_on;
+    debug_level = level;
 }
 
-int is_debugging_on()
+int instruments::is_debugging_on(enum DebugLevel level)
 {
-    return debugging;
+    return (level <= debug_level);
 }
 
 void instruments::dbgprintf_always(const char *fmt, ...)
@@ -82,9 +84,9 @@ void instruments::dbgprintf_always(const char *fmt, ...)
     va_end(ap);
 }
 
-void instruments::dbgprintf(const char *fmt, ...)
+void instruments::dbgprintf(enum DebugLevel level, const char *fmt, ...)
 {
-    if (debugging) {
+    if (is_debugging_on(level)) {
         va_list ap;
         va_start(ap, fmt);
         vdbgprintf(false, fmt, ap);

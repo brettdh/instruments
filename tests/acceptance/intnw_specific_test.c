@@ -90,7 +90,7 @@ create_estimators_and_strategies(instruments_external_estimator_t *estimators,
 static void setup_common(struct common_test_data *cdata, enum EvalMethod method)
 {
     set_fixed_resource_weights(0.0, 1.0);
-    set_debugging_on(0);
+    set_debug_level(NONE);
 
     cdata->evaluator = NULL;
     create_estimators_and_strategies(cdata->estimators, cdata->strategies, 
@@ -248,7 +248,7 @@ static void test_both_networks_best(struct common_test_data *cdata)
     int num_samples = 50;
     int i;
     
-    //set_debugging_on(1);
+    //set_debug_level(DEBUG);
 
     set_estimator_range_hints(cdata->estimators[0], 500, 9500, 9);
     set_estimator_range_hints(cdata->estimators[1], -1, 1, 1);
@@ -394,24 +394,31 @@ get_estimator_index(const char *network, const char *metric)
     return network_id * 2 + metric_id;
 }
 
-CTEST2(confidence_bounds_test, test_real_distributions)
+
+static void
+run_real_distributions_test(struct common_test_data *cdata, const char *restore_filename)
 {
-    //set_debugging_on(1);
+    //set_debug_level(DEBUG);
     
     //const char *logfile = "./support_files/confidence_bounds_test_intnw.log";
     const char *logfile = "./support_files/post_restore_intnw.log";
     FILE *in = fopen(logfile, "r");
     assert(in);
 
-    struct common_test_data *cdata = &data->common_data;
-
-    const char *filename = "support_files/saved_error_distributions_prob.txt";
-    restore_evaluator(cdata->evaluator, filename);
+    if (restore_filename) {
+        restore_evaluator(cdata->evaluator, restore_filename);
+    }
 
     char network[64], metric[64];
     double observation, estimate;
     char *line = NULL;
     size_t len = -1;
+    
+    // all 1 bits for the number of estimators
+    size_t all_seen = (1 << NUM_ESTIMATORS) - 1;
+    size_t seen = 0;
+    // when all_seen == seen, I've seen a sample for all the estimators
+
     while ((getline(&line, &len, in)) != -1) {
         char *start = strstr(line, "Adding new stats to ");
         if (start) {
@@ -420,19 +427,30 @@ CTEST2(confidence_bounds_test, test_real_distributions)
                              network, metric, &observation, &estimate)) == 4) {
                 int index = get_estimator_index(network, metric);
                 add_observation(cdata->estimators[index], observation, estimate);
+                seen |= (1 << index);
                 
                 if ((rc = sscanf(start, "Adding new stats to %*s network estimator: %*s obs %*f est %*f %s obs %lf est %lf",
                                  metric, &observation, &estimate)) == 3) {
                     index = get_estimator_index(network, metric);
                     add_observation(cdata->estimators[index], observation, estimate);
+                    seen |= (1 << index);
                 }
             }
-            choose_strategy(cdata->evaluator, (void *) 1024);
+            
+            if (seen == all_seen) {
+                choose_strategy(cdata->evaluator, (void *) 1024);
+            }
         }
         free(line);
         line = NULL;
     }
     fclose(in);
+}
+
+CTEST2(confidence_bounds_test, test_real_distributions)
+{
+    run_real_distributions_test(&data->common_data, 
+                                "support_files/saved_error_distributions_prob.txt");
 }
 
 CTEST_DATA(bayesian_method_test) {
@@ -491,7 +509,7 @@ static double update_mean(double mean, double value, int n)
 
 CTEST2(bayesian_method_test, test_proposal_example)
 {
-    //set_debugging_on(1);
+    //set_debug_level(DEBUG);
     
     struct common_test_data *cdata = &data->common_data;
 
@@ -552,3 +570,12 @@ CTEST2(bayesian_method_test, test_proposal_example)
         }
     }
 }
+
+CTEST2(bayesian_method_test, test_real_distributions)
+{
+    struct common_test_data *cdata = &data->common_data;
+
+    set_debug_level(DEBUG);
+    run_real_distributions_test(cdata, NULL);
+}
+

@@ -15,7 +15,7 @@ using std::find;
 #include "small_set.h"
 
 #include "debug.h"
-using instruments::dbgprintf;
+using namespace instruments;
 
 Strategy::Strategy(eval_fn_t time_fn_, 
                    eval_fn_t energy_cost_fn_, 
@@ -116,9 +116,9 @@ Strategy::calculateCost(StrategyEvaluator *evaluator, void *chooser_arg)
     double energy_weight = get_energy_cost_weight();
     double data_weight = get_data_cost_weight();
     if (!evaluator->isSilent()) {
-        dbgprintf("  Energy cost: %f * %f = %f\n",
+        dbgprintf(INFO, "  Energy cost: %f * %f = %f\n",
                   energy_cost, energy_weight, energy_cost * energy_weight);
-        dbgprintf("  Data cost:   %f * %f = %f\n",
+        dbgprintf(INFO, "  Data cost:   %f * %f = %f\n",
                   data_cost, data_weight, data_cost * data_weight);
     }
     return ((energy_cost * energy_weight) + (data_cost * data_weight));

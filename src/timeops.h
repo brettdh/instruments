@@ -6,7 +6,6 @@
 #include <sys/types.h>
 #include <time.h>
 #include <string>
-#include "debug.h"
 
 
 const suseconds_t& subseconds(const struct timeval&  tv);
@@ -34,7 +33,7 @@ void TIME(struct timespec& tv);
 /* tve should be >= tvb. */
 #define TIMEDIFF(tvb,tve,tvr)                                    \
 do {                                                             \
-    ASSERT(((tve).tv_sec > (tvb).tv_sec)                         \
+    assert(((tve).tv_sec > (tvb).tv_sec)                         \
            || (((tve).tv_sec == (tvb).tv_sec)                    \
                && (subseconds(tve) >= subseconds(tvb))));             \
     if (subseconds(tve) < subseconds(tvb)) {                         \
@@ -95,24 +94,6 @@ do {                                                             \
 
 struct timespec abs_time(struct timespec rel_time);
 
-struct TimeFunctionBody {
-#ifndef CMM_DEBUG
-    TimeFunctionBody(const char *str) { (void)str; }
-#else
-    struct timeval begin, end, diff;
-    const char *str;
-  
-    TimeFunctionBody(const char *str_) : str(str_) { 
-        TIME(begin); 
-    }
-    ~TimeFunctionBody() {
-        TIME(end);
-        TIMEDIFF(begin, end, diff);
-        instruments::dbgprintf("%s took %lu.%06lu seconds\n", str,
-                               diff.tv_sec, diff.tv_usec);
-    }
-#endif
-};
 #endif /* DEF_TIMEOPS */
 
 /* convert between u_long and struct timeval */

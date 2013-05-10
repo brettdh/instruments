@@ -20,15 +20,22 @@
         }                                                              \
     } while (0)
 
-CDECL void set_debugging_on(int debug_on);
-CDECL int is_debugging_on();
-
 #ifdef __cplusplus
 namespace instruments {
 #endif
 
-CDECL void dbgprintf(const char *format, ...)
-  __attribute__((format(printf, 1, 2)));
+enum DebugLevel {
+    NONE=0, /* shut it. */
+    ERROR,  /* exceptional situations only. */
+    INFO,   /* don't put these in hot spots. */
+    DEBUG   /* be as verbose and slow as you want. */
+};
+
+CDECL void set_debug_level(enum DebugLevel level);
+CDECL int is_debugging_on(enum DebugLevel level);
+
+CDECL void dbgprintf(enum DebugLevel level, const char *format, ...)
+  __attribute__((format(printf, 2, 3)));
 CDECL void dbgprintf_always(const char *format, ...)
   __attribute__((format(printf, 1, 2)));
 

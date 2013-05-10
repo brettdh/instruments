@@ -153,7 +153,7 @@ static struct timeval run_test(int num_samples, enum EvalMethod method)
 int main()
 {
     int i;
-    set_debugging_on(0);
+    set_debug_level(NONE);
 
 #if (defined(ANDROID) && defined(PROFILING_BUILD))
     monstartup("libinstruments.so");
@@ -192,7 +192,7 @@ int main()
 
 //#define CHECK_VALUES
 #ifdef CHECK_VALUES
-    set_debugging_on(1);
+    set_debug_level(DEBUG);
     for (i = 0; i < NUM_METHODS; ++i) {
         enum EvalMethod method = methods[i];
         fprintf(stderr, "*** %s ***\n", get_method_name(method));

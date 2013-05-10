@@ -5,7 +5,7 @@
 #include "estimator.h"
 #include "error_calculation.h"
 #include "debug.h"
-using instruments::dbgprintf;
+using namespace instruments;
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -456,7 +456,7 @@ IntNWJointDistribution::observationAdded(Estimator *estimator, double observatio
         double error = calculate_error(old_estimate, observation);
         estimatorSamples[estimator]->addValue(error);
         
-        dbgprintf("IntNWJoint: Added error observation to estimator %p: %f\n", estimator, error);
+        dbgprintf(INFO, "IntNWJoint: Added error observation to estimator %p: %f\n", estimator, error);
     } else if (estimatorSamples.count(estimator) == 0) {
         ensureSamplesDistributionExists(estimator);
     }
@@ -476,7 +476,7 @@ IntNWJointDistribution::saveToFile(ofstream& out)
             dist->appendToFile(estimator->getName(), out);
         }
     } catch (runtime_error& e) {
-        dbgprintf("WARNING: failed to save joint distribution: %s\n", e.what());
+        dbgprintf(ERROR, "WARNING: failed to save joint distribution: %s\n", e.what());
     }
 }
 
@@ -533,6 +533,6 @@ IntNWJointDistribution::restoreFromFile(ifstream& in)
 
         clearEstimatorSamplesDistributions();
     } catch (runtime_error& e) {
-        dbgprintf("WARNING: failed to restore joint distribution: %s\n", e.what());
+        dbgprintf(ERROR, "WARNING: failed to restore joint distribution: %s\n", e.what());
     }
 }

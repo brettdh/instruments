@@ -2,7 +2,7 @@
 #include "estimator.h"
 #include "error_calculation.h"
 #include "debug.h"
-using instruments::dbgprintf;
+using namespace instruments;
 
 #include <math.h>
 #include <assert.h>
@@ -114,7 +114,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
                                                                            double old_estimate,
                                                                            double new_estimate)
 {
-    dbgprintf("Getting error sample from estimator %p\n", estimator);
+    dbgprintf(INFO, "Getting error sample from estimator %p\n", estimator);
 
     /*
      * Algorithm borrowed from
@@ -144,9 +144,9 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
         error_bounds[LOWER] = bounds[1];
         error_bounds[UPPER] = bounds[0];
     }
-    dbgprintf("Adding error sample to estimator %p: %f\n",
+    dbgprintf(INFO, "Adding error sample to estimator %p: %f\n",
               estimator, exp(error));
-    dbgprintf("n=%4zu; error bounds: [%f, %f]\n", 
+    dbgprintf(INFO, "n=%4zu; error bounds: [%f, %f]\n", 
               num_samples, error_bounds[LOWER], error_bounds[UPPER]);
     if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
         // PROBLEMATIC.
@@ -207,7 +207,7 @@ void
 ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double observation, 
                                                     double old_estimate, double new_estimate)
 {
-    dbgprintf("Adding observation %f to estimator %p\n", observation, estimator);
+    dbgprintf(INFO, "Adding observation %f to estimator %p\n", observation, estimator);
     
     assert(estimator);
     string name = estimator->getName();
@@ -233,7 +233,7 @@ ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double
     }
     
     if (estimate_is_valid(old_estimate)) {
-        dbgprintf("Adding observation %f to estimator-bounds %p\n",
+        dbgprintf(INFO, "Adding observation %f to estimator-bounds %p\n",
                   observation, bounds);
         bounds->observationAdded(observation, old_estimate, new_estimate);
     }

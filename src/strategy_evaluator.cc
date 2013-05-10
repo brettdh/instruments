@@ -10,7 +10,7 @@
 #include "small_set.h"
 
 #include "debug.h"
-using instruments::dbgprintf;
+using namespace instruments;
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -179,26 +179,27 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
             double redundant_time = calculateTime(currentStrategy, chooser_arg);
             double benefit = best_singular_time - redundant_time;
 
-            if (currentStrategy->includes(best_singular)) {
-                // because the redundant strategy includes the best singular strategy,
-                //  the singular strategy can never have a lower time.
-                // if it does, the strategy evaluator is broken.
-                assert(benefit >= 0.0); 
-            }
-            
             double redundant_cost = calculateCost(currentStrategy, chooser_arg);
-            double net_benefit = benefit - (redundant_cost - best_singular_cost);
+            double extra_redundant_cost = redundant_cost - best_singular_cost;
+            double net_benefit = benefit - extra_redundant_cost;
 
             if (!silent) {
-                dbgprintf("Best singular strategy time: %f\n", best_singular_time);
-                dbgprintf("Redundant strategy time: %f\n", redundant_time);
-                dbgprintf("Redundant strategy benefit: %f\n", benefit);
-                dbgprintf("Best-time singular strategy cost: %f\n", best_singular_cost);
-                dbgprintf("Redundant strategy cost: %f\n", redundant_cost);
-                dbgprintf("Redundant strategy additional cost: %f\n", 
-                          redundant_cost - best_singular_cost);
+                dbgprintf(INFO, "Best singular strategy time: %f\n", best_singular_time);
+                dbgprintf(INFO, "Redundant strategy time: %f\n", redundant_time);
+                dbgprintf(INFO, "Redundant strategy benefit: %f\n", benefit);
+                dbgprintf(INFO, "Best-time singular strategy cost: %f\n", best_singular_cost);
+                dbgprintf(INFO, "Redundant strategy cost: %f\n", redundant_cost);
+                dbgprintf(INFO, "Redundant strategy additional cost: %f\n", 
+                          extra_redundant_cost);
             }
-            assert(redundant_cost >= best_singular_cost);
+            if (currentStrategy->includes(best_singular)) {
+                // because the redundant strategy includes the best singular strategy,
+                //  the singular strategy can never have a lower time, and
+                //  the redundant strategy can never have a lower cost.
+                // if either happens, the strategy evaluator is broken.
+                assert(benefit >= -0.0001); // tolerate floating-point inaccuracy
+                assert(extra_redundant_cost >= -0.0001);
+            }
 
             if (net_benefit > 0.0 && 
                 (best_redundant == NULL || net_benefit > best_redundant_net_benefit)) {
