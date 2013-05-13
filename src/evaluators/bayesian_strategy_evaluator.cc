@@ -2,8 +2,8 @@
 #include "estimator.h"
 #include "stats_distribution_binned.h"
 #include "debug.h"
-using namespace instruments;
-using namespace instruments;
+namespace inst = instruments;
+using inst::INFO; using inst::DEBUG;
 
 #include <vector>
 #include <map>
@@ -399,7 +399,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
             s << "[bayesian] key: ";
             print_vector(s, key);
             s << "  prior: " << prior << "  likelihood_coeff: " << likelihood_coeff;
-            dbgprintf(DEBUG, "%s\n", s.str().c_str());
+            inst::dbgprintf(DEBUG, "%s\n", s.str().c_str());
         }
         posterior_sum += posterior;
         
@@ -407,7 +407,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     }
 
     // if debug level isn't high enough, we're not calculating this, because it's slow.
-    dbgprintf(INFO, "[bayesian] posterior sum: %f\n", posterior_sum);
+    inst::dbgprintf(INFO, "[bayesian] posterior sum: %f\n", posterior_sum);
     
     // here's the normalization.  summing the posterior values ensures that
     //  I'm using the correct value.
@@ -536,7 +536,7 @@ BayesianStrategyEvaluator::saveToFile(const char *filename)
 void
 BayesianStrategyEvaluator::restoreFromFile(const char *filename)
 {
-    dbgprintf(INFO, "Restoring Bayesian distribution from %s\n", filename);
+    inst::dbgprintf(INFO, "Restoring Bayesian distribution from %s\n", filename);
 
     clearDistributions();
     

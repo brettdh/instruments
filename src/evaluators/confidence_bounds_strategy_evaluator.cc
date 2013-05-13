@@ -2,7 +2,8 @@
 #include "estimator.h"
 #include "error_calculation.h"
 #include "debug.h"
-using namespace instruments;
+namespace inst = instruments;
+using inst::INFO;
 
 #include <math.h>
 #include <assert.h>
@@ -114,7 +115,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
                                                                            double old_estimate,
                                                                            double new_estimate)
 {
-    dbgprintf(INFO, "Getting error sample from estimator %p\n", estimator);
+    inst::dbgprintf(INFO, "Getting error sample from estimator %p\n", estimator);
 
     /*
      * Algorithm borrowed from
@@ -144,10 +145,10 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(doubl
         error_bounds[LOWER] = bounds[1];
         error_bounds[UPPER] = bounds[0];
     }
-    dbgprintf(INFO, "Adding error sample to estimator %p: %f\n",
-              estimator, exp(error));
-    dbgprintf(INFO, "n=%4zu; error bounds: [%f, %f]\n", 
-              num_samples, error_bounds[LOWER], error_bounds[UPPER]);
+    inst::dbgprintf(INFO, "Adding error sample to estimator %p: %f\n",
+                    estimator, exp(error));
+    inst::dbgprintf(INFO, "n=%4zu; error bounds: [%f, %f]\n", 
+                    num_samples, error_bounds[LOWER], error_bounds[UPPER]);
     if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
         // PROBLEMATIC.
         assert(false); // TODO: figure out what to do here.
@@ -207,7 +208,7 @@ void
 ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double observation, 
                                                     double old_estimate, double new_estimate)
 {
-    dbgprintf(INFO, "Adding observation %f to estimator %p\n", observation, estimator);
+    inst::dbgprintf(INFO, "Adding observation %f to estimator %p\n", observation, estimator);
     
     assert(estimator);
     string name = estimator->getName();
@@ -233,8 +234,8 @@ ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double
     }
     
     if (estimate_is_valid(old_estimate)) {
-        dbgprintf(INFO, "Adding observation %f to estimator-bounds %p\n",
-                  observation, bounds);
+        inst::dbgprintf(INFO, "Adding observation %f to estimator-bounds %p\n",
+                        observation, bounds);
         bounds->observationAdded(observation, old_estimate, new_estimate);
     }
 

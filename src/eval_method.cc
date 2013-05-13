@@ -1,6 +1,7 @@
 #include "eval_method.h"
 #include "debug.h"
-using namespace instruments;
+namespace inst = instruments;
+using inst::ERROR;
 
 #include <assert.h>
 #include <stdlib.h>
@@ -49,7 +50,7 @@ get_method(const char *method_name)
             return p.first;
         }
     }
-    dbgprintf(ERROR, "Invalid method name: %s\n", method_name);
+    inst::dbgprintf(ERROR, "Invalid method name: %s\n", method_name);
     abort();
 }
 

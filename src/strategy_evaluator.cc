@@ -10,7 +10,8 @@
 #include "small_set.h"
 
 #include "debug.h"
-using namespace instruments;
+namespace inst = instruments;
+using inst::INFO;
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -184,13 +185,13 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
             double net_benefit = benefit - extra_redundant_cost;
 
             if (!silent) {
-                dbgprintf(INFO, "Best singular strategy time: %f\n", best_singular_time);
-                dbgprintf(INFO, "Redundant strategy time: %f\n", redundant_time);
-                dbgprintf(INFO, "Redundant strategy benefit: %f\n", benefit);
-                dbgprintf(INFO, "Best-time singular strategy cost: %f\n", best_singular_cost);
-                dbgprintf(INFO, "Redundant strategy cost: %f\n", redundant_cost);
-                dbgprintf(INFO, "Redundant strategy additional cost: %f\n", 
-                          extra_redundant_cost);
+                inst::dbgprintf(INFO, "Best singular strategy time: %f\n", best_singular_time);
+                inst::dbgprintf(INFO, "Redundant strategy time: %f\n", redundant_time);
+                inst::dbgprintf(INFO, "Redundant strategy benefit: %f\n", benefit);
+                inst::dbgprintf(INFO, "Best-time singular strategy cost: %f\n", best_singular_cost);
+                inst::dbgprintf(INFO, "Redundant strategy cost: %f\n", redundant_cost);
+                inst::dbgprintf(INFO, "Redundant strategy additional cost: %f\n", 
+                                extra_redundant_cost);
             }
             if (currentStrategy->includes(best_singular)) {
                 // because the redundant strategy includes the best singular strategy,
