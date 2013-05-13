@@ -112,8 +112,7 @@ class BayesianStrategyEvaluator::Likelihood {
     //   and iteration over only those estimators that matter
     //   for the current strategy.
     typedef map<vector<double>, DecisionsHistogram *, CmpVectors> LikelihoodMap;
-    //map<Strategy *, LikelihoodMap> likelihood_per_strategy;
-    LikelihoodMap strategy_likelihood;
+    LikelihoodMap likelihood_distribution;
 
     vector<double> getCurrentEstimatorKey(const vector<pair<Estimator *, double> >& estimator_values);
     void forEachEstimator(const vector<double>& key,
@@ -127,8 +126,7 @@ class BayesianStrategyEvaluator::DecisionsHistogram {
     DecisionsHistogram(BayesianStrategyEvaluator *evaluator_);
     void addDecision(const vector<pair<Estimator *,double> >& estimator_values);
     double getWinnerProbability(SimpleEvaluator *tmp_simple_evaluator,
-                                void *chooser_strategy, bool ensure_nonzero,
-                                size_t &cur_wins, size_t& cur_decisions);
+                                void *chooser_strategy, bool ensure_nonzero);
     void clear();
   private:
     BayesianStrategyEvaluator *evaluator;
@@ -283,9 +281,6 @@ BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t 
     
     return likelihood->getWeightedSum(&tmp_simple_evaluator, strategy, 
                                       fn, strategy_arg, chooser_arg);
-
-
-    //    return likelihood_value / prior_sum / likelihood_normalizing_factor;
 }
 
 BayesianStrategyEvaluator::Likelihood::Likelihood(BayesianStrategyEvaluator *evaluator_)
@@ -303,22 +298,18 @@ BayesianStrategyEvaluator::Likelihood::addObservation(Estimator *estimator, doub
 void 
 BayesianStrategyEvaluator::Likelihood::addDecision(const vector<pair<Estimator *,double> >& estimator_values)
 {
-    // for each strategy:
-    //     get the strategy's current key (vector of bins, based on estimator values) 
-    //     look up the histogram in that strategy's map
-    //     add an entry to the decisions pseudo-histogram
-    //for (Strategy *strategy : evaluator->strategies) {
-    //auto& strategy_likelihood = likelihood_per_strategy[strategy];
+    // get the current key over all estimators (vector of bins, based on estimator values) 
+    // look up the histogram in the likelihood map
+    // add an entry to the decisions pseudo-histogram
     vector<double> key = getCurrentEstimatorKey(estimator_values);
-    if (strategy_likelihood.count(key) == 0) {
+    if (likelihood_distribution.count(key) == 0) {
         // make sure that all vectors used as keys for the map have the same length
-        assert(strategy_likelihood.empty() || strategy_likelihood.begin()->first.size() == key.size());
-        strategy_likelihood[key] = new DecisionsHistogram(evaluator);
+        assert(likelihood_distribution.empty() || likelihood_distribution.begin()->first.size() == key.size());
+        likelihood_distribution[key] = new DecisionsHistogram(evaluator);
     }
-    DecisionsHistogram *histogram = strategy_likelihood[key];
+    DecisionsHistogram *histogram = likelihood_distribution[key];
     assert(histogram);
     histogram->addDecision(estimator_values);
-    //}
 }
 
 void
@@ -345,7 +336,6 @@ BayesianStrategyEvaluator::Likelihood::setEstimatorSamples(const vector<double>&
 vector<double>
 BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorKey(const vector<pair<Estimator *, double> >& estimator_values)
 {
-    //vector<Estimator *> estimators = strategy->getEstimators();
     vector<double> key;
     for (auto& p : estimator_values) {
         Estimator *estimator = p.first;
@@ -378,13 +368,6 @@ BayesianStrategyEvaluator::Likelihood::jointPriorProbability(const vector<double
     return probability;
 }
 
-#define soft_assert(cond) \
-    do {                                                                \
-        if (!cond) {                                                    \
-            dbgprintf(ERROR, "SOFT-ASSERT at %s:%d: %s\n", __FILE__, __LINE__, #cond); \
-        }                                                               \
-    } while (0)
-
 double 
 BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simple_evaluator, 
                                                       Strategy *strategy, typesafe_eval_fn_t fn,
@@ -392,26 +375,14 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
 {
     double weightedSum = 0.0;
     
-    double prior_sum = 0.0;
     double posterior_sum = 0.0;
 
     const auto& estimator_values = evaluator->simple_evaluator->getEstimatorValues();
     auto cur_key = getCurrentEstimatorKey(estimator_values);
     VectorsEqual vec_eq;
 
-    // XXX: is this causing a difference from what I expect?
-    // XXX:  maybe I should be iterating over the joint distribution?
-    // XXX:  I *think* it makes sense to separate them by strategy...
-    
-    // XXX: actually, this may be screwing up the normalization.
-    // TODO: figure out the right way and see if it makes a difference.
-
     bool debugging = is_debugging_on(DEBUG);
-    //size_t total_wins = 0;
-    //size_t total_decisions = 0;
-
-    //auto& strategy_likelihood = likelihood_per_strategy[strategy];
-    for (auto& map_pair : strategy_likelihood) {
+    for (auto& map_pair : likelihood_distribution) {
         auto key = map_pair.first;
         DecisionsHistogram *histogram = map_pair.second;
 
@@ -419,16 +390,9 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         double value = fn(evaluator, strategy_arg, chooser_arg);
         double prior = jointPriorProbability(key);
 
-        prior_sum += prior;
-
-        size_t cur_wins = 0;
-        size_t cur_decisions = 0;
         bool ensure_nonzero = vec_eq(cur_key, key);
-        double likelihood_coeff = histogram->getWinnerProbability(tmp_simple_evaluator, chooser_arg, ensure_nonzero,
-                                                                  cur_wins, cur_decisions);
+        double likelihood_coeff = histogram->getWinnerProbability(tmp_simple_evaluator, chooser_arg, ensure_nonzero);
         double posterior = prior * likelihood_coeff;
-        //total_wins += cur_wins;
-        //total_decisions += cur_decisions;
         
         if (debugging) {
             ostringstream s;
@@ -442,16 +406,11 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         weightedSum += value * posterior;
     }
 
-    assert(prior_sum > 0.0);
-    //double likelihood_normalizing_factor = ((double) total_wins) / total_decisions;
-    //assert(likelihood_normalizing_factor > 0.0);
-    dbgprintf(INFO, "[bayesian] prior-normalizing factor = %f\n", prior_sum);
-    //dbgprintf(INFO, "[bayesian] likelihood-normalizing factor = %f\n", likelihood_normalizing_factor);
-    
     // if debug level isn't high enough, we're not calculating this, because it's slow.
     dbgprintf(INFO, "[bayesian] posterior sum: %f\n", posterior_sum);
     
-    // here's the normalization
+    // here's the normalization.  summing the posterior values ensures that
+    //  I'm using the correct value.
     return weightedSum / posterior_sum;
 }
 
@@ -460,14 +419,11 @@ BayesianStrategyEvaluator::Likelihood::clear()
 {
     last_observation.clear();
     currentEstimatorSamples.clear();
-    //for (auto& p : likelihood_per_strategy) {
-    for (auto& q : strategy_likelihood) {
+    for (auto& q : likelihood_distribution) {
         DecisionsHistogram *histogram = q.second;
         delete histogram;
     }
-    strategy_likelihood.clear();
-    //}
-    //likelihood_per_strategy.clear();
+    likelihood_distribution.clear();
 }
 
 BayesianStrategyEvaluator::DecisionsHistogram::
@@ -491,14 +447,13 @@ addDecision(const vector<pair<Estimator *, double> >& estimator_values)
 
 double
 BayesianStrategyEvaluator::DecisionsHistogram::getWinnerProbability(SimpleEvaluator *tmp_simple_evaluator,
-                                                                    void *chooser_arg, bool ensure_nonzero,
-                                                                    size_t& cur_wins, size_t& cur_decisions)
+                                                                    void *chooser_arg, bool ensure_nonzero)
 {
     Strategy *winner = evaluator->getBestSingularStrategy(chooser_arg);
     assert(winner);
 
-    cur_wins = 0;
-    cur_decisions = decisions.size();
+    size_t cur_wins = 0;
+    size_t cur_decisions = decisions.size();
     for (auto decision : decisions) {
         tmp_simple_evaluator->setEstimatorValues(decision);
         Strategy *cur_winner = (Strategy *) tmp_simple_evaluator->chooseStrategy(chooser_arg);
