@@ -84,7 +84,7 @@ void instruments::dbgprintf_always(const char *fmt, ...)
 
 void instruments::dbgprintf(enum instruments::DebugLevel level, const char *fmt, ...)
 {
-    if (is_debugging_on(level)) {
+    if (instruments::is_debugging_on(level)) {
         va_list ap;
         va_start(ap, fmt);
         vdbgprintf(false, fmt, ap);

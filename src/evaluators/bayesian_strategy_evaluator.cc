@@ -381,7 +381,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     auto cur_key = getCurrentEstimatorKey(estimator_values);
     VectorsEqual vec_eq;
 
-    bool debugging = is_debugging_on(DEBUG);
+    bool debugging = inst::is_debugging_on(DEBUG);
     for (auto& map_pair : likelihood_distribution) {
         auto key = map_pair.first;
         DecisionsHistogram *histogram = map_pair.second;
