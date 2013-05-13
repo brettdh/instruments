@@ -1,15 +1,14 @@
 #ifndef DEBUG_H_INCL_OIUHFBOVSBWE
 #define DEBUG_H_INCL_OIUHFBOVSBWE
 
-#include <stdio.h>
-#include <unistd.h>
-
 #ifdef __cplusplus
 #define CDECL extern "C"
-#include <string>
 #else
-#define CDECL 
+#define CDECL
 #endif
+
+#include <stdio.h>
+#include <unistd.h>
 
 #define ASSERT(cond)                                                    \
     do {                                                                \
@@ -31,12 +30,12 @@ enum DebugLevel {
     DEBUG   /* be as verbose and slow as you want. */
 };
 
-CDECL void set_debug_level(enum DebugLevel level);
-CDECL int is_debugging_on(enum DebugLevel level);
+void set_debug_level(enum DebugLevel level);
+int is_debugging_on(enum DebugLevel level);
 
-CDECL void dbgprintf(enum DebugLevel level, const char *format, ...)
+void dbgprintf(enum DebugLevel level, const char *format, ...)
   __attribute__((format(printf, 2, 3)));
-CDECL void dbgprintf_always(const char *format, ...)
+void dbgprintf_always(const char *format, ...)
   __attribute__((format(printf, 1, 2)));
 
 #ifdef __cplusplus
@@ -44,6 +43,14 @@ CDECL void dbgprintf_always(const char *format, ...)
 #endif
 
 #ifdef __cplusplus
+typedef instruments::DebugLevel debug_level_t;
+#else
+typedef enum DebugLevel debug_level_t;
+#endif
+CDECL void instruments_set_debug_level(debug_level_t level);
+
+#ifdef __cplusplus
+#include <string>
 void check(bool success, const std::string& msg);
 #endif
 

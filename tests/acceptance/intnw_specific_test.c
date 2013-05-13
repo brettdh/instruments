@@ -90,7 +90,7 @@ create_estimators_and_strategies(instruments_external_estimator_t *estimators,
 static void setup_common(struct common_test_data *cdata, enum EvalMethod method)
 {
     set_fixed_resource_weights(0.0, 1.0);
-    set_debug_level(NONE);
+    instruments_set_debug_level(NONE);
 
     cdata->evaluator = NULL;
     create_estimators_and_strategies(cdata->estimators, cdata->strategies, 
@@ -248,7 +248,7 @@ static void test_both_networks_best(struct common_test_data *cdata)
     int num_samples = 50;
     int i;
     
-    //set_debug_level(DEBUG);
+    //instruments_set_debug_level(DEBUG);
 
     set_estimator_range_hints(cdata->estimators[0], 500, 9500, 9);
     set_estimator_range_hints(cdata->estimators[1], -1, 1, 1);
@@ -398,7 +398,7 @@ get_estimator_index(const char *network, const char *metric)
 static void
 run_real_distributions_test(struct common_test_data *cdata, const char *restore_filename)
 {
-    //set_debug_level(DEBUG);
+    //instruments_set_debug_level(DEBUG);
     
     //const char *logfile = "./support_files/confidence_bounds_test_intnw.log";
     const char *logfile = "./support_files/post_restore_intnw.log";
@@ -461,7 +461,7 @@ CTEST_DATA(bayesian_method_test) {
 CTEST_SETUP(bayesian_method_test)
 {
     setup_common(&data->common_data, BAYESIAN);
-    set_debug_level(DEBUG);
+    instruments_set_debug_level(DEBUG);
 }
 
 CTEST_TEARDOWN(bayesian_method_test)
@@ -511,7 +511,7 @@ static double update_mean(double mean, double value, int n)
 
 CTEST2(bayesian_method_test, test_proposal_example)
 {
-    //set_debug_level(DEBUG);
+    //instruments_set_debug_level(DEBUG);
     
     struct common_test_data *cdata = &data->common_data;
 
@@ -577,7 +577,7 @@ CTEST2(bayesian_method_test, test_real_distributions)
 {
     struct common_test_data *cdata = &data->common_data;
 
-    set_debug_level(DEBUG);
+    instruments_set_debug_level(DEBUG);
     run_real_distributions_test(cdata, NULL);
 }
 

@@ -4,7 +4,7 @@
 
 int main(int argc, const char *argv[])
 {
-    set_debug_level(NONE);
+    instruments_set_debug_level(NONE);
     return ctest_main(argc, argv); 
 }
 

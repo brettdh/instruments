@@ -69,6 +69,11 @@ void instruments::set_debug_level(enum instruments::DebugLevel level)
     debug_level = level;
 }
 
+void instruments_set_debug_level(enum instruments::DebugLevel level)
+{
+    instruments::set_debug_level(level);
+}
+
 int instruments::is_debugging_on(enum instruments::DebugLevel level)
 {
     return (level <= debug_level);
