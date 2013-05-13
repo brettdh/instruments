@@ -423,6 +423,7 @@ run_real_distributions_test(struct common_test_data *cdata, const char *restore_
         char *start = strstr(line, "Adding new stats to ");
         if (start) {
             int rc;
+            int make_decision = (seen == all_seen);
             if ((rc = sscanf(start, "Adding new stats to %s network estimator: %s obs %lf est %lf",
                              network, metric, &observation, &estimate)) == 4) {
                 int index = get_estimator_index(network, metric);
@@ -437,7 +438,7 @@ run_real_distributions_test(struct common_test_data *cdata, const char *restore_
                 }
             }
             
-            if (seen == all_seen) {
+            if (make_decision) {
                 choose_strategy(cdata->evaluator, (void *) 1024);
             }
         }
@@ -460,6 +461,7 @@ CTEST_DATA(bayesian_method_test) {
 CTEST_SETUP(bayesian_method_test)
 {
     setup_common(&data->common_data, BAYESIAN);
+    set_debug_level(DEBUG);
 }
 
 CTEST_TEARDOWN(bayesian_method_test)

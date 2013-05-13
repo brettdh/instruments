@@ -18,6 +18,8 @@ class StatsDistribution {
     Iterator *getIterator();
     void finishIterator(Iterator *it);
 
+    int totalCount();
+
     virtual void appendToFile(const std::string& name, std::ofstream& out) = 0;
     virtual std::string restoreFromFile(std::ifstream& in) = 0;
 

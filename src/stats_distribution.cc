@@ -14,3 +14,13 @@ StatsDistribution::finishIterator(Iterator *it)
     iterators.erase(it);
     delete it;
 }
+
+int
+StatsDistribution::totalCount()
+{
+    int total;
+    Iterator *it = getIterator();
+    total = it->totalCount();
+    finishIterator(it);
+    return total;
+}
