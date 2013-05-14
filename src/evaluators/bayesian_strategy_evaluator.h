@@ -52,6 +52,8 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
     class DecisionsHistogram;
     Likelihood *likelihood;
     DecisionsHistogram *normalizer;
+    
+    friend class DistributionKey;
 
     std::map<Estimator *, StatsDistributionBinned *> estimatorSamples;
     std::map<Estimator *, double> last_estimator_values;

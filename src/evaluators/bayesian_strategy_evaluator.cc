@@ -13,12 +13,14 @@ using inst::INFO; using inst::DEBUG;
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <memory>
 using std::vector; using std::map; using std::make_pair;
 using std::runtime_error; using std::ostringstream;
 using std::istringstream; using std::ostream;
 using std::string; using std::setprecision;
 using std::ifstream; using std::ofstream; using std::endl;
 using std::pair; using std::any_of;
+using std::shared_ptr;
 
 #include <stdlib.h>
 #include <assert.h>
@@ -30,28 +32,18 @@ static inline double my_fabs(double x)
     return ((double (*)(double)) fabs)(x);
 }
 
-static ostream&
-print_vector(ostream& os, const vector<double>& vec)
-{
-    os << "[ ";
-    for (const double& v : vec) {
-        os << v << " ";
-    }
-    os << "]";
-    return os;
-}
-
 typedef double (*combiner_fn_t)(double, double);
 
-class CmpVectors {
+template <typename T>
+class VectorLess {
     constexpr static double THRESHOLD = 0.0001;
     
   public:
     // return true iff first < second
-    bool operator()(const vector<double>& first, const vector<double>& second) const {
+    bool operator()(const vector<T>& first, const vector<T>& second) const {
         assert(first.size() == second.size());
         for (size_t i = 0; i < first.size(); ++i) {
-            double diff = first[i] - second[i];
+            T diff = first[i] - second[i];
             if (fabs(diff) > THRESHOLD) {
                 return diff < 0.0;
             }
@@ -60,13 +52,123 @@ class CmpVectors {
     }
 };
 
+template <typename T>
 class VectorsEqual {
-    CmpVectors less;
+    VectorLess<T> less;
   public:
-    bool operator()(const vector<double>& first, const vector<double>& second) const {
+    bool operator()(const vector<T>& first, const vector<T>& second) const {
         return !(less(first, second) || less(second, first));
     }
 };
+
+class DistributionKey {
+  public:
+    DistributionKey(BayesianStrategyEvaluator *evaluator);
+    ~DistributionKey();
+    void addEstimatorValue(Estimator *estimator, double value);
+    void forEachEstimator(std::function<void(Estimator *, double)> fn);
+
+    bool operator<(const DistributionKey& other) const;
+    bool operator==(const DistributionKey& other) const;
+    ostream& print(ostream& os) const;
+
+  private:
+    typedef map<Estimator *, size_t> EstimatorIndicesMap;
+    typedef shared_ptr<EstimatorIndicesMap> EstimatorIndicesMapPtr;
+    typedef map<BayesianStrategyEvaluator *,  EstimatorIndicesMapPtr> EstimatorIndicesByEvaluatorMap; 
+    static EstimatorIndicesByEvaluatorMap estimator_indices_maps;
+
+    BayesianStrategyEvaluator *evaluator;
+    shared_ptr<EstimatorIndicesMap> estimator_indices;
+    
+    vector<int> key; // list of indices into binned distribution
+    VectorLess<int> less;
+    VectorsEqual<int> equal;
+};
+
+DistributionKey::EstimatorIndicesByEvaluatorMap DistributionKey::estimator_indices_maps;
+
+DistributionKey::DistributionKey(BayesianStrategyEvaluator *evaluator_)
+    : evaluator(evaluator_)
+{
+    if (estimator_indices_maps.count(evaluator) == 0) {
+        estimator_indices_maps[evaluator].reset(new EstimatorIndicesMap);
+    }
+    estimator_indices = estimator_indices_maps[evaluator];
+}
+
+DistributionKey::~DistributionKey()
+{
+    if (estimator_indices.use_count() == 2) {
+        // I'm the last DistributionKey from this evaluator to go away,
+        //  so only me and the global map hold references to this map
+        estimator_indices_maps.erase(evaluator);
+    }
+    // managed map will get cleaned up by my shared_ptr's destructor
+}
+
+void 
+DistributionKey::addEstimatorValue(Estimator *estimator, double value)
+{
+    assert(estimator_indices != nullptr);
+    if (estimator_indices->count(estimator) == 0) {
+        estimator_indices->insert(make_pair(estimator, estimator_indices->size()));
+    }
+    size_t index = estimator_indices->at(estimator);
+    if (key.size() <= index) {
+        key.resize(index + 1);
+    }
+
+    assert(evaluator->estimatorSamples.count(estimator) > 0);
+    size_t bin_index = evaluator->estimatorSamples[estimator]->getIndex(value);
+    key[index] = bin_index;
+}
+
+void
+DistributionKey::forEachEstimator(std::function<void(Estimator *, double)> fn)
+{
+    assert(estimator_indices != nullptr);
+    assert(estimator_indices->size() == key.size());
+    for (auto& p : *estimator_indices) {
+        Estimator *estimator = p.first;
+        size_t index = p.second;
+        assert(index < key.size());
+        
+        // unnecessary most of the time, except when the tail values can change.
+        double value = evaluator->estimatorSamples[estimator]->getValueAtIndex(key[index]);
+        
+        fn(estimator, value);
+    }
+}
+
+bool
+DistributionKey::operator<(const DistributionKey& other) const
+{
+    return less(key, other.key);
+}
+
+bool 
+DistributionKey::operator==(const DistributionKey& other) const
+{
+    return equal(key, other.key);
+}
+
+ostream&
+DistributionKey::print(ostream& os) const
+{
+    os << "[ ";
+    for (const double& v : key) {
+        os << v << " ";
+    }
+    os << "]";
+    return os;
+}
+
+static ostream&
+operator<<(ostream& os, const DistributionKey& key)
+{
+    return key.print(os);
+}
 
 class BayesianStrategyEvaluator::SimpleEvaluator : public StrategyEvaluator {
   public:
@@ -111,14 +213,12 @@ class BayesianStrategyEvaluator::Likelihood {
     // I keep these separately for each strategy for easy lookup
     //   and iteration over only those estimators that matter
     //   for the current strategy.
-    typedef map<vector<double>, DecisionsHistogram *, CmpVectors> LikelihoodMap;
+    typedef map<DistributionKey, DecisionsHistogram *> LikelihoodMap;
     LikelihoodMap likelihood_distribution;
 
-    vector<double> getCurrentEstimatorKey(const vector<pair<Estimator *, double> >& estimator_values);
-    void forEachEstimator(const vector<double>& key,
-                          std::function<void(Estimator *, double)> fn);
-    void setEstimatorSamples(const vector<double>& key);
-    double jointPriorProbability(const vector<double>& key);
+    DistributionKey getCurrentEstimatorKey(const vector<pair<Estimator *, double> >& estimator_values);
+    void setEstimatorSamples(DistributionKey& key);
+    double jointPriorProbability(DistributionKey& key);
 };
 
 class BayesianStrategyEvaluator::DecisionsHistogram {
@@ -301,10 +401,12 @@ BayesianStrategyEvaluator::Likelihood::addDecision(const vector<pair<Estimator *
     // get the current key over all estimators (vector of bins, based on estimator values) 
     // look up the histogram in the likelihood map
     // add an entry to the decisions pseudo-histogram
-    vector<double> key = getCurrentEstimatorKey(estimator_values);
+    DistributionKey key = getCurrentEstimatorKey(estimator_values);
     if (likelihood_distribution.count(key) == 0) {
         // make sure that all vectors used as keys for the map have the same length
-        assert(likelihood_distribution.empty() || likelihood_distribution.begin()->first.size() == key.size());
+        assert(likelihood_distribution.empty() || 
+               (likelihood_distribution.begin()->first == key ||
+                !(likelihood_distribution.begin()->first == key)));
         likelihood_distribution[key] = new DecisionsHistogram(evaluator);
     }
     DecisionsHistogram *histogram = likelihood_distribution[key];
@@ -313,38 +415,23 @@ BayesianStrategyEvaluator::Likelihood::addDecision(const vector<pair<Estimator *
 }
 
 void
-BayesianStrategyEvaluator::Likelihood::forEachEstimator(const vector<double>& key,
-                                                        std::function<void(Estimator *, double)> fn)
+BayesianStrategyEvaluator::Likelihood::setEstimatorSamples(DistributionKey& key)
 {
-    vector<pair<Estimator *, double> > estimators = evaluator->simple_evaluator->getEstimatorValues();
-    assert(estimators.size() == key.size());
-    int i = 0;
-    for (double sample : key) {
-        Estimator *estimator = estimators[i++].first;
-        fn(estimator, sample);
-    }
-}
-
-void
-BayesianStrategyEvaluator::Likelihood::setEstimatorSamples(const vector<double>& key)
-{
-    forEachEstimator(key, [&](Estimator *estimator, double sample) {
+    key.forEachEstimator([&](Estimator *estimator, double sample) {
             currentEstimatorSamples[estimator] = sample;
         });
 }
 
-vector<double>
+DistributionKey
 BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorKey(const vector<pair<Estimator *, double> >& estimator_values)
 {
-    vector<double> key;
+    DistributionKey key(evaluator);
     for (auto& p : estimator_values) {
         Estimator *estimator = p.first;
         assert(last_observation.count(estimator) > 0);
-        assert(evaluator->estimatorSamples.count(estimator) > 0);
         
         double obs = last_observation[estimator];
-        double bin_mid = evaluator->estimatorSamples[estimator]->getBinnedValue(obs);
-        key.push_back(bin_mid);
+        key.addEstimatorValue(estimator, obs);
     }
     return key;
 }
@@ -358,11 +445,11 @@ BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorSample(Estimator *esti
 
 
 double
-BayesianStrategyEvaluator::Likelihood::jointPriorProbability(const vector<double>& key)
+BayesianStrategyEvaluator::Likelihood::jointPriorProbability(DistributionKey& key)
 {
     double probability = 1.0;
     ostringstream oss;
-    forEachEstimator(key, [&](Estimator *estimator, double sample) {
+    key.forEachEstimator([&](Estimator *estimator, double sample) {
             assert(evaluator->estimatorSamples.count(estimator) > 0);
             double single_prob = evaluator->estimatorSamples[estimator]->getProbability(sample);
             probability *= single_prob;
@@ -379,7 +466,8 @@ BayesianStrategyEvaluator::Likelihood::jointPriorProbability(const vector<double
 
 #define assert_valid_probability(value)                                 \
     do {                                                                \
-        if (value < 0.0 || value > 1.0) {                               \
+        const double threshold = 0.00001;                               \
+        if (value < -threshold || value - 1.0 > threshold) {            \
             fprintf(stderr, "%s (%f) is invalid probability at %s:%d\n", \
                     #value, value, __FILE__, __LINE__);                 \
             assert(false);                                              \
@@ -396,12 +484,11 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     double posterior_sum = 0.0;
 
     const auto& estimator_values = evaluator->simple_evaluator->getEstimatorValues();
-    auto cur_key = getCurrentEstimatorKey(estimator_values);
-    VectorsEqual vec_eq;
+    DistributionKey cur_key = getCurrentEstimatorKey(estimator_values);
 
     bool debugging = inst::is_debugging_on(DEBUG);
     for (auto& map_pair : likelihood_distribution) {
-        auto key = map_pair.first;
+        DistributionKey key = map_pair.first;
         DecisionsHistogram *histogram = map_pair.second;
 
         setEstimatorSamples(key);
@@ -412,7 +499,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         prior_sum += prior;
         assert_valid_probability(prior_sum);
     
-        bool ensure_nonzero = vec_eq(cur_key, key);
+        bool ensure_nonzero = (cur_key == key);
         double likelihood_coeff = histogram->getWinnerProbability(tmp_simple_evaluator, chooser_arg, ensure_nonzero);
         double posterior = prior * likelihood_coeff;
 
@@ -421,9 +508,9 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         
         if (debugging) {
             ostringstream s;
-            s << "[bayesian] key: ";
-            print_vector(s, key);
-            s << "  prior: " << prior << "  likelihood_coeff: " << likelihood_coeff;
+            s << "[bayesian] key: " << key
+              << "  prior: " << prior 
+              << "  likelihood_coeff: " << likelihood_coeff;
             inst::dbgprintf(DEBUG, "%s\n", s.str().c_str());
         }
         posterior_sum += posterior;

@@ -28,6 +28,10 @@ class StatsDistributionBinned : public StatsDistribution {
     // finds the bin where value falls and returns its midpoint.
     double getBinnedValue(double value);
 
+    double getValueAtIndex(size_t index);
+
+    size_t getIndex(double value);
+
     class Iterator : StatsDistribution::Iterator {
       public:
         virtual double probability();
@@ -77,7 +81,6 @@ class StatsDistributionBinned : public StatsDistribution {
     void calculateBins();
     bool binsAreSet();
 
-    size_t getIndex(double value);
     void updateBin(int index, double value);
     double probabilityAtIndex(size_t index);
 
