@@ -448,7 +448,10 @@ double
 BayesianStrategyEvaluator::Likelihood::jointPriorProbability(DistributionKey& key)
 {
     double probability = 1.0;
-    ostringstream oss;
+    static ostringstream oss;
+    if (inst::is_debugging_on(DEBUG)) {
+        oss.str("");
+    }
     key.forEachEstimator([&](Estimator *estimator, double sample) {
             assert(evaluator->estimatorSamples.count(estimator) > 0);
             double single_prob = evaluator->estimatorSamples[estimator]->getProbability(sample);
