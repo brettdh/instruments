@@ -361,12 +361,30 @@ double
 BayesianStrategyEvaluator::Likelihood::jointPriorProbability(const vector<double>& key)
 {
     double probability = 1.0;
+    ostringstream oss;
     forEachEstimator(key, [&](Estimator *estimator, double sample) {
             assert(evaluator->estimatorSamples.count(estimator) > 0);
-            probability *= evaluator->estimatorSamples[estimator]->getProbability(sample);
+            double single_prob = evaluator->estimatorSamples[estimator]->getProbability(sample);
+            probability *= single_prob;
+            if (inst::is_debugging_on(DEBUG)) {
+                oss << single_prob << " ";
+            }
         });
+    if (inst::is_debugging_on(DEBUG)) {
+        string s = oss.str();
+        dbgprintf(DEBUG, "Probabilities: %s  joint: %f\n", s.c_str(), probability);
+    }
     return probability;
 }
+
+#define assert_valid_probability(value)                                 \
+    do {                                                                \
+        if (value < 0.0 || value > 1.0) {                               \
+            fprintf(stderr, "%s (%f) is invalid probability at %s:%d\n", \
+                    #value, value, __FILE__, __LINE__);                 \
+            assert(false);                                              \
+        }                                                               \
+    } while (0)
 
 double 
 BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simple_evaluator, 
@@ -374,7 +392,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
                                                       void *strategy_arg, void *chooser_arg)
 {
     double weightedSum = 0.0;
-    
+    double prior_sum = 0.0;
     double posterior_sum = 0.0;
 
     const auto& estimator_values = evaluator->simple_evaluator->getEstimatorValues();
@@ -389,10 +407,17 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         setEstimatorSamples(key);
         double value = fn(evaluator, strategy_arg, chooser_arg);
         double prior = jointPriorProbability(key);
+        assert_valid_probability(prior);
 
+        prior_sum += prior;
+        assert_valid_probability(prior_sum);
+    
         bool ensure_nonzero = vec_eq(cur_key, key);
         double likelihood_coeff = histogram->getWinnerProbability(tmp_simple_evaluator, chooser_arg, ensure_nonzero);
         double posterior = prior * likelihood_coeff;
+
+        assert_valid_probability(likelihood_coeff);
+        assert_valid_probability(posterior);
         
         if (debugging) {
             ostringstream s;
@@ -402,11 +427,12 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
             inst::dbgprintf(DEBUG, "%s\n", s.str().c_str());
         }
         posterior_sum += posterior;
+        assert_valid_probability(posterior_sum);
         
         weightedSum += value * posterior;
     }
 
-    // if debug level isn't high enough, we're not calculating this, because it's slow.
+    inst::dbgprintf(INFO, "[bayesian] prior sum: %f\n", prior_sum);
     inst::dbgprintf(INFO, "[bayesian] posterior sum: %f\n", posterior_sum);
     
     // here's the normalization.  summing the posterior values ensures that

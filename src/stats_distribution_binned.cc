@@ -302,6 +302,9 @@ StatsDistributionBinned::printHistogram()
 bool
 StatsDistributionBinned::binsAreSet()
 {
+    // because I shouldn't be making histograms without range hints anymore.
+    assert(!breaks.empty());
+    
     return (!breaks.empty());
 }
 

@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <float.h>
 
 #include <regex.h>
 
@@ -243,17 +244,21 @@ static void add_last_estimates(instruments_external_estimator_t *estimators)
 
 static double update_mean(double mean, double value, int n);
 
+static void set_range_hints(struct common_test_data *cdata)
+{
+    set_estimator_range_hints(cdata->estimators[0], 500, 9500, 9);
+    set_estimator_range_hints(cdata->estimators[1], -1, 1, 1);
+    set_estimator_range_hints(cdata->estimators[2], 500, 9500, 9);
+    set_estimator_range_hints(cdata->estimators[3], -1, 1, 1);
+}
+
 static void test_both_networks_best(struct common_test_data *cdata)
 {
     int num_samples = 50;
     int i;
     
     //instruments_set_debug_level(DEBUG);
-
-    set_estimator_range_hints(cdata->estimators[0], 500, 9500, 9);
-    set_estimator_range_hints(cdata->estimators[1], -1, 1, 1);
-    set_estimator_range_hints(cdata->estimators[2], 500, 9500, 9);
-    set_estimator_range_hints(cdata->estimators[3], -1, 1, 1);
+    set_range_hints(cdata);
 
     // do this twice so that the bayesian method can make an initial decision.
     for (i = 0; i < 2; ++i) {
@@ -303,6 +308,7 @@ static void test_save_restore(struct common_test_data *cdata, const char *filena
     create_estimators_and_strategies(new_data.estimators, new_data.strategies, 
                                      new_data.args, &new_data.evaluator,
                                      eval_method);
+    set_range_hints(&new_data);
     add_last_estimates(new_data.estimators);
     if (eval_method == BAYESIAN) {
         // do it again, so that the bayesian method can make a decision.
@@ -395,29 +401,25 @@ get_estimator_index(const char *network, const char *metric)
 }
 
 
-static void
-run_real_distributions_test(struct common_test_data *cdata, const char *restore_filename)
+typedef void (*new_estimate_callback_t)(struct common_test_data *cdata, int index, 
+                                        double observation, double estimate, void *arg);
+
+static void read_intnw_log_file(const char *logfile, struct common_test_data *cdata,
+                                int test_decisions,
+                                new_estimate_callback_t callback, void *callback_arg)
 {
-    //instruments_set_debug_level(DEBUG);
-    
-    //const char *logfile = "./support_files/confidence_bounds_test_intnw.log";
-    const char *logfile = "./support_files/post_restore_intnw.log";
-    FILE *in = fopen(logfile, "r");
-    assert(in);
-
-    if (restore_filename) {
-        restore_evaluator(cdata->evaluator, restore_filename);
-    }
-
     char network[64], metric[64];
     double observation, estimate;
     char *line = NULL;
     size_t len = -1;
-    
+
     // all 1 bits for the number of estimators
     size_t all_seen = (1 << NUM_ESTIMATORS) - 1;
     size_t seen = 0;
     // when all_seen == seen, I've seen a sample for all the estimators
+
+    FILE *in = fopen(logfile, "r");
+    assert(in);
 
     while ((getline(&line, &len, in)) != -1) {
         char *start = strstr(line, "Adding new stats to ");
@@ -427,18 +429,18 @@ run_real_distributions_test(struct common_test_data *cdata, const char *restore_
             if ((rc = sscanf(start, "Adding new stats to %s network estimator: %s obs %lf est %lf",
                              network, metric, &observation, &estimate)) == 4) {
                 int index = get_estimator_index(network, metric);
-                add_observation(cdata->estimators[index], observation, estimate);
+                callback(cdata, index, observation, estimate, callback_arg);
                 seen |= (1 << index);
                 
                 if ((rc = sscanf(start, "Adding new stats to %*s network estimator: %*s obs %*f est %*f %s obs %lf est %lf",
                                  metric, &observation, &estimate)) == 3) {
                     index = get_estimator_index(network, metric);
-                    add_observation(cdata->estimators[index], observation, estimate);
+                    callback(cdata, index, observation, estimate, callback_arg);
                     seen |= (1 << index);
                 }
             }
             
-            if (make_decision) {
+            if (make_decision && test_decisions) {
                 choose_strategy(cdata->evaluator, (void *) 1024);
             }
         }
@@ -446,6 +448,58 @@ run_real_distributions_test(struct common_test_data *cdata, const char *restore_
         line = NULL;
     }
     fclose(in);
+}
+
+static void add_observation_callback(struct common_test_data *cdata, int index, 
+                                     double observation, double estimate, void *arg)
+{
+    add_observation(cdata->estimators[index], observation, estimate);
+}
+
+typedef struct hints {
+    double min;
+    double max;
+} hints_t;
+
+static void get_range_hints(struct common_test_data *cdata, int index, 
+                            double observation, double estimate, void *arg)
+{
+    hints_t *hints = (hints_t *) arg;
+    if (hints[index].min > observation) {
+        hints[index].min = observation;
+    }
+    if (hints[index].max < observation) {
+        hints[index].max = observation;
+    }
+}
+
+static void
+run_real_distributions_test(struct common_test_data *cdata, const char *restore_filename)
+{
+    //instruments_set_debug_level(DEBUG);
+    
+    //const char *logfile = "./support_files/confidence_bounds_test_intnw.log";
+    const char *logfile = "./support_files/post_restore_intnw.log";
+
+    if (restore_filename) {
+        restore_evaluator(cdata->evaluator, restore_filename);
+    }
+    
+    hints_t hints[NUM_ESTIMATORS];
+    int i;
+    for (i = 0; i < NUM_ESTIMATORS; ++i) {
+        hints[i].min = DBL_MAX;
+        hints[i].max = -DBL_MAX;
+    }
+
+    read_intnw_log_file(logfile, cdata, 0, get_range_hints, (void*) hints);
+
+    for (i = 0; i < NUM_ESTIMATORS; ++i) {
+        size_t NUMBINS = 30;
+        set_estimator_range_hints(cdata->estimators[i], hints[i].min * 0.95, hints[i].max * 1.05, NUMBINS);
+    }
+    
+    read_intnw_log_file(logfile, cdata, 1, add_observation_callback, NULL);
 }
 
 CTEST2(confidence_bounds_test, test_real_distributions)
