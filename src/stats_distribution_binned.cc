@@ -129,7 +129,7 @@ StatsDistributionBinned::getBinnedValue(double value)
 double 
 StatsDistributionBinned::getValueAtIndex(size_t index)
 {
-    assert(index >= 0 && index < (int) mids.size());
+    assert(index >= 0 && index < mids.size());
     return mids[index];
 }
 

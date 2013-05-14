@@ -1,5 +1,6 @@
 #include <instruments.h>
 #include <instruments_private.h>
+#include "debug.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -98,6 +99,8 @@ CTEST2(range_hints, value_observed)
 
 CTEST2(range_hints, tail_values_are_okay)
 {
+    instruments_set_debug_level(NONE);
+    
     set_estimator_range_hints(data->low_estimator, 1, 9, 8);
     set_estimator_range_hints(data->high_estimator, 11, 19, 8);
 
