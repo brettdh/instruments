@@ -70,9 +70,10 @@ void instruments::set_debug_level(enum instruments::DebugLevel level)
     debug_level = level;
 }
 
-void instruments_set_debug_level(instruments_debug_level_t level)
+void instruments_set_debug_level(instruments_debug_level_t level_)
 {
-    assert(level >= inst::NONE && level <= inst::DEBUG);
+    int level(level_);
+    assert(level >= instruments::NONE && level <= instruments::DEBUG);
     instruments::set_debug_level(instruments::DebugLevel(level));
 }
 
