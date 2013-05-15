@@ -43,13 +43,6 @@ void dbgprintf_always(const char *format, ...)
 #endif
 
 #ifdef __cplusplus
-typedef instruments::DebugLevel debug_level_t;
-#else
-typedef enum DebugLevel debug_level_t;
-#endif
-CDECL void instruments_set_debug_level(debug_level_t level);
-
-#ifdef __cplusplus
 #include <string>
 void check(bool success, const std::string& msg);
 #endif

@@ -1,3 +1,4 @@
+#include "instruments.h"
 #include "debug.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -69,9 +70,10 @@ void instruments::set_debug_level(enum instruments::DebugLevel level)
     debug_level = level;
 }
 
-void instruments_set_debug_level(enum instruments::DebugLevel level)
+void instruments_set_debug_level(instruments_debug_level_t level)
 {
-    instruments::set_debug_level(level);
+    assert(level >= inst::NONE && level <= inst::DEBUG);
+    instruments::set_debug_level(instruments::DebugLevel(level));
 }
 
 int instruments::is_debugging_on(enum instruments::DebugLevel level)

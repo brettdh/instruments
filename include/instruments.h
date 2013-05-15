@@ -219,4 +219,13 @@ CDECL void set_estimator_range_hints(instruments_estimator_t estimator,
  */
 CDECL int estimator_has_range_hints(instruments_estimator_t estimator);
 
+typedef enum {
+    INSTRUMENTS_DEBUG_LEVEL_NONE=0, /* shut it. */
+    INSTRUMENTS_DEBUG_LEVEL_ERROR,  /* exceptional situations only. */
+    INSTRUMENTS_DEBUG_LEVEL_INFO,   /* a little chattier, but not in any hot spots. (default) */
+    INSTRUMENTS_DEBUG_LEVEL_DEBUG   /* be as verbose and slow as you want. */
+} instruments_debug_level_t;
+
+CDECL void instruments_set_debug_level(instruments_debug_level_t level);
+
 #endif
