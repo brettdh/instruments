@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <string>
+#include <iostream>
 
 
 const suseconds_t& subseconds(const struct timeval&  tv);
@@ -99,5 +100,7 @@ struct timespec abs_time(struct timespec rel_time);
 /* convert between u_long and struct timeval */
 suseconds_t convert_to_useconds(struct timeval tv);
 struct timeval convert_to_timeval(u_long useconds);
+
+std::ostream& print_timestamp(std::ostream& out, const struct timeval& when);
 
 #endif /* timeops_h_incl */

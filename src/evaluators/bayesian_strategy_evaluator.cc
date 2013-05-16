@@ -2,6 +2,7 @@
 #include "estimator.h"
 #include "stats_distribution_binned.h"
 #include "debug.h"
+#include "timeops.h"
 namespace inst = instruments;
 using inst::INFO; using inst::DEBUG;
 
@@ -489,14 +490,23 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     const auto& estimator_values = evaluator->simple_evaluator->getEstimatorValues();
     DistributionKey cur_key = getCurrentEstimatorKey(estimator_values);
 
+    const char *milestones[] = { "setEstimatorSamples", "eval_fn", "prior", "likelihood" };
+    const size_t num_milestones = sizeof(milestones) / sizeof(*milestones);
+    struct timeval timepoints[num_milestones + 1];
+    
+    
     bool debugging = inst::is_debugging_on(DEBUG);
     for (auto& map_pair : likelihood_distribution) {
         DistributionKey key = map_pair.first;
         DecisionsHistogram *histogram = map_pair.second;
 
+        gettimeofday(&timepoints[0], NULL);
         setEstimatorSamples(key);
+        gettimeofday(&timepoints[1], NULL); 
         double value = fn(evaluator, strategy_arg, chooser_arg);
+        gettimeofday(&timepoints[2], NULL);
         double prior = jointPriorProbability(key);
+        gettimeofday(&timepoints[3], NULL);
         assert_valid_probability(prior);
 
         prior_sum += prior;
@@ -504,6 +514,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     
         bool ensure_nonzero = (cur_key == key);
         double likelihood_coeff = histogram->getWinnerProbability(tmp_simple_evaluator, chooser_arg, ensure_nonzero);
+        gettimeofday(&timepoints[4], NULL);
         double posterior = prior * likelihood_coeff;
 
         assert_valid_probability(likelihood_coeff);
@@ -515,6 +526,15 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
               << "  prior: " << prior 
               << "  likelihood_coeff: " << likelihood_coeff;
             inst::dbgprintf(DEBUG, "%s\n", s.str().c_str());
+
+            s.str("");
+            for (size_t i = 0; i < num_milestones; ++i) {
+                struct timeval diff;
+                TIMEDIFF(timepoints[i], timepoints[i+1], diff);
+                s << milestones[i] << ": ";
+                print_timestamp(s, diff) << "  ";
+            }
+            inst::dbgprintf(DEBUG, "[bayesian] %s\n", s.str().c_str());
         }
         posterior_sum += posterior;
         assert_valid_probability(posterior_sum);

@@ -1,6 +1,10 @@
 #include "timeops.h"
 #include <time.h>
 
+#include <iostream>
+#include <iomanip>
+using std::ostream; using std::setw; using std::setfill;
+
 const suseconds_t& subseconds(const struct timeval&  tv) { return tv.tv_usec; }
 const long int& subseconds(const struct timespec& tv) { return tv.tv_nsec; }
 suseconds_t& subseconds(struct timeval&  tv) { return tv.tv_usec; }
@@ -58,4 +62,12 @@ struct timeval convert_to_timeval(u_long useconds)
     tv.tv_sec = useconds / 1000000;
     tv.tv_usec = useconds - (tv.tv_sec * 1000000);
     return tv;
+}
+
+ostream&
+print_timestamp(ostream& out, const struct timeval& when)
+{
+    out << when.tv_sec << "." 
+        << setw(6) << setfill('0') << when.tv_usec;
+    return out;
 }

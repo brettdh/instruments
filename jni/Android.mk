@@ -1,6 +1,6 @@
 LOCAL_PATH := $(call my-dir)
 
-my_PROFILING_BUILD := no
+my_PROFILING_BUILD := yes
 my_PROFILING_CFLAGS := -pg -fno-omit-frame-pointer -fno-function-sections -DPROFILING_BUILD
 
 ifneq ($(my_PROFILING_BUILD),)
