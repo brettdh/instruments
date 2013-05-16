@@ -66,7 +66,7 @@ class DistributionKey {
     DistributionKey(BayesianStrategyEvaluator *evaluator);
     ~DistributionKey();
     void addEstimatorValue(Estimator *estimator, double value);
-    void forEachEstimator(std::function<void(Estimator *, double)> fn);
+    void forEachEstimator(std::function<void(Estimator *, double)> fn) const;
 
     bool operator<(const DistributionKey& other) const;
     bool operator==(const DistributionKey& other) const;
@@ -125,7 +125,7 @@ DistributionKey::addEstimatorValue(Estimator *estimator, double value)
 }
 
 void
-DistributionKey::forEachEstimator(std::function<void(Estimator *, double)> fn)
+DistributionKey::forEachEstimator(std::function<void(Estimator *, double)> fn) const
 {
     assert(estimator_indices != nullptr);
     assert(estimator_indices->size() == key.size());
@@ -157,9 +157,9 @@ ostream&
 DistributionKey::print(ostream& os) const
 {
     os << "[ ";
-    for (const double& v : key) {
-        os << v << " ";
-    }
+    forEachEstimator([&](Estimator *estimator, double value) {
+            os << value << " ";
+        });
     os << "]";
     return os;
 }
