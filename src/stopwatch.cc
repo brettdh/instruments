@@ -14,8 +14,9 @@ Stopwatch::Stopwatch()
 }
 
 Stopwatch::Stopwatch(const vector<string>& labels_)
-    : labels(labels_), next(-1), last_total(NULL)
+    : labels(labels_), next(-1), last_total(NULL), disabled(false)
 {
+    totals.resize(labels.size());
     freezeLabels();
 }
 
