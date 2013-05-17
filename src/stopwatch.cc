@@ -8,9 +8,21 @@
 #include <sstream>
 using std::string; using std::vector; using std::ostringstream;
 
-Stopwatch::Stopwatch(bool disable_)
-    : next(-1), last_total(NULL), disable(disable_)
+Stopwatch::Stopwatch()
+    : next(-1), last_total(NULL), disabled(false)
 {
+}
+
+Stopwatch::Stopwatch(const vector<string>& labels_)
+    : labels(labels_), next(-1), last_total(NULL)
+{
+    freezeLabels();
+}
+
+void
+Stopwatch::setEnabled(bool enabled)
+{
+    disabled = !enabled;
 }
 
 
@@ -23,7 +35,7 @@ Stopwatch::freezeLabels()
 void 
 Stopwatch::start(const char *label)
 {
-    if (disable) return;
+    if (disabled) return;
     
     if (last_total != NULL) {
         stop();
@@ -45,7 +57,7 @@ Stopwatch::start(const char *label)
 void 
 Stopwatch::stop()
 {
-    if (disable) return;
+    if (disabled) return;
 
     assert(last_total != NULL);
     struct timeval now, diff;

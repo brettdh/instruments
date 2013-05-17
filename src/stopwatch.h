@@ -12,7 +12,10 @@
 
 class Stopwatch {
   public:
-    Stopwatch(bool disable_=false);
+    Stopwatch();
+    Stopwatch(const std::vector<std::string>& labels_);
+
+    void setEnabled(bool enabled);
 
     // start looping over the labels seen so far.
     void freezeLabels();
@@ -36,7 +39,7 @@ class Stopwatch {
     struct timeval *last_total;
     struct timeval last_start;
 
-    bool disable;
+    bool disabled;
 };
 
 #endif

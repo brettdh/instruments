@@ -8,20 +8,18 @@
 #include <string>
 #include <iostream>
 
-
-const suseconds_t& subseconds(const struct timeval&  tv);
-const long int& subseconds(const struct timespec& tv);
-suseconds_t& subseconds(struct timeval&  tv);
-long int& subseconds(struct timespec& tv);
-const suseconds_t& subseconds(const struct timeval  *tv);
-const long int& subseconds(const struct timespec *tv);
-suseconds_t& subseconds(struct timeval  *tv);
-long int& subseconds(struct timespec *tv);
-
-suseconds_t MAX_SUBSECS(const struct timeval& tv);
-suseconds_t MAX_SUBSECS(const struct timeval *tv);
-long int MAX_SUBSECS(const struct timespec& tv);
-long int MAX_SUBSECS(const struct timespec *tv);
+inline const suseconds_t& subseconds(const struct timeval&  tv) { return tv.tv_usec; }
+inline const long int& subseconds(const struct timespec& tv) { return tv.tv_nsec; }
+inline suseconds_t& subseconds(struct timeval&  tv) { return tv.tv_usec; }
+inline long int& subseconds(struct timespec& tv) { return tv.tv_nsec; }
+inline const suseconds_t& subseconds(const struct timeval  *tv) { return tv->tv_usec; }
+inline const long int& subseconds(const struct timespec *tv) { return tv->tv_nsec; }
+inline suseconds_t& subseconds(struct timeval  *tv) { return tv->tv_usec; }
+inline long int& subseconds(struct timespec *tv) { return tv->tv_nsec; }
+inline suseconds_t MAX_SUBSECS(const struct timeval& tv) { return 1000000; }
+inline suseconds_t MAX_SUBSECS(const struct timeval *tv) { return 1000000; }
+inline long int MAX_SUBSECS(const struct timespec& tv) { return 1000000000; }
+inline long int MAX_SUBSECS(const struct timespec *tv) { return 1000000000; }
 
 /*************************************** time operations */
 

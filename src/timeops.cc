@@ -5,20 +5,6 @@
 #include <iomanip>
 using std::ostream; using std::setw; using std::setfill;
 
-const suseconds_t& subseconds(const struct timeval&  tv) { return tv.tv_usec; }
-const long int& subseconds(const struct timespec& tv) { return tv.tv_nsec; }
-suseconds_t& subseconds(struct timeval&  tv) { return tv.tv_usec; }
-long int& subseconds(struct timespec& tv) { return tv.tv_nsec; }
-const suseconds_t& subseconds(const struct timeval  *tv) { return tv->tv_usec; }
-const long int& subseconds(const struct timespec *tv) { return tv->tv_nsec; }
-suseconds_t& subseconds(struct timeval  *tv) { return tv->tv_usec; }
-long int& subseconds(struct timespec *tv) { return tv->tv_nsec; }
-
-suseconds_t MAX_SUBSECS(const struct timeval& tv) { return 1000000; }
-suseconds_t MAX_SUBSECS(const struct timeval *tv) { return 1000000; }
-long int MAX_SUBSECS(const struct timespec& tv) { return 1000000000; }
-long int MAX_SUBSECS(const struct timespec *tv) { return 1000000000; }
-
 void TIME(struct timeval& tv)
 {
     gettimeofday(&tv, NULL);

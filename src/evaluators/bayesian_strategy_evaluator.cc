@@ -494,7 +494,13 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     const auto& estimator_values = evaluator->simple_evaluator->getEstimatorValues();
     DistributionKey cur_key = getCurrentEstimatorKey(estimator_values);
 
-    Stopwatch stopwatch;
+    Stopwatch stopwatch({
+        "setEstimatorSamples",
+        "eval_fn",
+        "prior", 
+        "likelihood", 
+        "remaining summation"
+    });
     
     string value_name = get_value_name(strategy, fn);
     
