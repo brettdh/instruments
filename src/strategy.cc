@@ -234,3 +234,24 @@ Strategy::getEstimators()
 {
     return std::vector<Estimator *>(estimators.begin(), estimators.end());
 }
+
+static std::string value_names[] = {
+    "time", "energy", "data"
+};
+
+std::string get_value_name(Strategy *strategy, typesafe_eval_fn_t fn)
+{
+    return value_names[get_value_type(strategy, fn)];
+}
+
+eval_fn_type_t
+get_value_type(Strategy *strategy, typesafe_eval_fn_t fn)
+{
+    if (fn == strategy->getEvalFn(TIME_FN)) {
+        return TIME_FN;
+    } else if (fn == strategy->getEvalFn(ENERGY_FN)) {
+        return ENERGY_FN;
+    } else if (fn == strategy->getEvalFn(DATA_FN)) {
+        return DATA_FN;
+    } else abort();
+}

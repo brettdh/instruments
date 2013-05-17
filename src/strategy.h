@@ -2,6 +2,7 @@
 #define STRATEGY_H_INCL
 
 #include <vector>
+#include <string>
 #include "instruments.h"
 #include "small_set.h"
 
@@ -82,5 +83,8 @@ double redundant_strategy_total_energy_cost(StrategyEvaluationContext *ctx,
                                             void *strategy_arg, void *chooser_arg);
 double redundant_strategy_total_data_cost(StrategyEvaluationContext *ctx, 
                                           void *strategy_arg, void *chooser_arg);
+
+std::string get_value_name(Strategy *strategy, typesafe_eval_fn_t fn);
+eval_fn_type_t get_value_type(Strategy *strategy, typesafe_eval_fn_t fn);
 
 #endif

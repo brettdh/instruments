@@ -153,7 +153,7 @@ static struct timeval run_test(int num_samples, enum EvalMethod method)
 int main()
 {
     int i;
-    instruments_set_debug_level(NONE);
+    instruments_set_debug_level(DEBUG);
 
 #if (defined(ANDROID) && defined(PROFILING_BUILD))
     monstartup("libinstruments.so");

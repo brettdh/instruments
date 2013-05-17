@@ -18,7 +18,7 @@ using inst::INFO; using inst::DEBUG;
 using std::vector; using std::map; using std::make_pair;
 using std::runtime_error; using std::ostringstream;
 using std::istringstream; using std::ostream;
-using std::string; using std::setprecision;
+using std::string; using std::setprecision; using std::setw;
 using std::ifstream; using std::ofstream; using std::endl;
 using std::pair; using std::any_of;
 using std::shared_ptr;
@@ -159,13 +159,13 @@ DistributionKey::print(ostream& os) const
 {
     os << "[ ";
     forEachEstimator([&](Estimator *estimator, double value) {
-            os << value << " ";
+            os << setw(10) << value << " ";
         });
     os << "]";
     return os;
 }
 
-static ostream&
+ostream&
 operator<<(ostream& os, const DistributionKey& key)
 {
     return key.print(os);
@@ -461,10 +461,12 @@ BayesianStrategyEvaluator::Likelihood::jointPriorProbability(DistributionKey& ke
                 oss << single_prob << " ";
             }
         });
+    /*
     if (inst::is_debugging_on(DEBUG)) {
         string s = oss.str();
         dbgprintf(DEBUG, "Probabilities: %s  joint: %f\n", s.c_str(), probability);
     }
+    */
     return probability;
 }
 
@@ -477,6 +479,7 @@ BayesianStrategyEvaluator::Likelihood::jointPriorProbability(DistributionKey& ke
             assert(false);                                              \
         }                                                               \
     } while (0)
+
 
 double 
 BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simple_evaluator, 
@@ -492,10 +495,19 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
 
     const char *milestones[] = { "setEstimatorSamples", "eval_fn", "prior", "likelihood" };
     const size_t num_milestones = sizeof(milestones) / sizeof(*milestones);
+    struct timeval milestone_totals[num_milestones];
+    for (struct timeval& total : milestone_totals) {
+        total.tv_sec = total.tv_usec = 0;
+    }
+    
     struct timeval timepoints[num_milestones + 1];
     
+    string value_name = get_value_name(strategy, fn);
     
     bool debugging = inst::is_debugging_on(DEBUG);
+    inst::dbgprintf(DEBUG, "[bayesian] %45s   %13s %10s %10s %10s\n",
+                    "key", "prior", "likelihood", "posterior", value_name.c_str());
+
     for (auto& map_pair : likelihood_distribution) {
         DistributionKey key = map_pair.first;
         DecisionsHistogram *histogram = map_pair.second;
@@ -514,6 +526,9 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     
         bool ensure_nonzero = (cur_key == key);
         double likelihood_coeff = histogram->getWinnerProbability(tmp_simple_evaluator, chooser_arg, ensure_nonzero);
+        if (likelihood_coeff == 0.0) {
+            continue;
+        }
         gettimeofday(&timepoints[4], NULL);
         double posterior = prior * likelihood_coeff;
 
@@ -522,19 +537,18 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         
         if (debugging) {
             ostringstream s;
-            s << "[bayesian] key: " << key
-              << "  prior: " << prior 
-              << "  likelihood_coeff: " << likelihood_coeff;
+            s << "[bayesian] " << key
+              << "|" << setw(13) << prior 
+              << "|" << setw(10) << likelihood_coeff
+              << "|" << setw(10) << posterior
+              << "|" << setw(10) << value;
             inst::dbgprintf(DEBUG, "%s\n", s.str().c_str());
+        }
 
-            s.str("");
-            for (size_t i = 0; i < num_milestones; ++i) {
-                struct timeval diff;
-                TIMEDIFF(timepoints[i], timepoints[i+1], diff);
-                s << milestones[i] << ": ";
-                print_timestamp(s, diff) << "  ";
-            }
-            inst::dbgprintf(DEBUG, "[bayesian] %s\n", s.str().c_str());
+        for (size_t i = 0; i < num_milestones; ++i) {
+            struct timeval diff;
+            TIMEDIFF(timepoints[i], timepoints[i+1], diff);
+            timeradd(&milestone_totals[i], &diff, &milestone_totals[i]);
         }
         posterior_sum += posterior;
         assert_valid_probability(posterior_sum);
@@ -542,6 +556,14 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         weightedSum += value * posterior;
     }
 
+    if (inst::is_debugging_on(INFO)) {
+        ostringstream s;
+        for (size_t i = 0; i < num_milestones; ++i) {
+            s << milestones[i] << ": ";
+            print_timestamp(s, milestone_totals[i]) << "  ";
+        }
+        inst::dbgprintf(INFO, "[bayesian] calc times: [ %s ]\n", s.str().c_str());
+    }
     inst::dbgprintf(INFO, "[bayesian] prior sum: %f\n", prior_sum);
     inst::dbgprintf(INFO, "[bayesian] posterior sum: %f\n", posterior_sum);
     

@@ -34,18 +34,6 @@ static const size_t NUM_STRATEGIES = 3;
 
 static const size_t NUM_SAVED_VALUE_TYPES = DATA_FN + 1;
 
-static eval_fn_type_t
-get_saved_value_type(Strategy *strategy, typesafe_eval_fn_t fn)
-{
-    if (fn == strategy->getEvalFn(TIME_FN)) {
-        return TIME_FN;
-    } else if (fn == strategy->getEvalFn(ENERGY_FN)) {
-        return ENERGY_FN;
-    } else if (fn == strategy->getEvalFn(DATA_FN)) {
-        return DATA_FN;
-    } else abort();
-}
-
 static double *create_array(size_t length, double value)
 {
     double *array = new double[length];
@@ -283,7 +271,7 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
 {
     getEstimatorSamplesDistributions();
 
-    size_t saved_value_type = get_saved_value_type(strategy, fn);
+    size_t saved_value_type = get_value_type(strategy, fn);
 
     
     double **cur_strategy_memo = NULL;
@@ -389,7 +377,7 @@ IntNWJointDistribution::ensureValidMemoizedValues(eval_fn_type_t saved_value_typ
 double 
 IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
-    eval_fn_type_t saved_value_type = get_saved_value_type(strategy, fn);
+    eval_fn_type_t saved_value_type = get_value_type(strategy, fn);
     
     ensureValidMemoizedValues(saved_value_type);
     
