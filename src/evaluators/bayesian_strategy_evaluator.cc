@@ -494,17 +494,13 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     const auto& estimator_values = evaluator->simple_evaluator->getEstimatorValues();
     DistributionKey cur_key = getCurrentEstimatorKey(estimator_values);
 
-    Stopwatch stopwatch({
-        "setEstimatorSamples",
-        "eval_fn",
-        "prior", 
-        "likelihood", 
-        "remaining summation"
-    });
-    
     string value_name = get_value_name(strategy, fn);
     
     bool debugging = inst::is_debugging_on(DEBUG);
+    
+    Stopwatch stopwatch;
+    stopwatch.setEnabled(debugging);
+    
     inst::dbgprintf(DEBUG, "[bayesian] %45s   %13s %10s %10s %10s\n",
                     "key", "prior", "likelihood", "posterior", value_name.c_str());
 
@@ -556,8 +552,8 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         stopwatch.freezeLabels();
     }
 
-    if (inst::is_debugging_on(INFO)) {
-        inst::dbgprintf(INFO, "[bayesian] calc times: [ %s ]\n", 
+    if (debugging) {
+        inst::dbgprintf(DEBUG, "[bayesian] calc times: [ %s ]\n", 
                         stopwatch.toString().c_str());
     }
     inst::dbgprintf(INFO, "[bayesian] prior sum: %f\n", prior_sum);
