@@ -11,19 +11,22 @@ using std::string; using std::vector; using std::ostringstream;
 Stopwatch::Stopwatch()
 {
     last = totals.end();
+    cmp_string.reserve(128);
 }
 
 void 
-Stopwatch::start(const string& label)
+Stopwatch::start(const char *label)
 {
     if (last != totals.end()) {
         stop();
     }
-    last = totals.find(label);
+
+    cmp_string.assign(label);
+    last = totals.find(cmp_string);
     if (last == totals.end()) {
-        labels_in_order.push_back(label);
-        totals[label] = {0, 0};
-        last = totals.find(label);
+        labels_in_order.push_back(cmp_string);
+        totals[cmp_string] = {0, 0};
+        last = totals.find(cmp_string);
     }
     gettimeofday(&last_start, NULL);
 }

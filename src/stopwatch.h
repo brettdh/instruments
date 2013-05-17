@@ -12,7 +12,7 @@ class Stopwatch {
 
     // start a new event with the given label.
     // also stop()s the previous event (if any).
-    void start(const std::string& label);
+    void start(const char *label);
 
     // end the last timing period and add it to its total.
     void stop();
@@ -27,6 +27,9 @@ class Stopwatch {
     std::unordered_map<std::string, struct timeval> totals;
     decltype(totals.end()) last;
     struct timeval last_start;
+
+    // keep this around with the stopwatch to avoid lots of construction/destruction
+    std::string cmp_string;
 };
 
 #endif
