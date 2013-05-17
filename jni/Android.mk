@@ -60,6 +60,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	stats_distribution.cc \
 	stats_distribution_all_samples.cc \
 	stats_distribution_binned.cc \
+	stopwatch.cc \
 	strategy.cc \
 	strategy_evaluator.cc \
 	timeops.cc)
