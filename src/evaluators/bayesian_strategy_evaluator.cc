@@ -546,6 +546,8 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         
         weightedSum += value * posterior;
         stopwatch.stop();
+
+        stopwatch.freezeLabels();
     }
 
     if (inst::is_debugging_on(INFO)) {
