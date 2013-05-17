@@ -163,6 +163,7 @@ void add_observation(instruments_external_estimator_t est_handle,
 void set_estimator_range_hints(instruments_estimator_t est_handle,
                                double min, double max, size_t num_bins)
 {
+    sleep(5);
     Estimator *estimator = static_cast<Estimator *>(est_handle);
     estimator->setRangeHints(min, max, num_bins);
 }

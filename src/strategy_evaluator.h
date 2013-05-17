@@ -52,6 +52,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
                                size_t num_strategies);
 
     std::vector<Strategy*> strategies;
+    const small_set<Estimator*>& getAllEstimators();
 
     // TODO: change to a better default.
     const static EvalMethod DEFAULT_EVAL_METHOD = TRUSTED_ORACLE;

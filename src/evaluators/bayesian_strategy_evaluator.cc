@@ -272,6 +272,10 @@ BayesianStrategyEvaluator::setStrategies(const instruments_strategy_t *new_strat
         simple_evaluator = new SimpleEvaluator(new_strategies, num_strategies);
         simple_evaluator->setSilent(true);
     }
+
+    for (Estimator *estimator : getAllEstimators()) {
+        estimators_by_name[estimator->getName()] = estimator;
+    }
 }
 
 bool
@@ -717,8 +721,10 @@ BayesianStrategyEvaluator::restoreFromFile(const char *filename)
     for (i = 0; i < num_estimators; ++i) {
         string line;
         check(getline(in, line), "Failed to get an estimator's hints or lack thereof");
+
         istringstream iss(line);
         check(iss >> name, "Failed to get estimator name");
+
         EstimatorRangeHints hints;
         Estimator *estimator = getEstimator(name);
         if (iss >> hints.min >> hints.max >> hints.num_bins) {

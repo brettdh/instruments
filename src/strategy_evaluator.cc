@@ -53,6 +53,12 @@ StrategyEvaluator::addEstimator(Estimator *estimator)
     subscribed_estimators.insert(estimator);
 }
 
+const small_set<Estimator*>&
+StrategyEvaluator::getAllEstimators()
+{
+    return subscribed_estimators;
+}
+
 void
 StrategyEvaluator::removeEstimator(Estimator *estimator)
 {
