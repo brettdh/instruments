@@ -525,10 +525,15 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         double likelihood_coeff = histogram->getWinnerProbability(tmp_simple_evaluator, chooser_arg, ensure_nonzero);
         stopwatch.stop();
         if (likelihood_coeff == 0.0) {
+            stopwatch.start("posterior");
+            stopwatch.start("remaining summation");
+            stopwatch.stop();
+            stopwatch.freezeLabels();
             continue;
         }
-        stopwatch.start("remaining summation");
+        stopwatch.start("posterior");
         double posterior = prior * likelihood_coeff;
+        stopwatch.stop();
 
         assert_valid_probability(likelihood_coeff);
         assert_valid_probability(posterior);
@@ -543,6 +548,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
             inst::dbgprintf(DEBUG, "%s\n", s.str().c_str());
         }
 
+        stopwatch.start("remaining summation");
         posterior_sum += posterior;
         assert_valid_probability(posterior_sum);
         
