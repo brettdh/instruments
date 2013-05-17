@@ -150,10 +150,14 @@ static struct timeval run_test(int num_samples, enum EvalMethod method)
     return duration;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     int i;
-    instruments_set_debug_level(DEBUG);
+    instruments_debug_level_t debug_level = NONE;
+    if (argc > 1 && !strcasecmp(argv[1], "debug")) {
+        debug_level = DEBUG;
+    }
+    instruments_set_debug_level(debug_level);
 
 #if (defined(ANDROID) && defined(PROFILING_BUILD))
     monstartup("libinstruments.so");

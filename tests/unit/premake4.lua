@@ -42,6 +42,7 @@ project "InstrumentsTests"
      "stats_distribution.cc",
      "stats_distribution_all_samples.cc",
      "stats_distribution_binned.cc",
+     "stopwatch.cc",
      "timeops.cc",
   }
   support_files = _.map(support_files, function(f) return "../../src/"..f; end)
