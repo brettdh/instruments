@@ -91,11 +91,12 @@ static double get_sample()
     return normal_stddev * normal_sample + normal_mean;
 }
 
-#define NUM_ESTIMATORS 4
+static const size_t NUM_ESTIMATORS = 4;
+static const size_t NUM_STRATEGIES = 3;
 
-static struct timeval run_test(int num_samples, enum EvalMethod method)
+static void init_estimators(instruments_external_estimator_t *estimators,
+                            int num_samples)
 {
-    instruments_external_estimator_t estimators[NUM_ESTIMATORS];
     int i;
     char name[64];
     for (i = 0; i < NUM_ESTIMATORS; ++i) {
@@ -106,6 +107,14 @@ static struct timeval run_test(int num_samples, enum EvalMethod method)
         double range = normal_stddev * 2.0;
         set_estimator_range_hints(estimators[i], normal_mean - range, normal_mean + range, num_samples);
     }
+}
+
+static struct timeval run_test(int num_samples, enum EvalMethod method,
+                               const char *restore_file)
+{
+    instruments_external_estimator_t estimators[NUM_ESTIMATORS];
+    instruments_strategy_t strategies[NUM_STRATEGIES];
+    init_estimators(estimators, num_samples);
 
     struct strategy_args args[2] = {
         {
@@ -118,19 +127,21 @@ static struct timeval run_test(int num_samples, enum EvalMethod method)
         },
     };
 
-    const size_t NUM_STRATEGIES = 3;
-    instruments_strategy_t strategies[NUM_STRATEGIES];
     strategies[0] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[0], NULL);
     strategies[1] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[1], NULL);
     strategies[2] = make_redundant_strategy(strategies, 2);
-
+    
     instruments_strategy_evaluator_t evaluator = 
         register_strategy_set_with_method(strategies, 3, method);
+
+    if (restore_file) {
+        restore_evaluator(evaluator, restore_file);
+    }
 
     int bytelen = 4096;
 
     reset_prng();
-    int j;
+    int i, j;
     for (i = 0; i < num_samples; ++i) {
         for (j = 0; j < NUM_ESTIMATORS; ++j) {
             add_observation(estimators[j], get_sample(), get_sample());
@@ -149,6 +160,7 @@ static struct timeval run_test(int num_samples, enum EvalMethod method)
     
     return duration;
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -185,22 +197,30 @@ int main(int argc, char *argv[])
 
     for (num_samples = min_samples; num_samples <= max_samples; 
          num_samples += new_samples) {
-        fprintf(stderr, "%3d %s", num_samples, "samples");
+        fprintf(stderr, "%3d samples", num_samples);
         for (i = 0; i < NUM_METHODS; ++i) {
             enum EvalMethod method = methods[i];
-            struct timeval duration = run_test(num_samples, method);
+            struct timeval duration = run_test(num_samples, method, NULL);
             fprintf(stderr, " %lu.%06lu%7s", duration.tv_sec, duration.tv_usec, "");
         }
         fprintf(stderr, "\n");
     }
 
+    const char *bayesian_history = "support_files/saved_error_distributions_bayesian.txt";
+    fprintf(stderr, "%11s bayesian-with-history\n", "");
+    for (num_samples = min_samples; num_samples <= max_samples;
+         num_samples += new_samples) {
+        struct timeval duration = run_test(num_samples, BAYESIAN, bayesian_history);
+        fprintf(stderr, "%3d samples %lu.%06lu\n", num_samples, duration.tv_sec, duration.tv_usec);
+    }
+    
 //#define CHECK_VALUES
 #ifdef CHECK_VALUES
     instruments_set_debug_level(DEBUG);
     for (i = 0; i < NUM_METHODS; ++i) {
         enum EvalMethod method = methods[i];
         fprintf(stderr, "*** %s ***\n", get_method_name(method));
-        (void) run_test(5, method);
+        (void) run_test(5, method, NULL);
     }
 #endif
 
