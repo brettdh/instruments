@@ -632,6 +632,5 @@ CTEST2(bayesian_method_test, test_real_distributions)
     struct common_test_data *cdata = &data->common_data;
 
     instruments_set_debug_level(DEBUG);
-    run_real_distributions_test(cdata, NULL);
+    run_real_distributions_test(cdata, "support_files/saved_error_distributions_bayesian.txt");
 }
-

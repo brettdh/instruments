@@ -11,11 +11,13 @@ using std::string; using std::vector; using std::ostringstream;
 Stopwatch::Stopwatch()
     : next(-1), last_total(NULL), disabled(false)
 {
+    last_start.tv_sec = last_start.tv_usec = 0;
 }
 
 Stopwatch::Stopwatch(const vector<string>& labels_)
     : labels(labels_), next(-1), last_total(NULL), disabled(false)
 {
+    last_start.tv_sec = last_start.tv_usec = 0;
     totals.resize(labels.size());
     freezeLabels();
 }

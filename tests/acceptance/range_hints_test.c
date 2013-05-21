@@ -122,7 +122,7 @@ CTEST2(range_hints, tail_values_are_okay)
     }
 
     int n;
-    for (n = 0; n < 100; ++n) {
+    for (n = 0; n < 10; ++n) {
         for (i = 1; i < 9; ++i) {
             // add a bunch of non-tail observations
             add_observation(data->low_estimator, 0.5 + i, 0.5 + i);
@@ -135,7 +135,7 @@ CTEST2(range_hints, tail_values_are_okay)
         ASSERT_NOT_NULL(chosen);
     }
 
-    for (n = 0; n < 500; ++n) {
+    for (n = 0; n < 50; ++n) {
         for (i = 0; i < 5; ++i) {
             // add *different* observations that fall in the tail.
             // checking whether the binned distribution handles this correctly.
