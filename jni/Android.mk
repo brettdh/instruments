@@ -1,11 +1,7 @@
 LOCAL_PATH := $(call my-dir)
 
 my_PROFILING_BUILD := yes
-my_PROFILING_CFLAGS := -pg -fno-omit-frame-pointer -fno-function-sections -DPROFILING_BUILD
-
-ifneq ($(my_PROFILING_BUILD),)
--include $(LOCAL_PATH)/android-ndk-profiler.mk
-endif
+my_PROFILING_CFLAGS := -pg -DPROFILING_BUILD
 
 common_CFLAGS:=-g -O3 -Wall -Werror -DANDROID
 common_CXXFLAGS:=$(common_CFLAGS) -std=gnu++0x
@@ -70,7 +66,7 @@ LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(MOCKTIME_INCLUDES) $(LIBPT_INCLUDE
 LOCAL_CXXFLAGS := $(common_CXXFLAGS)
 ifneq ($(my_PROFILING_BUILD),)
 LOCAL_CXXFLAGS += $(my_PROFILING_CFLAGS)
-LOCAL_STATIC_LIBRARIES += andprof
+LOCAL_STATIC_LIBRARIES += android-ndk-profiler
 LOCAL_LDLIBS += -llog
 endif
 LOCAL_SHARED_LIBRARIES := mocktime powertutor
@@ -86,9 +82,14 @@ LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(LOCAL_PATH)/../tests/include
 LOCAL_CFLAGS := $(common_CFLAGS)
 ifneq ($(my_PROFILING_BUILD),)
 LOCAL_CFLAGS += $(my_PROFILING_CFLAGS)
-LOCAL_STATIC_LIBRARIES += andprof
+LOCAL_STATIC_LIBRARIES += android-ndk-profiler
 LOCAL_LDLIBS += -llog
 endif
 #LOCAL_LDFLAGS += -fuse-ld=gold
 LOCAL_SHARED_LIBRARIES := libinstruments libpowertutor libmocktime
 include $(BUILD_EXECUTABLE)
+
+
+ifneq ($(my_PROFILING_BUILD),)
+$(call import-module,android-ndk-profiler)
+endif
