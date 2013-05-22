@@ -176,6 +176,8 @@ class BayesianStrategyEvaluator::SimpleEvaluator : public StrategyEvaluator {
   public:
     SimpleEvaluator(const instruments_strategy_t *new_strategies,
                     size_t num_strategies);
+    
+    Strategy *chooseStrategy(void *chooser_arg);
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg);
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
@@ -233,6 +235,9 @@ class BayesianStrategyEvaluator::DecisionsHistogram {
   private:
     BayesianStrategyEvaluator *evaluator;
     vector<vector<pair<Estimator *, double> > > decisions;
+    
+    void *last_chooser_arg;
+    map<Strategy *, double> last_winner_probability;
 };
 
 BayesianStrategyEvaluator::BayesianStrategyEvaluator()
@@ -475,6 +480,9 @@ BayesianStrategyEvaluator::Likelihood::jointPriorProbability(DistributionKey& ke
     return probability;
 }
 
+#ifdef NDEBUG
+#define assert_valid_probability(value)
+#else
 #define assert_valid_probability(value)                                 \
     do {                                                                \
         const double threshold = 0.00001;                               \
@@ -484,7 +492,7 @@ BayesianStrategyEvaluator::Likelihood::jointPriorProbability(DistributionKey& ke
             assert(false);                                              \
         }                                                               \
     } while (0)
-
+#endif
 
 double 
 BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simple_evaluator, 
@@ -492,7 +500,9 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
                                                       void *strategy_arg, void *chooser_arg)
 {
     double weightedSum = 0.0;
+#ifndef NDEBUG
     double prior_sum = 0.0;
+#endif
     double posterior_sum = 0.0;
 
     const auto& estimator_values = evaluator->simple_evaluator->getEstimatorValues();
@@ -521,8 +531,10 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         stopwatch.stop();
         assert_valid_probability(prior);
 
+#ifndef NDEBUG
         prior_sum += prior;
         assert_valid_probability(prior_sum);
+#endif
     
         bool ensure_nonzero = (cur_key == key);
         stopwatch.start("likelihood");
@@ -530,6 +542,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         stopwatch.stop();
         if (likelihood_coeff == 0.0) {
             stopwatch.start("posterior");
+            stopwatch.start("printing");
             stopwatch.start("remaining summation");
             stopwatch.stop();
             stopwatch.freezeLabels();
@@ -542,6 +555,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         assert_valid_probability(likelihood_coeff);
         assert_valid_probability(posterior);
         
+        stopwatch.start("printing");
         if (debugging) {
             ostringstream s;
             s << "[bayesian] " << key
@@ -566,7 +580,11 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
         inst::dbgprintf(DEBUG, "[bayesian] calc times: [ %s ]\n", 
                         stopwatch.toString().c_str());
     }
+    inst::dbgprintf(INFO, "[bayesian] calculated posterior from %zu samples\n", 
+                    likelihood_distribution.size());
+#ifndef NDEBUG
     inst::dbgprintf(INFO, "[bayesian] prior sum: %f\n", prior_sum);
+#endif
     inst::dbgprintf(INFO, "[bayesian] posterior sum: %f\n", posterior_sum);
     
     // here's the normalization.  summing the posterior values ensures that
@@ -588,7 +606,7 @@ BayesianStrategyEvaluator::Likelihood::clear()
 
 BayesianStrategyEvaluator::DecisionsHistogram::
 DecisionsHistogram(BayesianStrategyEvaluator *evaluator_)
-    : evaluator(evaluator_)
+    : evaluator(evaluator_), last_chooser_arg(NULL)
 {
 }
 
@@ -609,24 +627,48 @@ double
 BayesianStrategyEvaluator::DecisionsHistogram::getWinnerProbability(SimpleEvaluator *tmp_simple_evaluator,
                                                                     void *chooser_arg, bool ensure_nonzero)
 {
+    bool debugging = inst::is_debugging_on(DEBUG);
+    Stopwatch stopwatch;
+    stopwatch.setEnabled(debugging);
+    
     Strategy *winner = evaluator->getBestSingularStrategy(chooser_arg);
     assert(winner);
+
+    if (chooser_arg == last_chooser_arg) {
+        if (last_winner_probability.count(winner) > 0) {
+            return last_winner_probability[winner];
+        }
+    } else {
+        last_winner_probability.clear();
+    }
 
     size_t cur_wins = 0;
     size_t cur_decisions = decisions.size();
     for (auto decision : decisions) {
+        stopwatch.start("setEstimatorValues");
         tmp_simple_evaluator->setEstimatorValues(decision);
+        stopwatch.start("chooseStrategy");
         Strategy *cur_winner = (Strategy *) tmp_simple_evaluator->chooseStrategy(chooser_arg);
+        stopwatch.start("summation");
         if (cur_winner == winner) {
             cur_wins++;
         }
+        stopwatch.stop();
+        stopwatch.freezeLabels();
+    }
+    if (debugging) {
+        inst::dbgprintf(DEBUG, "[bayesian] winner calc times: [ %s ]\n", 
+                        stopwatch.toString().c_str());
     }
 
     if (cur_wins == 0 && ensure_nonzero) {
         ++cur_wins;
         ++cur_decisions;
     }
-    return cur_wins / ((double) cur_decisions);
+    double prob = cur_wins / ((double) cur_decisions);
+    last_chooser_arg = chooser_arg;
+    last_winner_probability[winner] = prob;
+    return prob;
 }
 
 
@@ -759,7 +801,31 @@ BayesianStrategyEvaluator::SimpleEvaluator::SimpleEvaluator(const instruments_st
                                                             size_t num_strategies)
 
 {
-    StrategyEvaluator::setStrategies(new_strategies, num_strategies);
+    instruments_strategy_t *singular_strategies = new instruments_strategy_t[num_strategies];
+    size_t count = 0;
+    for (size_t i = 0; i < num_strategies; ++i) {
+        Strategy *strategy = (Strategy*) new_strategies[i];
+        if (!strategy->isRedundant()) {
+            singular_strategies[count++] = new_strategies[i];
+        }
+    }
+    StrategyEvaluator::setStrategies(singular_strategies, count);
+    delete [] singular_strategies;
+}
+
+Strategy *
+BayesianStrategyEvaluator::SimpleEvaluator::chooseStrategy(void *chooser_arg)
+{
+    double min_time = DBL_MAX;
+    Strategy *winner = NULL;
+    for (Strategy *strategy : strategies) {
+        double time = strategy->calculateTime(this, chooser_arg);
+        if (!winner || time < min_time) {
+            winner = strategy;
+            min_time = time;
+        }
+    }
+    return winner;
 }
 
 double 
