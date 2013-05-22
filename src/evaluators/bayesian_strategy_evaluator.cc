@@ -27,6 +27,7 @@ using std::shared_ptr;
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <float.h>
 
 static inline double my_fabs(double x)
 {
@@ -621,6 +622,10 @@ BayesianStrategyEvaluator::DecisionsHistogram::
 addDecision(const vector<pair<Estimator *, double> >& estimator_values)
 {
     decisions.push_back(estimator_values);
+    last_winner_probability.clear(); // needs to be recalculated
+    // TODO: can do better.  calculate this value every time a decision is added.
+    // TODO: calculating it is very cheap, too (don't need to recompute everything
+    // TODO:  until the chooser_arg changes)
 }
 
 double
