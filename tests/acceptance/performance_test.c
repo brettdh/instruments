@@ -206,7 +206,11 @@ int main(int argc, char *argv[])
         fprintf(stderr, "\n");
     }
 
+#ifdef ANDROID
+    const char *bayesian_history = "/sdcard/intnw/instruments_test/saved_error_distributions_bayesian.txt";
+#else
     const char *bayesian_history = "support_files/saved_error_distributions_bayesian.txt";
+#endif
     fprintf(stderr, "%11s bayesian-with-history\n", "");
     for (num_samples = min_samples; num_samples <= max_samples;
          num_samples += new_samples) {
