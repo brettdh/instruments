@@ -110,7 +110,7 @@ static void init_estimators(instruments_external_estimator_t *estimators,
 }
 
 static struct timeval run_test(int num_samples, enum EvalMethod method,
-                               const char *restore_file)
+                               const char *restore_file, int choose_strategy_count)
 {
     instruments_external_estimator_t estimators[NUM_ESTIMATORS];
     instruments_strategy_t strategies[NUM_STRATEGIES];
@@ -147,7 +147,11 @@ static struct timeval run_test(int num_samples, enum EvalMethod method,
             add_observation(estimators[j], get_sample(), get_sample());
         }
     }
-    struct timeval duration = time_choose_strategy(evaluator, bytelen);
+    struct timeval total_duration = {0, 0};
+    for (i = 0; i < choose_strategy_count; ++i) {
+        struct timeval duration = time_choose_strategy(evaluator, bytelen);
+        timeradd(&total_duration, &duration, &total_duration);
+    }
     
     for (i = 0; i < NUM_ESTIMATORS; ++i) {
         free_external_estimator(estimators[i]);
@@ -158,7 +162,7 @@ static struct timeval run_test(int num_samples, enum EvalMethod method,
     }
     free_strategy_evaluator(evaluator);
     
-    return duration;
+    return total_duration;
 }
 
 
@@ -200,7 +204,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "%3d samples", num_samples);
         for (i = 0; i < NUM_METHODS; ++i) {
             enum EvalMethod method = methods[i];
-            struct timeval duration = run_test(num_samples, method, NULL);
+            struct timeval duration = run_test(num_samples, method, NULL, 1);
             fprintf(stderr, " %lu.%06lu%7s", duration.tv_sec, duration.tv_usec, "");
         }
         fprintf(stderr, "\n");
@@ -214,9 +218,16 @@ int main(int argc, char *argv[])
     fprintf(stderr, "%11s bayesian-with-history\n", "");
     for (num_samples = min_samples; num_samples <= max_samples;
          num_samples += new_samples) {
-        struct timeval duration = run_test(num_samples, BAYESIAN, bayesian_history);
+        struct timeval duration = run_test(num_samples, BAYESIAN, bayesian_history, 1);
         fprintf(stderr, "%3d samples %lu.%06lu\n", num_samples, duration.tv_sec, duration.tv_usec);
     }
+
+    int num_iterations = 1000;
+    num_samples = 50;
+    struct timeval total_duration = run_test(num_samples, CONFIDENCE_BOUNDS, NULL, num_iterations);
+    fprintf(stderr, "Confidence bounds, %d samples, %d times:  %lu.%06lu sec\n", 
+            num_samples, num_iterations, total_duration.tv_sec, total_duration.tv_usec);
+    
     
 //#define CHECK_VALUES
 #ifdef CHECK_VALUES
@@ -224,7 +235,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < NUM_METHODS; ++i) {
         enum EvalMethod method = methods[i];
         fprintf(stderr, "*** %s ***\n", get_method_name(method));
-        (void) run_test(5, method, NULL);
+        (void) run_test(5, method, NULL, 1);
     }
 #endif
 
