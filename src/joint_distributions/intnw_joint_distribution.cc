@@ -255,7 +255,7 @@ IntNWJointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
     pair<Strategy *, typesafe_eval_fn_t> key = make_pair(strategy, fn);
     if (cache.count(key) == 0) {
         if (strategy->isRedundant()) {
-            assert(strategy->childrenAreDisjoint());
+            assert(strategy->childrenAreDisjoint(fn));
             cache[key] = redundantStrategyExpectedValue(strategy, fn);
         } else {
             cache[key] = singularStrategyExpectedValue(strategy, fn);

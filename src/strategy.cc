@@ -16,7 +16,7 @@ using std::find;
 
 #include "debug.h"
 namespace inst = instruments;
-using inst::INFO;
+using inst::INFO; using inst::ERROR;
 
 Strategy::Strategy(eval_fn_t time_fn_, 
                    eval_fn_t energy_cost_fn_, 
@@ -49,10 +49,17 @@ Strategy::setEvalFnLookupArray()
  *  that the given strategy uses. */
 class EstimatorCollector : public StrategyEvaluationContext {
     Strategy *strategy;
+    typesafe_eval_fn_t cur_fn;
   public:
-    EstimatorCollector(Strategy *s) : strategy(s) {}
+    EstimatorCollector(Strategy *s) : strategy(s), cur_fn(NULL) {}
+    void collect(typesafe_eval_fn_t fn, void *strategy_arg, void *chooser_arg) {
+        if (fn) {
+            cur_fn = fn;
+            (void) fn(this, strategy_arg, chooser_arg);
+        }
+    }
     virtual double getAdjustedEstimatorValue(Estimator *estimator) {
-        strategy->addEstimator(estimator);
+        strategy->addEstimator(cur_fn, estimator);
         return estimator->getEstimate();
     }
 };
@@ -63,57 +70,88 @@ Strategy::collectEstimators()
     // run all the eval functions and add all their estimators
     //  to this strategy.
     EstimatorCollector collector(this);
-    if (time_fn) {
-        (void)time_fn(&collector, strategy_arg, default_chooser_arg);
-    }
-    if (energy_cost_fn) {
-        (void)energy_cost_fn(&collector, strategy_arg, default_chooser_arg);
-    }
-    if (data_cost_fn) {
-        (void)data_cost_fn(&collector, strategy_arg, default_chooser_arg);
-    }
+    collector.collect(time_fn, strategy_arg, default_chooser_arg);
+    collector.collect(energy_cost_fn, strategy_arg, default_chooser_arg);
+    collector.collect(data_cost_fn, strategy_arg, default_chooser_arg);
 }
 
 void
-Strategy::addEstimator(Estimator *estimator)
+Strategy::addEstimator(typesafe_eval_fn_t fn, Estimator *estimator)
 {
-    estimators.insert(estimator);
+    estimators[fn].insert(estimator);
 }
 
 void
 Strategy::getAllEstimators(StrategyEvaluator *evaluator)
 {
-    for (small_set<Estimator*>::const_iterator it = estimators.begin();
-         it != estimators.end(); ++it) {
-        Estimator *estimator = *it;
-        evaluator->addEstimator(estimator);
+    for (auto& pair : estimators) {
+        auto& fn_estimators = pair.second;
+        for (Estimator *estimator : fn_estimators) {
+            evaluator->addEstimator(estimator);
+        }
     }
 }
 
 bool
 Strategy::usesEstimator(Estimator *estimator)
 {
-    return (estimators.count(estimator) != 0);
+    for (auto& pair : estimators) {
+        auto& fn_estimators = pair.second;
+        if (fn_estimators.count(estimator) > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool
+Strategy::usesEstimator(typesafe_eval_fn_t fn, Estimator *estimator)
+{
+    return (estimators.count(fn) != 0 && estimators[fn].count(estimator) != 0);
+}
+
+bool
+Strategy::usesNoEstimators(typesafe_eval_fn_t fn)
+{
+    return (estimators.count(fn) == 0 || estimators[fn].empty());
+}
+
+class AssertUnusedEvaluator : public StrategyEvaluationContext {
+  public:
+    virtual double getAdjustedEstimatorValue(Estimator *estimator) {
+        inst::dbgprintf(ERROR, "should not be here; function uses no estimators\n");
+        ASSERT(false);
+        return 0.0;
+    }
+};
+
+double 
+Strategy::expectedValue(StrategyEvaluator *evaluator, typesafe_eval_fn_t fn, void *chooser_arg)
+{
+    if (fn == NULL) {
+        return 0.0;
+    }
+    
+    if (usesNoEstimators(fn)) {
+        AssertUnusedEvaluator unused_evaluator;
+        return fn(&unused_evaluator, strategy_arg, chooser_arg);
+    } else {
+        return evaluator->expectedValue(this, fn, strategy_arg, chooser_arg);
+    }
 }
 
 double
 Strategy::calculateTime(StrategyEvaluator *evaluator, void *chooser_arg)
 {
-    return evaluator->expectedValue(this, time_fn, strategy_arg, chooser_arg);
+    return expectedValue(evaluator, time_fn, chooser_arg);
 }
 
 double
 Strategy::calculateCost(StrategyEvaluator *evaluator, void *chooser_arg)
 {
-    double energy_cost = 0.0, data_cost = 0.0;
-    if (energy_cost_fn) {
-        energy_cost = evaluator->expectedValue(this, energy_cost_fn,
-                                               strategy_arg, chooser_arg);
-    }
-    if (data_cost_fn) {
-        data_cost = evaluator->expectedValue(this, data_cost_fn,
-                                             strategy_arg, chooser_arg);
-    }
+    double energy_cost = expectedValue(evaluator, energy_cost_fn, chooser_arg);
+    double data_cost = expectedValue(evaluator, data_cost_fn, chooser_arg);
+
     double energy_weight = get_energy_cost_weight();
     double data_weight = get_data_cost_weight();
     if (!evaluator->isSilent()) {
@@ -205,19 +243,17 @@ Strategy::includes(Strategy *child)
     return find(begin, end, child) != end;
 }
 
-
 bool
-Strategy::childrenAreDisjoint()
+Strategy::childrenAreDisjoint(typesafe_eval_fn_t fn)
 {
     std::set<Estimator *> all_estimators;
     for (size_t i = 0; i < child_strategies.size(); ++i) {
         Strategy *child = child_strategies[i];
-        for (small_set<Estimator*>::const_iterator it = child->estimators.begin();
-             it != child->estimators.end(); ++it) {
-            if (all_estimators.count(*it) > 0) {
+        for (Estimator *estimator :  child->estimators[fn]) {
+            if (all_estimators.count(estimator) > 0) {
                 return false;
             }
-            all_estimators.insert(*it);
+            all_estimators.insert(estimator);
         }
     }
     return true;
@@ -229,10 +265,24 @@ Strategy::getEvalFn(eval_fn_type_t type)
     return fns[type];
 }
 
+std::set<Estimator *>
+Strategy::getEstimatorsSet()
+{
+    // TODO: take fn argument?
+
+    std::set<Estimator*> all_estimators;
+    for (auto& pair : estimators) {
+        auto& fn_estimators = pair.second;
+        all_estimators.insert(fn_estimators.begin(), fn_estimators.end());
+    }
+    return all_estimators;
+}
+
 std::vector<Estimator *>
 Strategy::getEstimators()
 {
-    return std::vector<Estimator *>(estimators.begin(), estimators.end());
+    std::set<Estimator *> all_estimators = getEstimatorsSet();
+    return std::vector<Estimator *>(all_estimators.begin(), all_estimators.end());
 }
 
 static std::string value_names[] = {

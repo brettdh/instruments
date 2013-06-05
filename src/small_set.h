@@ -20,6 +20,7 @@ class small_set {
     void insert(T& val);
     void erase(T& val);
     size_t size() const;
+    bool empty() const;
     size_t count(const T& val) const;
     void clear();
 
@@ -65,6 +66,12 @@ template <typename T>
 size_t small_set<T>::size() const
 {
     return items.size();
+}
+
+template <typename T>
+bool small_set<T>::empty() const
+{
+    return items.empty();
 }
 
 template <typename T>

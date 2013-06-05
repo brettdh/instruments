@@ -55,7 +55,7 @@ EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
 {
     Estimator *estimator = Estimator::create(LAST_OBSERVATION, "simple");
     Strategy *strategy = new Strategy(get_time, get_energy_cost, get_data_cost, estimator, NULL);
-    strategy->addEstimator(estimator);
+    strategy->addEstimator((typesafe_eval_fn_t) get_time, estimator);
 
     StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1, 
                                                              EMPIRICAL_ERROR);

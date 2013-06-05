@@ -36,9 +36,11 @@ StatsDistributionTest::testIdenticalSamples()
 void
 StatsDistributionTest::testHistogram()
 {
-    StatsDistribution *dist = new StatsDistributionBinned;
-
     int counts[] = {1,2,4,8,16,32,16,8,4,2,1};
+
+    int num_bins = sizeof(counts)/sizeof(*counts);
+    StatsDistribution *dist = new StatsDistributionBinned(0.5, num_bins - 1.5, num_bins - 2);
+
     const int numints = sizeof(counts) / sizeof(int);
     for (int i = 0; i < numints; ++i) {
         for (int j = 0; j < counts[i]; ++j) {

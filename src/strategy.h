@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <string>
+#include <map>
+#include <set>
 #include "instruments.h"
 #include "small_set.h"
 
@@ -33,19 +35,22 @@ class Strategy {
     Strategy(const instruments_strategy_t strategies[], 
              size_t num_strategies);
     
-    void addEstimator(Estimator *estimator);
+    void addEstimator(typesafe_eval_fn_t fn, Estimator *estimator);
     double calculateTime(StrategyEvaluator *evaluator, void *chooser_arg);
     double calculateCost(StrategyEvaluator *evaluator, void *chooser_arg);
     bool isRedundant();
 
     void getAllEstimators(StrategyEvaluator *evaluator);
     bool usesEstimator(Estimator *estimator);
+    bool usesEstimator(typesafe_eval_fn_t fn, Estimator *estimator);
+    bool usesNoEstimators(typesafe_eval_fn_t fn);
     
+    std::set<Estimator *> getEstimatorsSet();
     std::vector<Estimator *> getEstimators();
 
     const std::vector<Strategy *>& getChildStrategies();
     bool includes(Strategy *child);
-    bool childrenAreDisjoint();
+    bool childrenAreDisjoint(typesafe_eval_fn_t fn);
 
   private:
     friend class EmpiricalErrorStrategyEvaluatorTest;
@@ -69,7 +74,10 @@ class Strategy {
 
     void collectEstimators();
 
-    small_set<Estimator*> estimators;
+    double expectedValue(StrategyEvaluator *evaluator, typesafe_eval_fn_t fn, void *chooser_arg);
+
+
+    std::map<typesafe_eval_fn_t, small_set<Estimator*> > estimators;
 
     std::vector<Strategy *> child_strategies;
 
