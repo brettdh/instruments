@@ -133,6 +133,7 @@ Strategy::expectedValue(StrategyEvaluator *evaluator, typesafe_eval_fn_t fn, voi
     }
     
     if (usesNoEstimators(fn)) {
+        inst::dbgprintf(INFO, "No estimators; just calling eval fn\n");
         AssertUnusedEvaluator unused_evaluator;
         return fn(&unused_evaluator, strategy_arg, chooser_arg);
     } else {
