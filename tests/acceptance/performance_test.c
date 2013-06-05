@@ -151,6 +151,8 @@ static struct timeval run_test(int num_samples, enum EvalMethod method,
     for (i = 0; i < choose_strategy_count; ++i) {
         struct timeval duration = time_choose_strategy(evaluator, bytelen);
         timeradd(&total_duration, &duration, &total_duration);
+
+        add_observation(estimators[i % NUM_ESTIMATORS], get_sample(), get_sample());
     }
     
     for (i = 0; i < NUM_ESTIMATORS; ++i) {
@@ -180,7 +182,7 @@ int main(int argc, char *argv[])
 #endif
 
     enum EvalMethod methods[] = { 
-        //CONFIDENCE_BOUNDS,
+        CONFIDENCE_BOUNDS,
         BAYESIAN,
         //EMPIRICAL_ERROR_ALL_SAMPLES,
         //EMPIRICAL_ERROR_ALL_SAMPLES_INTNW
