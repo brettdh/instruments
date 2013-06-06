@@ -128,7 +128,7 @@ CDECL instruments_strategy_t
 choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
 
 
-typedef void (*instruments_strategy_chosen_callback_t)(instruments_strategy_t);
+typedef void (*instruments_strategy_chosen_callback_t)(instruments_strategy_t, void *);
 
 /** Start an asynchronous call to choose_strategy that will yield
  *  the chosen straegy by calling callback(chosen_strategy).
@@ -136,7 +136,7 @@ typedef void (*instruments_strategy_chosen_callback_t)(instruments_strategy_t);
  */
 CDECL void
 choose_strategy_async(instruments_strategy_evaluator_t evaluator, void *chooser_arg,
-                      instruments_strategy_chosen_callback_t callback);
+                      instruments_strategy_chosen_callback_t callback, void *callback_arg);
 
 
 /** Queries the evaluator for the recommended time at which

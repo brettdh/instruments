@@ -105,10 +105,12 @@ choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator_handle,
 
 void
 choose_strategy_async(instruments_strategy_evaluator_t evaluator_handle,
-                      void *chooser_arg, instruments_strategy_chosen_callback_t callback)
+                      void *chooser_arg,
+                      instruments_strategy_chosen_callback_t callback,
+                      void *callback_arg)
 {
     StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
-    evaluator->chooseStrategyAsync(chooser_arg, callback);
+    evaluator->chooseStrategyAsync(chooser_arg, callback, callback_arg);
  }
 
 void

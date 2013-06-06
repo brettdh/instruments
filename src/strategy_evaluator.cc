@@ -7,6 +7,8 @@
 #include "strategy.h"
 #include "estimator.h"
 
+#include "pthread_util.h"
+
 #include "small_set.h"
 
 #include "debug.h"
@@ -24,6 +26,8 @@ using std::vector;
 StrategyEvaluator::StrategyEvaluator()
     : currentStrategy(NULL), silent(false)
 {
+    pthread_mutex_init(&evaluator_mutex, NULL);
+    
     const int ASYNC_EVAL_THREADS = 3;
     pool = new ThreadPool(ASYNC_EVAL_THREADS);
 }
@@ -149,7 +153,8 @@ StrategyEvaluator::isSilent()
 instruments_strategy_t
 StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
 {
-    // TODO: error message about concurrent calls
+    PthreadScopedLock lock(&evaluator_mutex);
+    
     assert(currentStrategy == NULL);
 
     // first, pick the singular strategy that takes the least time (expected)
@@ -239,11 +244,12 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
 
 void
 StrategyEvaluator::chooseStrategyAsync(void *chooser_arg, 
-                                       instruments_strategy_chosen_callback_t callback)
+                                       instruments_strategy_chosen_callback_t callback,
+                                       void *callback_arg)
 {
     auto async_choose = [=]() {
         instruments_strategy_t strategy = chooseStrategy(chooser_arg);
-        callback(strategy); // thread-safety of this is up to the caller
+        callback(strategy, callback_arg); // thread-safety of this is up to the caller
     };
 
     pool->startTask(async_choose);

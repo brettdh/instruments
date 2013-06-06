@@ -20,7 +20,7 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
 instruments_strategy_t strategy;
 
-static void store_chosen_strategy(instruments_strategy_t chosen)
+static void store_chosen_strategy(instruments_strategy_t chosen, void *unused)
 {
     pthread_mutex_lock(&mutex);
     strategy = chosen;
@@ -35,7 +35,7 @@ check_chosen_strategy_async(instruments_strategy_evaluator_t evaluator,
 {
     pthread_mutex_lock(&mutex);
     strategy = NULL;
-    choose_strategy_async(evaluator, chooser_arg, store_chosen_strategy);
+    choose_strategy_async(evaluator, chooser_arg, store_chosen_strategy, NULL);
     while (strategy == NULL) {
         pthread_cond_wait(&cv, &mutex);
     }

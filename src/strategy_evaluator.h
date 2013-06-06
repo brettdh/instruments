@@ -9,6 +9,8 @@
 
 #include <vector>
 
+#include <pthread.h>
+
 class Estimator;
 class Strategy;
 
@@ -34,7 +36,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     // TODO: declare this not-thread-safe?  that seems reasonable.
     instruments_strategy_t chooseStrategy(void *chooser_arg, bool redundancy=true);
     void chooseStrategyAsync(void *chooser_arg, 
-                             instruments_strategy_chosen_callback_t callback);
+                             instruments_strategy_chosen_callback_t callback,
+                             void *callback_arg);
     
     void addEstimator(Estimator *estimator);
     void removeEstimator(Estimator *estimator);
@@ -67,6 +70,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     bool silent;
 
     small_set<Estimator *> subscribed_estimators;
+
+    pthread_mutex_t evaluator_mutex;
 
     // for asynchronous strategy decisions.
     ThreadPool *pool;
