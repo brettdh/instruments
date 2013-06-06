@@ -232,3 +232,16 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
         return best_singular;
     }
 }
+
+
+void
+StrategyEvaluator::chooseStrategyAsync(void *chooser_arg, 
+                                       instruments_strategy_chosen_callback_t callback)
+{
+    auto async_choose = [&]() {
+        instruments_strategy_t strategy = chooseStrategy(chooser_arg);
+        callback(strategy); // thread-safety of this is up to the caller
+    };
+
+    pool->startTask(async_choose);
+}

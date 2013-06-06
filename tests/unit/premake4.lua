@@ -16,6 +16,7 @@ project "InstrumentsTests"
      "multi_dimension_array_test.cc",
      "running_mean_estimator_test.cc",
      "strategy_estimators_discovery_test.cc",
+     "thread_pool_test.cc",
   }
   local support_files = {
      "abstract_joint_distribution.cc",
@@ -43,6 +44,7 @@ project "InstrumentsTests"
      "stats_distribution_all_samples.cc",
      "stats_distribution_binned.cc",
      "stopwatch.cc",
+     "thread_pool.cc",
      "timeops.cc",
   }
   support_files = _.map(support_files, function(f) return "../../src/"..f; end)
@@ -54,7 +56,7 @@ project "InstrumentsTests"
                     function(dir) return "../../src/"..dir; end))
 
   flags { "Symbols", "FatalWarnings" }
-  links { "mocktime", "cppunit" }
+  links { "pthread", "mocktime", "cppunit" }
 
   buildoptions { R_buildoptions(), "-Wall", "-std=gnu++0x" }
   linkoptions { R_linkoptions() }

@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <thread>
+using std::thread;
 
 #include <instruments.h>
 #include <instruments_private.h>
@@ -100,6 +102,14 @@ choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator_handle,
     StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
     return evaluator->chooseStrategy(chooser_arg, /* redundancy = */ false);
 }
+
+void
+choose_strategy_async(instruments_strategy_evaluator_t evaluator_handle,
+                      void *chooser_arg, instruments_strategy_chosen_callback_t callback)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    evaluator->chooseStrategyAsync(chooser_arg, callback);
+ }
 
 void
 save_evaluator(instruments_strategy_evaluator_t evaluator_handle, const char *filename)
