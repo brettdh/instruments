@@ -122,12 +122,17 @@ CTEST_TEARDOWN(intnw_specific_test)
 
 static void assert_correct_strategy_helper(struct common_test_data *cdata,
                                            instruments_strategy_t correct_strategy,
-                                           int bytes, int soft)
+                                           int bytes, int soft, int redundancy)
 {
     instruments_strategy_t *strategies = cdata->strategies;
     instruments_strategy_evaluator_t evaluator = cdata->evaluator;
     
-    instruments_strategy_t chosen_strategy = choose_strategy(evaluator, (void *)bytes);
+    instruments_strategy_t chosen_strategy;
+    if (redundancy) {
+        chosen_strategy = choose_strategy(evaluator, (void *)bytes);
+    } else {
+        chosen_strategy = choose_nonredundant_strategy(evaluator, (void *)bytes);
+    }
     int chosen_strategy_idx = -1, correct_strategy_idx = -1, i;
     for (i = 0; i < NUM_STRATEGIES; ++i) {
         if (correct_strategy == strategies[i]) {
@@ -155,16 +160,23 @@ static void assert_correct_strategy(struct common_test_data *cdata,
                                     instruments_strategy_t correct_strategy,
                                     int bytes)
 {
-    assert_correct_strategy_helper(cdata, correct_strategy, bytes, 0);
+    assert_correct_strategy_helper(cdata, correct_strategy, bytes, 0, 1);
 }
 
 static void soft_assert_correct_strategy(struct common_test_data *cdata,
                                          instruments_strategy_t correct_strategy,
                                          int bytes)
 {
-    assert_correct_strategy_helper(cdata, correct_strategy, bytes, 1);
+    assert_correct_strategy_helper(cdata, correct_strategy, bytes, 1, 1);
 }
 
+static void assert_correct_nonredundant_strategy(struct common_test_data *cdata,
+                                                 instruments_strategy_t correct_strategy,
+                                                 int bytes)
+{
+    assert_correct_strategy_helper(cdata, correct_strategy, bytes, 0, 0);
+}
+    
 
 static void init_network_params(struct common_test_data *cdata,
                                 double bandwidth1, double latency1, 
@@ -220,9 +232,9 @@ CTEST2(intnw_specific_test, test_each_network_wins)
 
 // params used for redundancy test
 static int bytelen = 5000;
-static double stable_bandwidth = 2000;
-static double better_bandwidth = 5000;
-static double worse_bandwidth = 1000;
+static double stable_bandwidth = 2000; // 2.5 seconds    | better on pure average
+static double better_bandwidth = 5000; // 1 second       | better sometimes (1.5s),
+static double worse_bandwidth = 1000;  // 5 seconds      | but sometimes worse by more (2.5s)
 // expected value of time on network 1: 2.5 seconds
 //                   cost             : x
 //                   time on network 2: bandwidth: 5000 +/- 4000
@@ -296,6 +308,13 @@ static void test_both_networks_best(struct common_test_data *cdata)
 CTEST2(intnw_specific_test, test_both_networks_best)
 {
     test_both_networks_best(&data->common_data);
+}
+
+CTEST2(intnw_specific_test, test_ignore_redundancy)
+{
+    struct common_test_data *cdata = &data->common_data;
+    test_both_networks_best(cdata);
+    assert_correct_nonredundant_strategy(cdata, cdata->strategies[0], bytelen);
 }
 
 static void test_save_restore(struct common_test_data *cdata, const char *filename, 

@@ -122,6 +122,11 @@ choose_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
  *        'singular' strategies. 
  */
 
+/** Choose and return the best nonredundant strategy.
+ */
+CDECL instruments_strategy_t
+choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
+
 /** Queries the evaluator for the recommended time at which
  *  the strategies should be re-evaluated.
  *  This time may be in the past; this indicates that

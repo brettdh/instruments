@@ -31,7 +31,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     bool isSilent();
 
     // TODO: declare this not-thread-safe?  that seems reasonable.
-    instruments_strategy_t chooseStrategy(void *chooser_arg);
+    instruments_strategy_t chooseStrategy(void *chooser_arg, bool redundancy=true);
     
     void addEstimator(Estimator *estimator);
     void removeEstimator(Estimator *estimator);

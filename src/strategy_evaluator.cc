@@ -144,7 +144,7 @@ StrategyEvaluator::isSilent()
 }
 
 instruments_strategy_t
-StrategyEvaluator::chooseStrategy(void *chooser_arg)
+StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
 {
     // TODO: error message about concurrent calls
     assert(currentStrategy == NULL);
@@ -175,6 +175,13 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg)
         }
     }
     
+    if (!redundancy) {
+        inst::dbgprintf(INFO, "Not considering redundancy; returning best "
+                        "singular strategy (time %f cost %f)\n",
+                        best_singular_time, best_singular_cost);
+        return best_singular;
+    }
+
     // then, pick the cheapest redundant strategy that offers net benefit
     //  over the best singular strategy (if any)
     Strategy *best_redundant = NULL;

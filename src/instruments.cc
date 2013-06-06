@@ -93,6 +93,14 @@ choose_strategy(instruments_strategy_evaluator_t evaluator_handle,
     return evaluator->chooseStrategy(chooser_arg);
 }
 
+instruments_strategy_t
+choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator_handle,
+                             void *chooser_arg)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    return evaluator->chooseStrategy(chooser_arg, /* redundancy = */ false);
+}
+
 void
 save_evaluator(instruments_strategy_evaluator_t evaluator_handle, const char *filename)
 {
