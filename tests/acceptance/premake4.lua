@@ -6,7 +6,7 @@ project "AcceptanceTests"
   
   includedirs { "../include", "../../include", "../../src" }
   libdirs { "../../src" }
-  links { "InstrumentsLibrary" }
+  links { "pthread", "InstrumentsLibrary" }
   linkoptions { "-Wl,-rpath,../../src" }
   targetname "run_tests"
 

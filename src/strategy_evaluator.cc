@@ -24,6 +24,8 @@ using std::vector;
 StrategyEvaluator::StrategyEvaluator()
     : currentStrategy(NULL), silent(false)
 {
+    const int ASYNC_EVAL_THREADS = 3;
+    pool = new ThreadPool(ASYNC_EVAL_THREADS);
 }
 
 StrategyEvaluator::~StrategyEvaluator()
@@ -31,6 +33,7 @@ StrategyEvaluator::~StrategyEvaluator()
     for (Estimator *estimator : subscribed_estimators) {
         estimator->unsubscribe(this);
     }
+    delete pool;
 }
 
 void
@@ -238,7 +241,7 @@ void
 StrategyEvaluator::chooseStrategyAsync(void *chooser_arg, 
                                        instruments_strategy_chosen_callback_t callback)
 {
-    auto async_choose = [&]() {
+    auto async_choose = [=]() {
         instruments_strategy_t strategy = chooseStrategy(chooser_arg);
         callback(strategy); // thread-safety of this is up to the caller
     };

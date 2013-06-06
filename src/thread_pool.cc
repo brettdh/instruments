@@ -83,7 +83,7 @@ ThreadPool::idle(Worker *worker)
 ThreadPool::Worker::Worker(ThreadPool *pool_)
     : pool(pool_), running(true)
 {
-    my_thread = new thread([&]() {
+    my_thread = new thread([=]() {
             run();
         });
 }
@@ -123,7 +123,7 @@ ThreadPool::Worker::startTask(std::function<void()> fn)
 void 
 ThreadPool::Worker::kill()
 {
-    startTask([&]() {
+    startTask([=]() {
             running = false;
         });
     
