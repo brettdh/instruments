@@ -89,6 +89,8 @@ CDECL instruments_strategy_t
 make_redundant_strategy(const instruments_strategy_t *strategies, 
                         size_t num_strategies);
 
+CDECL void set_strategy_name(instruments_strategy_t strategy, const char * name);
+
 /** Destroy a strategy previously created with
  *  make_strategy or make_redundant_strategy.
  */

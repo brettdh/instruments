@@ -34,6 +34,9 @@ class Strategy {
              void *default_chooser_arg_);
     Strategy(const instruments_strategy_t strategies[], 
              size_t num_strategies);
+
+    void setName(const char *name_);
+    const char *getName() const;
     
     void addEstimator(typesafe_eval_fn_t fn, Estimator *estimator);
     double calculateTime(StrategyEvaluator *evaluator, void *chooser_arg);
@@ -68,6 +71,8 @@ class Strategy {
     typesafe_eval_fn_t data_cost_fn;
     void *strategy_arg;
     void *default_chooser_arg;
+
+    std::string name;
 
     typesafe_eval_fn_t fns[NUM_FNS];
     void setEvalFnLookupArray();

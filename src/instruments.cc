@@ -30,6 +30,13 @@ make_redundant_strategy(const instruments_strategy_t *strategies,
     return new Strategy(strategies, num_strategies);
 }
 
+void 
+set_strategy_name(instruments_strategy_t strategy_handle, const char * name)
+{
+    Strategy *strategy = (Strategy *) strategy_handle;
+    strategy->setName(name);
+}
+
 void free_strategy(instruments_strategy_t strategy)
 {
     delete ((Strategy *) strategy);

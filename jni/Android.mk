@@ -59,6 +59,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	stopwatch.cc \
 	strategy.cc \
 	strategy_evaluator.cc \
+	thread_pool.cc \
 	timeops.cc)
 #	r_singleton.cc \
 

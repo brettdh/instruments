@@ -10,7 +10,11 @@
 #include <algorithm>
 #include <vector>
 #include <set>
-using std::find;
+#include <string>
+#include <sstream>
+#include <iomanip>
+using std::find; using std::string; using std::ostringstream;
+using std::hex;
 
 #include "small_set.h"
 
@@ -35,6 +39,22 @@ Strategy::Strategy(eval_fn_t time_fn_,
     
     collectEstimators();
     setEvalFnLookupArray();
+
+    ostringstream s;
+    s << hex << this;
+    name = s.str();
+}
+
+void
+Strategy::setName(const char *name_)
+{
+    name = name_;
+}
+
+const char *
+Strategy::getName() const
+{
+    return name.c_str();
 }
 
 void
