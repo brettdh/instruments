@@ -27,6 +27,7 @@ StrategyEvaluator::StrategyEvaluator()
     : currentStrategy(NULL), silent(false)
 {
     pthread_mutex_init(&evaluator_mutex, NULL);
+    pthread_mutex_init(&cache_mutex, NULL);
     
     const int ASYNC_EVAL_THREADS = 3;
     pool = new ThreadPool(ASYNC_EVAL_THREADS);
@@ -151,8 +152,55 @@ StrategyEvaluator::isSilent()
 }
 
 instruments_strategy_t
+StrategyEvaluator::getCachedChoice(void *chooser_arg, bool redundancy)
+{
+    PthreadScopedLock lock(&cache_mutex);
+    auto& cache = (redundancy ? redundant_choice_cache : nonredundant_choice_cache);
+
+    // XXX: chooser_arg needs an equality function, not just pointer equality,
+    // XXX: to differentiate whether the same argument has been passed again.
+    auto it = cache.find(chooser_arg);
+    if (it != cache.end()) {
+        return it->second;
+    }
+    return NULL;
+}
+
+void
+StrategyEvaluator::saveCachedChoice(instruments_strategy_t winner, void *chooser_arg, bool redundancy)
+{
+    PthreadScopedLock lock(&cache_mutex);
+    auto& cache = (redundancy ? redundant_choice_cache : nonredundant_choice_cache);
+
+    // XXX: chooser_arg needs an equality function, not just pointer equality,
+    // XXX: to differentiate whether the same argument has been passed again.
+    cache[chooser_arg] = winner;
+}
+
+void
+StrategyEvaluator::clearCache()
+{
+    PthreadScopedLock lock(&cache_mutex);
+    nonredundant_choice_cache.clear();
+    redundant_choice_cache.clear();
+}
+
+void
+StrategyEvaluator::observationAdded(Estimator *estimator, double observation, 
+                                    double old_estimate, double new_estimate)
+{
+    clearCache();
+    processObservation(estimator, observation, old_estimate, new_estimate);
+}
+
+instruments_strategy_t
 StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
 {
+    instruments_strategy_t cached_choice = getCachedChoice(chooser_arg, redundancy);
+    if (cached_choice) {
+        return cached_choice;
+    }
+
     PthreadScopedLock lock(&evaluator_mutex);
     
     assert(currentStrategy == NULL);
@@ -197,6 +245,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
         inst::dbgprintf(INFO, "Not considering redundancy; returning best "
                         "singular strategy (time %f cost %f)\n",
                         best_singular_time, best_singular_cost);
+        saveCachedChoice(best_singular, chooser_arg, redundancy);
         return best_singular;
     }
 
@@ -246,11 +295,15 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
 
     // if any redundant strategy was better than the best singular strategy, use it.
     //  otherwise, just use the best singular strategy.
+    instruments_strategy_t winner = NULL;
     if (best_redundant) {
-        return best_redundant;
+        winner = best_redundant;
     } else {
-        return best_singular;
+        winner = best_singular;
     }
+    
+    saveCachedChoice(winner, chooser_arg, redundancy);
+    return winner;
 }
 
 
@@ -265,4 +318,11 @@ StrategyEvaluator::chooseStrategyAsync(void *chooser_arg,
     };
 
     pool->startTask(async_choose);
+}
+
+void 
+StrategyEvaluator::restoreFromFile(const char *filename)
+{
+    clearCache();
+    restoreFromFileImpl(filename);
 }

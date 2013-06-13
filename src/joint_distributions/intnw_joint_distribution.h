@@ -27,8 +27,8 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
-    virtual void observationAdded(Estimator *estimator, double observation,
-                                  double old_estimate, double new_estimate);
+    virtual void processObservation(Estimator *estimator, double observation,
+                                    double old_estimate, double new_estimate);
 
     virtual void saveToFile(std::ofstream& out);
     virtual void restoreFromFile(std::ifstream& in);

@@ -45,11 +45,13 @@ class StrategyEvaluator : public StrategyEvaluationContext {
 
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg) = 0;
-    virtual void observationAdded(Estimator *estimator, double observation, 
-                                  double old_estimate, double new_estimate) { /* ignore by default */ }
+    void observationAdded(Estimator *estimator, double observation, 
+                          double old_estimate, double new_estimate);
 
     virtual void saveToFile(const char *filename) = 0;
-    virtual void restoreFromFile(const char *filename) = 0;
+
+    // also clears the cache.
+    void restoreFromFile(const char *filename);
 
     virtual ~StrategyEvaluator();
   protected:
@@ -59,6 +61,10 @@ class StrategyEvaluator : public StrategyEvaluationContext {
 
     std::vector<Strategy*> strategies;
     const small_set<Estimator*>& getAllEstimators();
+
+    virtual void processObservation(Estimator *estimator, double observation, 
+                                    double old_estimate, double new_estimate) { /* ignore by default */ }
+    virtual void restoreFromFileImpl(const char *filename) = 0;
 
     // TODO: change to a better default.
     const static EvalMethod DEFAULT_EVAL_METHOD = TRUSTED_ORACLE;
@@ -71,6 +77,15 @@ class StrategyEvaluator : public StrategyEvaluationContext {
 
     small_set<Estimator *> subscribed_estimators;
 
+    pthread_mutex_t cache_mutex;
+    std::map<void *, instruments_strategy_t> nonredundant_choice_cache;
+    std::map<void *, instruments_strategy_t> redundant_choice_cache;
+
+    instruments_strategy_t getCachedChoice(void *chooser_arg, bool redundancy);
+    void saveCachedChoice(instruments_strategy_t winner, void *chooser_arg, bool redundancy);
+    void clearCache();
+
+    
     pthread_mutex_t evaluator_mutex;
 
     // for asynchronous strategy decisions.

@@ -16,10 +16,10 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
 
     virtual void saveToFile(const char *filename);
-    virtual void restoreFromFile(const char *filename);
+    virtual void restoreFromFileImpl(const char *filename);
   protected:
-    virtual void observationAdded(Estimator *estimator, double observation,
-                                  double old_estimate, double new_estimate);
+    virtual void processObservation(Estimator *estimator, double observation,
+                                    double old_estimate, double new_estimate);
   private:
     enum BoundType {
         LOWER=0, UPPER

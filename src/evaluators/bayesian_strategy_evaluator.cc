@@ -185,7 +185,7 @@ class BayesianStrategyEvaluator::SimpleEvaluator : public StrategyEvaluator {
 
     // nothing to save/restore.
     virtual void saveToFile(const char *filename) {}
-    virtual void restoreFromFile(const char *filename) {}
+    virtual void restoreFromFileImpl(const char *filename) {}
 
     void setEstimatorValue(Estimator *estimator, double value);
     void setEstimatorValues(const vector<pair<Estimator *, double> >& new_estimator_values);
@@ -321,8 +321,8 @@ BayesianStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
 }
 
 void 
-BayesianStrategyEvaluator::observationAdded(Estimator *estimator, double observation,
-                                            double old_estimate, double new_estimate)
+BayesianStrategyEvaluator::processObservation(Estimator *estimator, double observation,
+                                              double old_estimate, double new_estimate)
 {
     bool add_decision = !uninitializedStrategiesExist();
 
@@ -741,7 +741,7 @@ BayesianStrategyEvaluator::saveToFile(const char *filename)
 }
 
 void
-BayesianStrategyEvaluator::restoreFromFile(const char *filename)
+BayesianStrategyEvaluator::restoreFromFileImpl(const char *filename)
 {
     inst::dbgprintf(INFO, "Restoring Bayesian distribution from %s\n", filename);
 

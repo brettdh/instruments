@@ -27,8 +27,8 @@ class GenericJointDistribution : public AbstractJointDistribution {
     double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
 
     double getAdjustedEstimatorValue(Estimator *estimator);
-    void observationAdded(Estimator *estimator, double observation,
-                          double old_estimate, double new_estimate);
+    void processObservation(Estimator *estimator, double observation,
+                            double old_estimate, double new_estimate);
 
     virtual void saveToFile(std::ofstream& out);
     virtual void restoreFromFile(std::ifstream& in);

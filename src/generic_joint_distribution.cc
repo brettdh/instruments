@@ -209,8 +209,8 @@ GenericJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 }
 
 void 
-GenericJointDistribution::observationAdded(Estimator *estimator, double observation,
-                                           double old_estimate, double new_estimate)
+GenericJointDistribution::processObservation(Estimator *estimator, double observation,
+                                             double old_estimate, double new_estimate)
 {
     clearMemos();
     

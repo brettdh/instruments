@@ -61,10 +61,10 @@ EmpiricalErrorStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
 }
 
 void 
-EmpiricalErrorStrategyEvaluator::observationAdded(Estimator *estimator, double observation, 
-                                                  double old_estimate, double new_estimate)
+EmpiricalErrorStrategyEvaluator::processObservation(Estimator *estimator, double observation, 
+                                                    double old_estimate, double new_estimate)
 {
-    jointDistribution->observationAdded(estimator, observation, old_estimate, new_estimate);
+    jointDistribution->processObservation(estimator, observation, old_estimate, new_estimate);
 }
 
 
@@ -91,7 +91,7 @@ EmpiricalErrorStrategyEvaluator::saveToFile(const char *filename)
 }
 
 void 
-EmpiricalErrorStrategyEvaluator::restoreFromFile(const char *filename)
+EmpiricalErrorStrategyEvaluator::restoreFromFileImpl(const char *filename)
 {
     ifstream in(filename);
     if (!in) {

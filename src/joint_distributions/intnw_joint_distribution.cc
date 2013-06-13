@@ -437,8 +437,8 @@ IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 }
 
 void
-IntNWJointDistribution::observationAdded(Estimator *estimator, double observation,
-                                         double old_estimate, double new_estimate)
+IntNWJointDistribution::processObservation(Estimator *estimator, double observation,
+                                           double old_estimate, double new_estimate)
 {
     if (estimate_is_valid(old_estimate) && estimatorSamples.count(estimator) > 0) {
         // if there's a prior estimate, we can calculate an error sample

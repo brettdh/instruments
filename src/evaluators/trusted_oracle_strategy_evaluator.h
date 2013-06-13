@@ -11,7 +11,7 @@ class TrustedOracleStrategyEvaluator : public StrategyEvaluator {
 
     // nothing to save/restore.
     virtual void saveToFile(const char *filename) {}
-    virtual void restoreFromFile(const char *filename) {}
+    virtual void restoreFromFileImpl(const char *filename) {}
 };
 
 #endif

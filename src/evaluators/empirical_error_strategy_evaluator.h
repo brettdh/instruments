@@ -19,10 +19,10 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
                                  void *strategy_arg, void *chooser_arg);
 
     virtual void saveToFile(const char *filename);
-    virtual void restoreFromFile(const char *filename);
+    virtual void restoreFromFileImpl(const char *filename);
   protected:
-    virtual void observationAdded(Estimator *estimator, double observation, 
-                                  double old_estimate, double new_estimate);
+    virtual void processObservation(Estimator *estimator, double observation, 
+                                    double old_estimate, double new_estimate);
     virtual void setStrategies(const instruments_strategy_t *strategies_,
                                size_t num_strategies_);
 

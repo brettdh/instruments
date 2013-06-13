@@ -25,7 +25,7 @@ using std::pair; using std::make_pair;
 class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
   public:
     ErrorConfidenceBounds(Estimator *estimator_=NULL);
-    void observationAdded(double observation, double old_estimate, double new_estimate);
+    void processObservation(double observation, double old_estimate, double new_estimate);
     double getBound(BoundType type);
     void saveToFile(ofstream& out);
     string restoreFromFile(ifstream& in);
@@ -111,9 +111,9 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBoundDistance()
 }
 
 void
-ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::observationAdded(double observation, 
-                                                                           double old_estimate,
-                                                                           double new_estimate)
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(double observation, 
+                                                                             double old_estimate,
+                                                                             double new_estimate)
 {
     inst::dbgprintf(INFO, "Getting error sample from estimator %p\n", estimator);
 
@@ -205,8 +205,8 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
 }
 
 void 
-ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double observation, 
-                                                    double old_estimate, double new_estimate)
+ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, double observation, 
+                                                      double old_estimate, double new_estimate)
 {
     inst::dbgprintf(INFO, "Adding observation %f to estimator %p\n", observation, estimator);
     
@@ -236,7 +236,7 @@ ConfidenceBoundsStrategyEvaluator::observationAdded(Estimator *estimator, double
     if (estimate_is_valid(old_estimate)) {
         inst::dbgprintf(INFO, "Adding observation %f to estimator-bounds %p\n",
                         observation, bounds);
-        bounds->observationAdded(observation, old_estimate, new_estimate);
+        bounds->processObservation(observation, old_estimate, new_estimate);
     }
 
     clearCache();
@@ -390,7 +390,7 @@ ConfidenceBoundsStrategyEvaluator::saveToFile(const char *filename)
 }
 
 void 
-ConfidenceBoundsStrategyEvaluator::restoreFromFile(const char *filename)
+ConfidenceBoundsStrategyEvaluator::restoreFromFileImpl(const char *filename)
 {
     ifstream in(filename);
     if (!in) {
