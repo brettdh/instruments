@@ -14,6 +14,10 @@
 namespace instruments {
 #endif
 
+#ifdef ERROR
+#undef ERROR
+#endif
+
 enum DebugLevel {
     NONE=0, /* shut it. */
     ERROR,  /* exceptional situations only. */
@@ -29,7 +33,7 @@ void dbgprintf(enum DebugLevel level, const char *format, ...)
 void dbgprintf_always(const char *format, ...)
   __attribute__((format(printf, 1, 2)));
 
-#ifdef NDEBUG
+#ifndef NDEBUG
 #  ifdef ANDROID
 #  define ASSERT_SLEEP(x) sleep(x)
 #  else
@@ -38,10 +42,11 @@ void dbgprintf_always(const char *format, ...)
 #define ASSERT(cond)                                                    \
     do {                                                                \
         if (!(cond)) {                                                  \
-            instruments::dbgprintf(instruments::ERROR, "ASSERT '" #cond "' failed at %s:%d\n", __FILE__, __LINE__); \
+            instruments::dbgprintf(instruments::ERROR,                  \
+                                   "ASSERT '" #cond "' failed at %s:%d\n", __FILE__, __LINE__); \
             ASSERT_SLEEP(60);                                           \
-            __builtin_trap();                                          \
-        }                                                              \
+            __builtin_trap();                                           \
+        }                                                               \
     } while (0)
 #else
 #define ASSERT(cond)

@@ -14,7 +14,6 @@ using std::runtime_error;
 
 #include "small_set.h"
 #include "timeops.h"
-#include "debug.h"
 
 #ifndef ANDROID
 #include <RInside.h>
@@ -33,6 +32,8 @@ StatsDistributionBinned::initRInside()
     r_samples_name = oss.str();
 }
 #endif
+
+#include "debug.h"
 
 class NoRInsideOnAndroid : public runtime_error {
   public:
