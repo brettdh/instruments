@@ -1,12 +1,13 @@
 #include <assert.h>
 #include "estimator.h"
 #include "estimator_registry.h"
+#include "debug.h"
 
 Estimator *
 EstimatorRegistry::getNetworkBandwidthDownEstimator(const char *iface)
 {
     // TODO: implement
-    assert(false);
+    ASSERT(false);
     return NULL;
 }
 
@@ -14,7 +15,7 @@ Estimator *
 EstimatorRegistry::getNetworkBandwidthUpEstimator(const char *iface)
 {
     // TODO: implement
-    assert(false);
+    ASSERT(false);
     return NULL;
 }
 
@@ -22,7 +23,7 @@ Estimator *
 EstimatorRegistry::getNetworkRttEstimator(const char *iface)
 {
     // TODO: implement
-    assert(false);
+    ASSERT(false);
     return NULL;
 }
 

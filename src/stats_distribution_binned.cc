@@ -14,6 +14,7 @@ using std::runtime_error;
 
 #include "small_set.h"
 #include "timeops.h"
+#include "debug.h"
 
 #ifndef ANDROID
 #include <RInside.h>
@@ -129,7 +130,7 @@ StatsDistributionBinned::getBinnedValue(double value)
 double 
 StatsDistributionBinned::getValueAtIndex(size_t index)
 {
-    assert(index >= 0 && index < mids.size());
+    ASSERT(index >= 0 && index < mids.size());
     return mids[index];
 }
 
@@ -137,7 +138,7 @@ StatsDistributionBinned::getValueAtIndex(size_t index)
 double
 StatsDistributionBinned::probabilityAtIndex(size_t index)
 {
-    assert(index < counts.size());
+    ASSERT(index < counts.size());
     return (double(counts[index]) / all_samples_sorted.size());
 }
 
@@ -310,7 +311,7 @@ bool
 StatsDistributionBinned::binsAreSet()
 {
     // because I shouldn't be making histograms without range hints anymore.
-    assert(!breaks.empty());
+    ASSERT(!breaks.empty());
     
     return (!breaks.empty());
 }
@@ -373,24 +374,24 @@ void
 StatsDistributionBinned::assertValidHistogram()
 {
     if (!breaks.empty()) {
-        assert((breaks.size() + 1) == mids.size());
-        assert((breaks.size() + 1) == counts.size());
+        ASSERT((breaks.size() + 1) == mids.size());
+        ASSERT((breaks.size() + 1) == counts.size());
 
         int total_counts = 0;
         for (size_t i = 1; i < breaks.size(); ++i) {
-            assert(breaks[i-1] <= mids[i]);
-            assert(breaks[i] > mids[i]);
+            ASSERT(breaks[i-1] <= mids[i]);
+            ASSERT(breaks[i] > mids[i]);
             
             total_counts += counts[i];
         }
 
-        assert(counts[0] == 0 || mids[0] <= breaks[0]);
-        assert(counts[counts.size()-1] == 0 ||
+        ASSERT(counts[0] == 0 || mids[0] <= breaks[0]);
+        ASSERT(counts[counts.size()-1] == 0 ||
                mids[mids.size()-1] > breaks[breaks.size()-1]);
 
         total_counts += counts[0];
         total_counts += counts[counts.size() - 1];
-        assert(total_counts == (int) all_samples_sorted.size());
+        ASSERT(total_counts == (int) all_samples_sorted.size());
     }
 }
 

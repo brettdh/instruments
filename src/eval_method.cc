@@ -37,7 +37,7 @@ static NameMap names(names_initializer,
 const char *
 get_method_name(enum EvalMethod method)
 {
-    assert(names.count(method) == 1);
+    ASSERT(names.count(method) == 1);
     return names[method].c_str();
 }
 

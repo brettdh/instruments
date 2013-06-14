@@ -7,6 +7,7 @@
 #ifndef ANDROID
 #include "stats_distribution_binned.h"
 #endif
+#include "debug.h"
 
 #include "multi_dimension_array.h"
 
@@ -69,7 +70,7 @@ memoized_min_time(StrategyEvaluationContext *ctx,
     double minValue = DBL_MAX;
     for (size_t i = 0; i < args->num_strategies; ++i) {
         double value = jointDistribution->getMemoizedValue(memos[i], i);
-        assert(value != DBL_MAX);
+        ASSERT(value != DBL_MAX);
         minValue = min(minValue, value);
     }
     return minValue;
@@ -85,14 +86,14 @@ memoized_total_energy_cost(StrategyEvaluationContext *ctx,
     vector<MultiDimensionArray<double> *>& memos = *args->memos;
     Strategy *parent = args->parent_strategy;
     vector<Strategy *> children = parent->getChildStrategies();
-    assert(args->num_strategies == children.size());
+    ASSERT(args->num_strategies == children.size());
 
     // valid because singular strategies are always evaluated before redundant strategies.
     double sum = 0.0;
     for (size_t i = 0; i < args->num_strategies; ++i) {
         if (children[i]->getEvalFn(ENERGY_FN) != NULL) {
             double value = jointDistribution->getMemoizedValue(memos[i], i);
-            assert(value != DBL_MAX);
+            ASSERT(value != DBL_MAX);
             sum += value;
         }
     }
@@ -109,14 +110,14 @@ memoized_total_data_cost(StrategyEvaluationContext *ctx,
     vector<MultiDimensionArray<double> *>& memos = *args->memos;
     Strategy *parent = args->parent_strategy;
     vector<Strategy *> children = parent->getChildStrategies();
-    assert(args->num_strategies == children.size());
+    ASSERT(args->num_strategies == children.size());
 
     // valid because singular strategies are always evaluated before redundant strategies.
     double sum = 0.0;
     for (size_t i = 0; i < args->num_strategies; ++i) {
         if (children[i]->getEvalFn(DATA_FN) != NULL) {
             double value = jointDistribution->getMemoizedValue(memos[i], i);
-            assert(value != DBL_MAX);
+            ASSERT(value != DBL_MAX);
             sum += value;
         }
     }
@@ -136,8 +137,8 @@ memo_saving_fn(StrategyEvaluationContext *ctx,
     // only called with singular strategies.
 #ifndef NDEBUG
     Strategy *strategy = args->parent_strategy;
+    ASSERT(!strategy->isRedundant());
 #endif
-    assert(!strategy->isRedundant());
 
     double value = args->real_fn(ctx, args->real_strategy_arg, chooser_arg);
     jointDistribution->saveMemoizedValue(memo, value);
@@ -171,7 +172,7 @@ GenericJointDistribution::setEvalArgs(void *strategy_arg_, void *chooser_arg_)
 double 
 GenericJointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
 {
-    assert(iterator == NULL);
+    ASSERT(iterator == NULL);
     
     struct memoized_strategy_args args;
     args.parent_strategy = strategy;
@@ -199,7 +200,7 @@ GenericJointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t f
 double 
 GenericJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 {
-    assert(iterator);
+    ASSERT(iterator);
 
     // TODO: save per iteration?  it might not matter much.
     double estimate = estimator->getEstimate();
@@ -241,13 +242,13 @@ GenericJointDistribution::getMemoList(Strategy *strategy, typesafe_eval_fn_t fn)
 void
 GenericJointDistribution::setEmptyMemos(Strategy *strategy, const vector<size_t>& dimensions)
 {
-    assert(time_memos.size() == energy_memos.size() &&
+    ASSERT(time_memos.size() == energy_memos.size() &&
            energy_memos.size() == data_memos.size());
-    assert(!strategy->isRedundant());
+    ASSERT(!strategy->isRedundant());
 
     size_t index = getStrategyIndex(strategy);
     if (time_memos[index] != NULL) {
-        assert(energy_memos[index] != NULL &&
+        ASSERT(energy_memos[index] != NULL &&
                data_memos[index] != NULL);
 
         // ignore; assume that expectedValue has been called twice with the same arguments
@@ -261,7 +262,7 @@ GenericJointDistribution::setEmptyMemos(Strategy *strategy, const vector<size_t>
 void
 GenericJointDistribution::clearMemos()
 {
-    assert(time_memos.size() == energy_memos.size() &&
+    ASSERT(time_memos.size() == energy_memos.size() &&
            energy_memos.size() == data_memos.size());
     for (size_t i = 0; i < time_memos.size(); ++i) {
         delete time_memos[i];
@@ -283,14 +284,14 @@ GenericJointDistribution::getStrategyIndex(Strategy *strategy)
             break;
         }
     }
-    assert(strategy_index != -1);
+    ASSERT(strategy_index != -1);
     return strategy_index;
 }
 
 inline double
 GenericJointDistribution::getMemoizedValue(MultiDimensionArray<double> *memo, size_t strategy_index)
 {
-    assert(iterator);
+    ASSERT(iterator);
     return memo->at(iterator->strategyPosition(strategy_index));
 }
 
@@ -298,8 +299,8 @@ void
 GenericJointDistribution::saveMemoizedValue(MultiDimensionArray<double> *memo,
                                      double value)
 {
-    assert(iterator);
-    assert(iterator->numStrategies() == 1);
+    ASSERT(iterator);
+    ASSERT(iterator->numStrategies() == 1);
     size_t strategy_index = 0;
     if (!iterator->isDone()) {
         memo->at(iterator->strategyPosition(strategy_index)) = value;
@@ -478,7 +479,7 @@ GenericJointDistribution::Iterator::advance()
 void
 GenericJointDistribution::Iterator::setStrategyPositions(size_t index, size_t value)
 {
-    assert(index < strategy_positions_for_estimator_position.size());
+    ASSERT(index < strategy_positions_for_estimator_position.size());
     const vector<size_t*>& subscribed_positions = strategy_positions_for_estimator_position[index];
     for (size_t i = 0; i < subscribed_positions.size(); ++i) {
         size_t *rval = subscribed_positions[i];

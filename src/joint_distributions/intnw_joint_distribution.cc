@@ -313,6 +313,9 @@ inline double
 IntNWJointDistribution::getSingularJointProbability(double **strategy_probabilities,
                                                     size_t index0, size_t index1)
 {
+    ASSERT(strategy_probabilities);
+    ASSERT(strategy_probabilities[0]);
+    ASSERT(strategy_probabilities[1]);
     return strategy_probabilities[0][index0] * strategy_probabilities[1][index1];
 }
 

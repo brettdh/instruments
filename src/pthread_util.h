@@ -11,13 +11,14 @@
 #include <string.h>
 #include "debug.h"
 
-#define PTHREAD_ASSERT_SUCCESS(rc)                      \
-    do {                                                \
-        if (rc != 0) {                                  \
-            fprintf(stderr, "PTHREAD ERROR: %s\n",      \
-                    strerror(rc));                      \
-            ASSERT(0);                                  \
-        }                                               \
+#define PTHREAD_ASSERT_SUCCESS(rc)                          \
+    do {                                                    \
+        if (rc != 0) {                                      \
+            instruments::dbgprintf(instruments::ERROR,      \
+                                   "PTHREAD ERROR: %s\n",   \
+                                   strerror(rc));           \
+            ASSERT(0);                                      \
+        }                                                   \
     } while (0)
 
 #ifdef ANDROID

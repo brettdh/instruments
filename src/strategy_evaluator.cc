@@ -120,7 +120,7 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
         evaluator = new BayesianStrategyEvaluator;
     } else {
         // TODO: implement the rest.
-        assert(false);
+        ASSERT(false);
         __builtin_unreachable();
     }
     evaluator->setStrategies(strategies, num_strategies);
@@ -190,6 +190,8 @@ StrategyEvaluator::observationAdded(Estimator *estimator, double observation,
                                     double old_estimate, double new_estimate)
 {
     clearCache();
+
+    PthreadScopedLock lock(&evaluator_mutex);
     processObservation(estimator, observation, old_estimate, new_estimate);
 }
 
@@ -203,7 +205,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
 
     PthreadScopedLock lock(&evaluator_mutex);
     
-    assert(currentStrategy == NULL);
+    ASSERT(currentStrategy == NULL);
 
     // first, pick the singular strategy that takes the least time (expected)
     Strategy *best_singular = NULL;
@@ -228,10 +230,13 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
                 // XXX: HACK.  This is a caching decision that belongs inside
                 // XXX:  the class that does the caching.
                 cost = calculateCost(currentStrategy, chooser_arg);
+                inst::dbgprintf(INFO, "Singular strategy \"%s\"  time: %f  cost: %f\n",
+                                currentStrategy->getName(), time, cost);
+            } else {
+                inst::dbgprintf(INFO, "Singular strategy \"%s\"  time: %f\n",
+                                currentStrategy->getName(), time);
             }
 
-            inst::dbgprintf(INFO, "Singular strategy \"%s\"  time: %f  cost: %f\n",
-                            currentStrategy->getName(), time, cost);
 
             if (!best_singular || time < best_singular_time) {
                 best_singular = currentStrategy;
@@ -240,11 +245,12 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
             }
         }
     }
+    currentStrategy = NULL;
     
     if (!redundancy) {
         inst::dbgprintf(INFO, "Not considering redundancy; returning best "
-                        "singular strategy (time %f cost %f)\n",
-                        best_singular_time, best_singular_cost);
+                        "singular strategy (time %f)\n",
+                        best_singular_time);
         saveCachedChoice(best_singular, chooser_arg, redundancy);
         return best_singular;
     }
@@ -280,8 +286,8 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
                 //  the singular strategy can never have a lower time, and
                 //  the redundant strategy can never have a lower cost.
                 // if either happens, the strategy evaluator is broken.
-                assert(benefit >= -0.0001); // tolerate floating-point inaccuracy
-                assert(extra_redundant_cost >= -0.0001);
+                ASSERT(benefit >= -0.0001); // tolerate floating-point inaccuracy
+                ASSERT(extra_redundant_cost >= -0.0001);
             }
 
             if (net_benefit > 0.0 && 

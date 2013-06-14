@@ -5,6 +5,7 @@
 #include "last_observation_estimator.h"
 #include "running_mean_estimator.h"
 #include "strategy_evaluator.h"
+#include "debug.h"
 
 #include <stdexcept>
 #include <string>
@@ -65,7 +66,7 @@ bool estimate_is_valid(double estimate)
 double invalid_estimate()
 {
     double e = DBL_MAX;
-    assert(!estimate_is_valid(e));
+    ASSERT(!estimate_is_valid(e));
     return e;
 }
 
@@ -120,7 +121,7 @@ Estimator::hasRangeHints()
 EstimatorRangeHints 
 Estimator::getRangeHints()
 {
-    assert(hasRangeHints());
+    ASSERT(hasRangeHints());
     return range_hints;
 }
 

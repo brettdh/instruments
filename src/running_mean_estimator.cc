@@ -1,4 +1,3 @@
-#include <assert.h>
 #include "running_mean_estimator.h"
 
 double

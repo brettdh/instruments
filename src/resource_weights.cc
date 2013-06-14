@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include "pthread_util.h"
 #include "mocktime.h"
+#include "debug.h"
 
 #include <sstream>
 using std::ostringstream;
@@ -88,7 +89,7 @@ void set_resource_budgets(struct timeval goalTime,
 void start_periodic_updates()
 {
     PthreadScopedLock lock(&weights_lock);
-    assert(adaptive_energy_weight && adaptive_data_weight);
+    ASSERT(adaptive_energy_weight && adaptive_data_weight);
     adaptive_energy_weight->startPeriodicUpdates();
     adaptive_data_weight->startPeriodicUpdates();
 }

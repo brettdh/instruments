@@ -1,5 +1,6 @@
 #include "stopwatch.h"
 #include "timeops.h"
+#include "debug.h"
 
 #include <string.h>
 
@@ -44,10 +45,10 @@ Stopwatch::start(const char *label)
         stop();
     }
 
-    assert(last_start.tv_sec == 0 &&
+    ASSERT(last_start.tv_sec == 0 &&
            last_start.tv_usec == 0);
     if (next >= 0) {
-        assert(labels[next] == label);
+        ASSERT(labels[next] == label);
         last_total = &totals[next];
     } else {
         labels.push_back(label);
@@ -62,7 +63,7 @@ Stopwatch::stop()
 {
     if (disabled) return;
 
-    assert(last_total != NULL);
+    ASSERT(last_total != NULL);
     struct timeval now, diff;
     gettimeofday(&now, NULL);
     TIMEDIFF(last_start, now, diff);
