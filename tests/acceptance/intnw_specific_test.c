@@ -55,6 +55,7 @@ struct common_test_data {
 
 CTEST_DATA(intnw_specific_test) {
     struct common_test_data common_data;
+    struct common_test_data weighted_method_common_data;
 };
 
 static void 
@@ -113,11 +114,13 @@ static void teardown_common(struct common_test_data *cdata)
 CTEST_SETUP(intnw_specific_test)
 {
     setup_common(&data->common_data, EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+    setup_common(&data->weighted_method_common_data, EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED_INTNW);
 }
 
 CTEST_TEARDOWN(intnw_specific_test)
 {
     teardown_common(&data->common_data);
+    teardown_common(&data->weighted_method_common_data);
 }
 
 static void assert_correct_strategy_helper(struct common_test_data *cdata,
@@ -203,29 +206,42 @@ static void init_network_params(struct common_test_data *cdata,
     }
 }
 
+#define FOREACH_METHOD(cdata_array, i)                                  \
+    int i;                                                              \
+    struct common_test_data *cdata_array[] = {                          \
+        &data->common_data,                                             \
+        &data->weighted_method_common_data                              \
+    };                                                                  \
+    const int array_max = sizeof(cdata_array) / sizeof(*cdata_array);   \
+    for (i = 0; i < array_max; ++i)
+
 CTEST2(intnw_specific_test, test_one_network_wins)
 {
-    struct common_test_data *cdata = &data->common_data;
-
-    int bytelen = 500000;
-    init_network_params(cdata, 500000, 0.02, 128, 0.5);
-    assert_correct_strategy(cdata, cdata->strategies[0], bytelen);
+    FOREACH_METHOD(cdata_array, i) {
+        struct common_test_data *cdata = cdata_array[i];
+        
+        int bytelen = 500000;
+        init_network_params(cdata, 500000, 0.02, 128, 0.5);
+        assert_correct_strategy(cdata, cdata->strategies[0], bytelen);
+    }
 }
 
 CTEST2(intnw_specific_test, test_each_network_wins)
 {
-    struct common_test_data *cdata = &data->common_data;
-    
-    init_network_params(cdata, 5000, 1.0, 2500, 0.2);
-    // break-even: 
-    //   x / 5000 + 1.0 = x / 2500 + 0.2
-    //   x = 0.8 * 5000
-    //   x = 4000
-    //  if x > 4000, network 1 wins.
-    //  if x < 4000, network 2 wins.
-    
-    assert_correct_strategy(cdata, cdata->strategies[0], 4001);
-    assert_correct_strategy(cdata, cdata->strategies[1], 3999);
+    FOREACH_METHOD(cdata_array, i) {
+        struct common_test_data *cdata = cdata_array[i];
+        
+        init_network_params(cdata, 5000, 1.0, 2500, 0.2);
+        // break-even: 
+        //   x / 5000 + 1.0 = x / 2500 + 0.2
+        //   x = 0.8 * 5000
+        //   x = 4000
+        //  if x > 4000, network 1 wins.
+        //  if x < 4000, network 2 wins.
+        
+        assert_correct_strategy(cdata, cdata->strategies[0], 4001);
+        assert_correct_strategy(cdata, cdata->strategies[1], 3999);
+    }
 }
 
 
@@ -307,14 +323,22 @@ static void test_both_networks_best(struct common_test_data *cdata)
 
 CTEST2(intnw_specific_test, test_both_networks_best)
 {
-    test_both_networks_best(&data->common_data);
+    FOREACH_METHOD(cdata_array, i) {
+        test_both_networks_best(cdata_array[i]);
+    }
 }
 
 CTEST2(intnw_specific_test, test_ignore_redundancy)
 {
-    struct common_test_data *cdata = &data->common_data;
-    test_both_networks_best(cdata);
-    assert_correct_nonredundant_strategy(cdata, cdata->strategies[0], bytelen);
+    FOREACH_METHOD(cdata_array, i) {
+        if (i == 1) {
+            instruments_set_debug_level(DEBUG);
+        }
+        struct common_test_data *cdata = cdata_array[i];
+        test_both_networks_best(cdata);
+        assert_correct_nonredundant_strategy(cdata, cdata->strategies[0], bytelen);
+        instruments_set_debug_level(NONE);
+    }
 }
 
 static void test_save_restore(struct common_test_data *cdata, const char *filename, 
@@ -346,6 +370,8 @@ CTEST2(intnw_specific_test, test_save_restore)
 {
     test_save_restore(&data->common_data, "/tmp/intnw_saved_evaluation_state.txt", 
                       EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+    test_save_restore(&data->weighted_method_common_data, "/tmp/intnw_saved_evaluation_state.txt", 
+                      EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED_INTNW);
 }
 
 CTEST_DATA(confidence_bounds_test) {

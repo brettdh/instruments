@@ -66,7 +66,7 @@ static void destroy_array(double **array, size_t dim1)
 }
 
 static double *get_estimator_values(StatsDistribution *estimator_samples, 
-                                    double (StatsDistribution::Iterator::*fn)(int))
+                                    double (StatsDistribution::Iterator::*fn)(size_t))
 {
     StatsDistribution::Iterator *it = estimator_samples->getIterator();
     size_t len = it->totalCount();

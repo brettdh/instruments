@@ -4,13 +4,6 @@
 // had to put this into a reusable macro in order to 
 //  make a (relatively) performant 4-way loop.
 
-// TODO-BAYESIAN: override this (or part of it) in a subclass to implement the 
-// TODO-BAYESIAN: relevant part of the posterior distribution calculation.
-// TOOD-BAYESIAN: specifically, I need to be able to replace the empirical
-// TOOD-BAYESIAN: joint-probability calculation with the posterior probability calculation.
-// TODO-BAYESIAN: I determined earlier today that the compiler is pretty good at
-// TODO-BAYESIAN: caching intermediate values in the plain multiplication,
-// TODO-BAYESIAN: so maybe I can push that into a function call.
 #define FN_BODY_WITH_COMBINER(weightedSum, COMBINER,                    \
                               PROBABILITY_GETTER, JOINT_PROBABILITY_GETTER, saved_value_type) \
     for (size_t i = 0; i < singular_strategies.size(); ++i) {                      \

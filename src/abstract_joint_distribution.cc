@@ -11,10 +11,11 @@
 StatsDistribution *
 AbstractJointDistribution::createSamplesDistribution(Estimator *estimator)
 {
-    // TODO: create the Bayesian variants.
     switch (dist_type) {
+    case ALL_SAMPLES_WEIGHTED:
+        return new StatsDistributionAllSamples(true); // use weighted error method.
     case ALL_SAMPLES:
-        return new StatsDistributionAllSamples;
+        return new StatsDistributionAllSamples(false);
     case BINNED:
 #ifdef ANDROID
         throw std::runtime_error("Binned distribution not yet supported.");

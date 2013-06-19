@@ -150,7 +150,7 @@ StatsDistributionBinned::Iterator::probability()
 }
 
 inline double 
-StatsDistributionBinned::Iterator::probability(int pos)
+StatsDistributionBinned::Iterator::probability(size_t pos)
 {
     return distribution->probabilityAtIndex(pos);
 }
@@ -162,7 +162,7 @@ StatsDistributionBinned::Iterator::value()
 }
 
 inline double
-StatsDistributionBinned::Iterator::at(int pos)
+StatsDistributionBinned::Iterator::at(size_t pos)
 {
     return distribution->mids[pos];
 }

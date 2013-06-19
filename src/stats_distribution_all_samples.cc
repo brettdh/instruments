@@ -10,29 +10,101 @@
 using std::string; using std::ifstream; using std::ofstream;
 using std::endl; using std::setprecision;
 using std::runtime_error; using std::count;
+using std::deque;
+
+static const double MIN_SIZE_THRESHOLD = 0.01;
+static const size_t MAX_SAMPLES = 20;
+static double NEW_SAMPLE_WEIGHT = 0.0;
+static deque<double> normalizers;
+
+static double calculateWeight(size_t sample_index, size_t num_samples)
+{
+    return pow(NEW_SAMPLE_WEIGHT, num_samples - sample_index);
+}
+
+static double
+calculateWeightedProbability(size_t num_samples, double weight)
+{
+    return 1.0 / num_samples * weight;
+}
+
+static struct StaticIniter {
+    StaticIniter() {
+        NEW_SAMPLE_WEIGHT = pow(MIN_SIZE_THRESHOLD, 1.0/MAX_SAMPLES);
+        normalizers.resize(MAX_SAMPLES + 1);
+        normalizers[0] = strtod("NAN", NULL);
+        for (size_t i = 1; i < normalizers.size(); ++i) {
+            normalizers[i] = 0.0;
+            for (size_t j = 0; j < i; ++j) {
+                double weight = calculateWeight(j, i);
+                normalizers[i] += calculateWeightedProbability(i, weight);
+            }
+        }
+    }
+} initer;
+
+
+StatsDistributionAllSamples::StatsDistributionAllSamples(bool weighted_error_)
+    : weighted_error(weighted_error_)
+{
+}
 
 double
 StatsDistributionAllSamples::getProbability(double value)
 {
-    return ((double) count(values.begin(), values.end(), value)) / values.size();
+    double prob = 0.0;
+    for (size_t i = 0; i < values.size(); ++i) {
+        if (values[i] == value) {
+            prob += probabilityAtPosition(i);
+        }
+    }
+    return prob;
 }
 
 void 
 StatsDistributionAllSamples::addValue(double value)
 {
+    if (values.size() == MAX_SAMPLES) {
+        values.pop_front();
+    }
     values.push_back(value);
+}
+
+double 
+StatsDistributionAllSamples::getWeight(size_t sample_index)
+{
+    if (weighted_error) {
+        size_t num_values = values.size();
+        assert(num_values > 0);
+        assert(num_values < normalizers.size());
+        return calculateWeight(sample_index, num_values) / normalizers[num_values];
+    } else {
+        return 1.0;
+    }
+}
+
+double 
+StatsDistributionAllSamples::calculateProbability(size_t sample_index)
+{
+    return calculateWeightedProbability(values.size(), getWeight(sample_index));
+}
+
+double
+StatsDistributionAllSamples::probabilityAtPosition(size_t pos)
+{
+    return calculateProbability(pos);
 }
 
 inline double 
 StatsDistributionAllSamples::Iterator::probability()
 {
-    return cached_probability;
+    return probability(cur_position);
 }
 
 inline double 
-StatsDistributionAllSamples::Iterator::probability(int pos)
+StatsDistributionAllSamples::Iterator::probability(size_t pos)
 {
-    return cached_probability;
+    return cached_probability[pos];
 }
 
 inline double
@@ -42,7 +114,7 @@ StatsDistributionAllSamples::Iterator::value()
 }
 
 inline double
-StatsDistributionAllSamples::Iterator::at(int pos)
+StatsDistributionAllSamples::Iterator::at(size_t pos)
 {
     return distribution->values[pos];
 }
@@ -82,7 +154,11 @@ StatsDistributionAllSamples::Iterator::Iterator(StatsDistributionAllSamples *d)
 {
     ASSERT(distribution->values.size() > 0);
     total_count = distribution->values.size();
-    cached_probability = 1.0 / total_count;
+    cached_probability.resize(total_count);
+    
+    for (size_t i = 0; i < total_count; ++i) {
+        cached_probability[i] = distribution->probabilityAtPosition(i);
+    }
 }
 
 StatsDistribution::Iterator *
