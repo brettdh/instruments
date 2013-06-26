@@ -431,9 +431,12 @@ IntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_typ
 double
 IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 {
+    double estimate = estimator->getEstimate();
+    if (estimatorSamplesValues.count(estimator) == 0) {
+        return estimate;
+    }
     double *estimator_samples_values = estimatorSamplesValues[estimator];
     size_t index = estimatorIndices[estimator];
-    double estimate = estimator->getEstimate();
     double error = estimator_samples_values[index];
     double adjusted_value = adjusted_estimate(estimate, error);
     return adjusted_value;
