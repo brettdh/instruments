@@ -4,6 +4,7 @@
 // had to put this into a reusable macro in order to 
 //  make a (relatively) performant 4-way loop.
 
+//void IntNWJointDistribution::FN_BODY_WITH_COMBINER(double& weightedSum, double (*COMBINER)(double, double), size_t saved_value_type) {
 #define FN_BODY_WITH_COMBINER(weightedSum, COMBINER, saved_value_type) \
     assert(wifi_strategy_saved_values != NULL);                  \
     assert(cellular_strategy_saved_values != NULL);                  \
@@ -14,7 +15,7 @@
     max_i = singular_samples_count[0][0]; /* (strategy 0, estimator 0) */ \
     max_j = singular_samples_count[0][1]; /* (strategy 0, estimator 1) */            \
     max_k = singular_samples_count[0][2]; /* (strategy 0, estimator 2) */            \
-    max_m = singular_samples_count[1][1]; /* (strategy 1, estimator 3) */            \
+    max_m = singular_samples_count[1][0]; /* (strategy 1, estimator 3) */            \
     max_n = singular_samples_count[1][1]; /* (strategy 1, estimator 4) */            \
                                                                                    \
     double ***wifi_strategy_cur_saved_values = wifi_strategy_saved_values[saved_value_type];          \

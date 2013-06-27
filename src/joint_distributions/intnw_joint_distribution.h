@@ -70,6 +70,9 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     void ensureSamplesDistributionExists(Estimator *estimator);
 
     virtual void addDefaultValue(Estimator *estimator);
+
+    //void FN_BODY_WITH_COMBINER(double& weightedSum, double (*COMBINER)(double, double), size_t saved_value_type);
+
 };
 
 
