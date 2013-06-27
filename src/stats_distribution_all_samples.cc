@@ -64,7 +64,7 @@ StatsDistributionAllSamples::getProbability(double value)
 void 
 StatsDistributionAllSamples::addValue(double value)
 {
-    if (values.size() == MAX_SAMPLES) {
+    if (weighted_error && values.size() == MAX_SAMPLES) {
         values.pop_front();
     }
     values.push_back(value);
@@ -197,7 +197,7 @@ StatsDistributionAllSamples::restoreFromFile(ifstream& in)
     for (int i = 0; i < num_values; ++i) {
         double value = 0.0;
         check(in >> value, "Failed to read value");
-        values.push_back(value);
+        addValue(value);
     }
     return name;
 }
