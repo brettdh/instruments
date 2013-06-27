@@ -343,7 +343,7 @@ CTEST2(intnw_specific_test, test_ignore_redundancy)
 {
     FOREACH_METHOD(cdata_array, i) {
         if (i == 1) {
-            instruments_set_debug_level(DEBUG);
+            //instruments_set_debug_level(DEBUG);
         }
         struct common_test_data *cdata = cdata_array[i];
         test_both_networks_best(cdata);
@@ -571,7 +571,7 @@ CTEST_DATA(bayesian_method_test) {
 CTEST_SETUP(bayesian_method_test)
 {
     setup_common(&data->common_data, BAYESIAN);
-    instruments_set_debug_level(DEBUG);
+    //instruments_set_debug_level(DEBUG);
 }
 
 CTEST_TEARDOWN(bayesian_method_test)
@@ -688,6 +688,6 @@ CTEST2(bayesian_method_test, test_real_distributions)
 {
     struct common_test_data *cdata = &data->common_data;
 
-    instruments_set_debug_level(DEBUG);
+    //instruments_set_debug_level(DEBUG);
     run_real_distributions_test(cdata, "support_files/saved_error_distributions_bayesian.txt");
 }

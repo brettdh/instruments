@@ -133,8 +133,8 @@ IntNWJointDistribution::IntNWJointDistribution(StatsDistributionType dist_type,
     singular_probabilities = new double**[singular_strategy_estimators.size()];
     singular_samples_values = new double**[singular_strategy_estimators.size()];
     singular_samples_count = new size_t*[singular_strategy_estimators.size()];
-    wifi_strategy_saved_values = new double***[singular_strategy_estimators.size()];
-    cellular_strategy_saved_values = new double**[singular_strategy_estimators.size()];
+    wifi_strategy_saved_values = new double***[NUM_SAVED_VALUE_TYPES];
+    cellular_strategy_saved_values = new double**[NUM_SAVED_VALUE_TYPES];
     for (size_t i = 0; i < NUM_SAVED_VALUE_TYPES; ++i) {
         wifi_strategy_saved_values[i] = NULL;
         cellular_strategy_saved_values[i] = NULL;
@@ -159,8 +159,6 @@ IntNWJointDistribution::~IntNWJointDistribution()
         delete [] singular_probabilities[i];
         delete [] singular_samples_values[i];
         delete [] singular_samples_count[i];
-        delete [] wifi_strategy_saved_values[i];
-        delete [] cellular_strategy_saved_values[i];
     }
     delete [] singular_probabilities;
     delete [] singular_samples_values;
