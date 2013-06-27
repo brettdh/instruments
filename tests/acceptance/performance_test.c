@@ -91,7 +91,7 @@ static double get_sample()
     return normal_stddev * normal_sample + normal_mean;
 }
 
-static const size_t NUM_ESTIMATORS = 4;
+static const size_t NUM_ESTIMATORS = 5;
 static const size_t NUM_STRATEGIES = 3;
 
 static void init_estimators(instruments_external_estimator_t *estimators,
@@ -118,12 +118,12 @@ static struct timeval run_test(int num_samples, enum EvalMethod method,
 
     struct strategy_args args[2] = {
         {
-        num_estimators: 2,
+        num_estimators: 3,
         estimators: &estimators[0]
         },
         {
         num_estimators: 2,
-        estimators: &estimators[2]
+        estimators: &estimators[3]
         },
     };
 

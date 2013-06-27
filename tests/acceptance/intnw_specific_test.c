@@ -43,7 +43,7 @@ static double data_cost(instruments_context_t ctx, void *strategy_arg, void *cho
     return (args->is_cellular ? 0.97 : 0.5);
 }
 
-#define NUM_ESTIMATORS 4
+#define NUM_ESTIMATORS 5
 #define NUM_STRATEGIES 3
 
 struct common_test_data {
@@ -72,12 +72,12 @@ create_estimators_and_strategies(instruments_external_estimator_t *estimators,
         estimators[i] = create_external_estimator(name);
     }
 
-    args[0].num_estimators = 2;
+    args[0].num_estimators = 3;
     args[0].estimators = &estimators[0];
     args[0].is_cellular = 0;
     args[0].fake_cost = -1.0;
     args[1].num_estimators = 2;
-    args[1].estimators = &estimators[2];
+    args[1].estimators = &estimators[3];
     args[1].is_cellular = 1;
     args[1].fake_cost = -1.0;
 
@@ -189,18 +189,20 @@ static void init_network_params(struct common_test_data *cdata,
     int num_samples = 50;
     //int num_samples = 1;
 
-    double values[] = { bandwidth1, latency1, bandwidth2, latency2 };
+    const double UNUSED_WIFI_SESSION_DURATION = 0.0;
+    double values[] = { bandwidth1, latency1, UNUSED_WIFI_SESSION_DURATION, bandwidth2, latency2 };
 
     int i, j;
-    for (i = 0; i < 4; ++i) {
+    for (i = 0; i < NUM_ESIMATORS; ++i) {
         // set single-bin histogram for the trivial bayesian tests.
         // i.e. if you're calling init_network_params, you're initializing
         // a network with very steady params for a sanity check.
         set_estimator_range_hints(cdata->estimators[i], values[i] * 0.9, values[i] * 1.1, 1);
     }
+    set_estimator_range_hints(cdata->estimators[2], -1, 1, 1);
 
     for (i = 0; i < num_samples; ++i) {
-        for (j = 0; j < 4; ++j) {
+        for (j = 0; j < NUM_ESTIMATORS; ++j) {
             add_observation(cdata->estimators[j], values[j], values[j]);
         }
     }
@@ -266,8 +268,9 @@ static void add_last_estimates(instruments_external_estimator_t *estimators)
 {
     add_observation(estimators[0], stable_bandwidth, stable_bandwidth);
     add_observation(estimators[1], 0.0, 0.0);
-    add_observation(estimators[2], better_bandwidth, better_bandwidth);
-    add_observation(estimators[3], 0.0, 0.0);
+    add_observation(estimators[2], 0.0, 0.0);
+    add_observation(estimators[3], better_bandwidth, better_bandwidth);
+    add_observation(estimators[4], 0.0, 0.0);
 }
 
 static double update_mean(double mean, double value, int n);
@@ -276,8 +279,9 @@ static void set_range_hints(struct common_test_data *cdata)
 {
     set_estimator_range_hints(cdata->estimators[0], 500, 9500, 9);
     set_estimator_range_hints(cdata->estimators[1], -1, 1, 1);
-    set_estimator_range_hints(cdata->estimators[2], 500, 9500, 9);
-    set_estimator_range_hints(cdata->estimators[3], -1, 1, 1);
+    set_estimator_range_hints(cdata->estimators[2], -1, 1, 1);
+    set_estimator_range_hints(cdata->estimators[3], 500, 9500, 9);
+    set_estimator_range_hints(cdata->estimators[4], -1, 1, 1);
 }
 
 static void test_both_networks_best(struct common_test_data *cdata)
@@ -292,8 +296,9 @@ static void test_both_networks_best(struct common_test_data *cdata)
     for (i = 0; i < 2; ++i) {
         add_observation(cdata->estimators[0], stable_bandwidth, stable_bandwidth);
         add_observation(cdata->estimators[1], 0.0, 0.0);
-        add_observation(cdata->estimators[2], better_bandwidth, better_bandwidth);
-        add_observation(cdata->estimators[3], 0.0, 0.0);
+        add_observation(cdata->estimators[2], 0.0, 0.0);
+        add_observation(cdata->estimators[3], better_bandwidth, better_bandwidth);
+        add_observation(cdata->estimators[4], 0.0, 0.0);
     }
 
     assert_correct_strategy(cdata, cdata->strategies[1], bytelen);
@@ -303,6 +308,7 @@ static void test_both_networks_best(struct common_test_data *cdata)
     for (i = 0; i < num_samples; ++i) {
         add_observation(cdata->estimators[0], stable_bandwidth, stable_bandwidth);
         add_observation(cdata->estimators[1], 0.0, 0.0);
+        add_observation(cdata->estimators[2], 0.0, 0.0);
 
         double new_bandwidth;
         if (i % 2 == 0) {
@@ -313,9 +319,9 @@ static void test_both_networks_best(struct common_test_data *cdata)
         avg_bandwidth = update_mean(avg_bandwidth, new_bandwidth, i);
         //double est_bandwidth = avg_bandwidth;
         double est_bandwidth = new_bandwidth;
-        add_observation(cdata->estimators[2], new_bandwidth, est_bandwidth);
+        add_observation(cdata->estimators[3], new_bandwidth, est_bandwidth);
 
-        add_observation(cdata->estimators[3], 0.0, 0.0);
+        add_observation(cdata->estimators[4], 0.0, 0.0);
     }
 
     assert_correct_strategy(cdata, cdata->strategies[2], bytelen);
@@ -616,8 +622,9 @@ CTEST2(bayesian_method_test, test_proposal_example)
 
     set_estimator_range_hints(cdata->estimators[0], 0.5, 9.5, 9);
     set_estimator_range_hints(cdata->estimators[1], -1, 1, 1);
-    set_estimator_range_hints(cdata->estimators[2], 0.5, 9.5, 9);
-    set_estimator_range_hints(cdata->estimators[3], -1, 1, 1);
+    set_estimator_range_hints(cdata->estimators[2], -1, 1, 1);
+    set_estimator_range_hints(cdata->estimators[3], 0.5, 9.5, 9);
+    set_estimator_range_hints(cdata->estimators[4], -1, 1, 1);
 
     double bandwidth1_steps[] = { 9, 9, 8, 9, 1, 1, 1, 1, 1 };
     double bandwidth2_steps[] = { 5, 5, 4, 4, 5, 6, 5, 6, 6 };
@@ -640,7 +647,7 @@ CTEST2(bayesian_method_test, test_proposal_example)
 
     // no latency variation for this test.
     add_observation(cdata->estimators[1], 0.0, 0.0);
-    add_observation(cdata->estimators[3], 0.0, 0.0);
+    add_observation(cdata->estimators[4], 0.0, 0.0);
 
     // make the two networks have the same small cost,
     // so that the instances in this example where the
@@ -662,7 +669,7 @@ CTEST2(bayesian_method_test, test_proposal_example)
         //fprintf(stderr, "%s\n", msg);
 
         add_observation(cdata->estimators[0], bandwidth1_steps[i], avg_bandwidth1);
-        add_observation(cdata->estimators[2], bandwidth2_steps[i], avg_bandwidth2);
+        add_observation(cdata->estimators[3], bandwidth2_steps[i], avg_bandwidth2);
 
         if (i > 0) {
             // skip the first one; I won't have a decision until

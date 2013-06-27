@@ -25,10 +25,10 @@ using std::vector; using std::ifstream; using std::ofstream; using std::find_if;
 using std::ostringstream; using std::endl;
 using std::runtime_error; using std::string;
 
-static const size_t NUM_ESTIMATORS_SINGULAR = 2;
+static const size_t WIFI_STRATEGY_INDEX = 0;
+static const size_t CELLULAR_STRATEGY_INDEX = 1;
+static const size_t NUM_ESTIMATORS_SINGULAR[] = {3, 2};
 static const size_t REDUNDANT_STRATEGY_CHILDREN = 2;
-static const size_t NUM_ESTIMATORS_REDUNDANT = 
-    NUM_ESTIMATORS_SINGULAR * REDUNDANT_STRATEGY_CHILDREN;
 
 static const size_t NUM_STRATEGIES = 3;
 
@@ -52,6 +52,15 @@ static double **create_array(size_t dim1, size_t dim2, double value)
     return array;
 }
 
+static double ***create_array(size_t dim1, size_t dim2, size_t dim3, double value)
+{
+    double ***array = new double**[dim1];
+    for (size_t i = 0; i < dim1; ++i) {
+        array[i] = create_array(dim2, dim3, value);
+    }
+    return array;
+}
+
 static void destroy_array(double *array)
 {
     delete [] array;
@@ -61,6 +70,14 @@ static void destroy_array(double **array, size_t dim1)
 {
     for (size_t i = 0; i < dim1; ++i) {
         destroy_array(array[i]);
+    }
+    delete [] array;
+}
+
+static void destroy_array(double ***array, size_t dim1, size_t dim2)
+{
+    for (size_t i = 0; i < dim1; ++i) {
+        destroy_array(array[i], dim2);
     }
     delete [] array;
 }
@@ -116,17 +133,18 @@ IntNWJointDistribution::IntNWJointDistribution(StatsDistributionType dist_type,
     singular_probabilities = new double**[singular_strategy_estimators.size()];
     singular_samples_values = new double**[singular_strategy_estimators.size()];
     singular_samples_count = new size_t*[singular_strategy_estimators.size()];
-    singular_strategy_saved_values = new double***[singular_strategy_estimators.size()];
+    wifi_strategy_saved_values = new double***[singular_strategy_estimators.size()];
+    cellular_strategy_saved_values = new double**[singular_strategy_estimators.size()];
+    for (size_t i = 0; i < NUM_SAVED_VALUE_TYPES; ++i) {
+        wifi_strategy_saved_values[i] = NULL;
+        cellular_strategy_saved_values[i] = NULL;
+    }
     
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
-        singular_probabilities[i] = new double*[NUM_ESTIMATORS_SINGULAR];
-        singular_samples_values[i] = new double*[NUM_ESTIMATORS_SINGULAR];
-        singular_samples_count[i] = new size_t[NUM_ESTIMATORS_SINGULAR];
-        singular_strategy_saved_values[i] = new double**[NUM_SAVED_VALUE_TYPES];
-        for (size_t j = 0; j < NUM_SAVED_VALUE_TYPES; ++j) {
-            singular_strategy_saved_values[i][j] = NULL;
-        }
-        for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
+        singular_probabilities[i] = new double*[NUM_ESTIMATORS_SINGULAR[i]];
+        singular_samples_values[i] = new double*[NUM_ESTIMATORS_SINGULAR[i]];
+        singular_samples_count[i] = new size_t[NUM_ESTIMATORS_SINGULAR[i]];
+        for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR[i]; ++j) {
             singular_probabilities[i][j] = NULL;
             singular_samples_values[i][j] = NULL;
             singular_samples_count[i][j] = 0;
@@ -141,12 +159,14 @@ IntNWJointDistribution::~IntNWJointDistribution()
         delete [] singular_probabilities[i];
         delete [] singular_samples_values[i];
         delete [] singular_samples_count[i];
-        delete [] singular_strategy_saved_values[i];
+        delete [] wifi_strategy_saved_values[i];
+        delete [] cellular_strategy_saved_values[i];
     }
     delete [] singular_probabilities;
     delete [] singular_samples_values;
     delete [] singular_samples_count;
-    delete [] singular_strategy_saved_values;
+    delete [] wifi_strategy_saved_values;
+    delete [] cellular_strategy_saved_values;
 
     for (EstimatorSamplesMap::iterator it = estimatorSamples.begin();
          it != estimatorSamples.end(); ++it) {
@@ -186,7 +206,7 @@ IntNWJointDistribution::getEstimatorSamplesDistributions()
             return;
         }
 
-        for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
+        for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR[i]; ++j) {
             Estimator *estimator = singular_strategy_estimators[i][j];
             ensureSamplesDistributionExists(estimator);
             StatsDistribution *distribution = estimatorSamples[estimator];
@@ -198,33 +218,40 @@ IntNWJointDistribution::getEstimatorSamplesDistributions()
     }
 
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
-        for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
+        for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR[i]; ++j) {
             Estimator *estimator = singular_strategy_estimators[i][j];
             estimatorSamplesValues[estimator] = singular_samples_values[i][j];
             estimatorIndices[estimator] = 0;
         }
-        for (size_t j = 0; j < NUM_SAVED_VALUE_TYPES; ++j) {
-            singular_strategy_saved_values[i][j] = create_array(singular_samples_count[i][0],
-                                                                singular_samples_count[i][1],
-                                                                DBL_MAX);
-        }
+    }
+    for (size_t i = 0; i < NUM_SAVED_VALUE_TYPES; ++i) {
+        wifi_strategy_saved_values[i] = create_array(singular_samples_count[0][0],
+                                                     singular_samples_count[0][1],
+                                                     singular_samples_count[0][2],
+                                                     DBL_MAX);
+        cellular_strategy_saved_values[i] = create_array(singular_samples_count[1][0],
+                                                         singular_samples_count[1][1],
+                                                         DBL_MAX);
     }
 }
 
 void 
 IntNWJointDistribution::clearEstimatorSamplesDistributions()
 {
+    for (size_t i = 0; i < NUM_SAVED_VALUE_TYPES; ++i) {
+        destroy_array(wifi_strategy_saved_values[i], singular_samples_count[0][0], singular_samples_count[0][1]);
+        destroy_array(cellular_strategy_saved_values[i], singular_samples_count[1][0]);
+        wifi_strategy_saved_values[i] = NULL;
+        cellular_strategy_saved_values[i] = NULL;
+    }
+    
     for (size_t i = 0; i < singular_strategy_estimators.size(); ++i) {
         if (singular_probabilities[i][0] == NULL) {
             return;
         }
         
-        for (size_t j = 0; j < NUM_SAVED_VALUE_TYPES; ++j) {
-            destroy_array(singular_strategy_saved_values[i][j], singular_samples_count[i][0]);
-            singular_strategy_saved_values[i][j] = NULL;
-        }
         
-        for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR; ++j) {
+        for (size_t j = 0; j < NUM_ESTIMATORS_SINGULAR[i]; ++j) {
             delete [] singular_probabilities[i][j];
             delete [] singular_samples_values[i][j];
             singular_probabilities[i][j] = NULL;
@@ -273,50 +300,51 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
 
     size_t saved_value_type = get_value_type(strategy, fn);
 
-    
-    double **cur_strategy_memo = NULL;
+    bool wifi = false;
     double **strategy_probabilities = NULL;
     size_t *samples_count = NULL;
     vector<Estimator *> current_strategy_estimators;
     for (size_t i = 0; i < singular_strategies.size(); ++i) {
         if (strategy == singular_strategies[i]) {
-            cur_strategy_memo = singular_strategy_saved_values[i][saved_value_type];
             current_strategy_estimators = singular_strategy_estimators[i];
             samples_count = singular_samples_count[i];
             strategy_probabilities = singular_probabilities[i];
+            wifi = (i == WIFI_STRATEGY_INDEX);
             break;
         }
     }
     assert(samples_count);
-    assert(cur_strategy_memo);
-
-    size_t max_i, max_j;
-    max_i = samples_count[0];
-    max_j = samples_count[1];
 
     double weightedSum = 0.0;
+
+    size_t max_i, max_j, max_k;
+    max_i = samples_count[0];
+    max_j = samples_count[1];
+    if (wifi) {
+        max_k = samples_count[2];
+    }
+
     for (size_t i = 0; i < max_i; ++i) {
         estimatorIndices[current_strategy_estimators[0]] = i;
         for (size_t j = 0; j < max_j; ++j) {
             estimatorIndices[current_strategy_estimators[1]] = j;
-            double value = fn(this, strategy_arg, chooser_arg);
-            double probability = getSingularJointProbability(strategy_probabilities,
-                                                             i, j);
-            cur_strategy_memo[i][j] = value;
-            weightedSum += (value * probability);
+            double probability = strategy_probabilities[0][i] * strategy_probabilities[1][j];
+            if (wifi) {
+                for (size_t k = 0; i < max_k; ++k) {
+                    estimatorIndices[current_strategy_estimators[2]] = k;
+                    double value = fn(this, strategy_arg, chooser_arg);
+                    double k_probability = probability * strategy_probabilities[2][k];
+                    wifi_strategy_saved_values[saved_value_type][i][j][k] = value;
+                    weightedSum += value * k_probability;
+                }
+            } else {
+                double value = fn(this, strategy_arg, chooser_arg);
+                cellular_strategy_saved_values[saved_value_type][i][j] = value;
+                weightedSum += (value * probability);
+            }
         }
     }
     return weightedSum;
-}
-
-inline double
-IntNWJointDistribution::getSingularJointProbability(double **strategy_probabilities,
-                                                    size_t index0, size_t index1)
-{
-    ASSERT(strategy_probabilities);
-    ASSERT(strategy_probabilities[0]);
-    ASSERT(strategy_probabilities[1]);
-    return strategy_probabilities[0][index0] * strategy_probabilities[1][index1];
 }
 
 static inline double
@@ -362,18 +390,18 @@ ensure_values_valid(double **saved_values, size_t max_i, size_t max_j,
 void
 IntNWJointDistribution::ensureValidMemoizedValues(eval_fn_type_t saved_value_type)
 {
-    size_t max_i, max_j, max_k, max_m;  /* counts for: */
+    size_t max_i, max_j, max_k, max_m, max_n;  /* counts for: */
     max_i = singular_samples_count[0][0]; /* (strategy 0, estimator 0) */
     max_j = singular_samples_count[0][1]; /* (strategy 0, estimator 1) */
-    max_k = singular_samples_count[1][0]; /* (strategy 1, estimator 2) */
-    max_m = singular_samples_count[1][1]; /* (strategy 1, estimator 3) */
+    max_k = singular_samples_count[0][2]; /* (strategy 0, estimator 2) */
+    max_m = singular_samples_count[1][0]; /* (strategy 1, estimator 3) */
+    max_n = singular_samples_count[1][1]; /* (strategy 1, estimator 4) */
 
-    double **strategy_0_saved_values = singular_strategy_saved_values[0][saved_value_type];
-    double **strategy_1_saved_values = singular_strategy_saved_values[1][saved_value_type];
-
-    ensure_values_valid(strategy_0_saved_values, max_i, max_j,
-                        singular_strategies[0]->getEvalFn(saved_value_type));
-    ensure_values_valid(strategy_1_saved_values, max_k, max_m,
+    for (size_t i = 0; i < max_i; ++i) {
+        ensure_values_valid(wifi_strategy_saved_values[saved_value_type][i], max_j, max_k,
+                            singular_strategies[0]->getEvalFn(saved_value_type));
+    }
+    ensure_values_valid(cellular_strategy_saved_values[saved_value_type], max_m, max_n,
                         singular_strategies[1]->getEvalFn(saved_value_type));
 }
 
@@ -393,25 +421,13 @@ IntNWJointDistribution::redundantStrategyExpectedValue(Strategy *strategy, types
 }
 
 
-// indices are 4-way loop indices.
-static inline double noop_joint_probability(size_t i, size_t j, size_t k, size_t m)
-{
-    // the joint probability is already calculated in the product of the
-    //  singular probabilities.
-    return 1.0;
-}
-
 #include "tight_loop.h"
 
 double
 IntNWJointDistribution::redundantStrategyExpectedValueMin(size_t saved_value_type)
 {
     double weightedSum = 0.0;
-    FN_BODY_WITH_COMBINER(weightedSum,
-                          min,
-                          get_one_redundant_probability, 
-                          noop_joint_probability,
-                          saved_value_type);
+    FN_BODY_WITH_COMBINER(weightedSum, min, saved_value_type);
     return weightedSum;
 }
 
@@ -419,11 +435,7 @@ double
 IntNWJointDistribution::redundantStrategyExpectedValueSum(size_t saved_value_type)
 {
     double weightedSum = 0.0;
-    FN_BODY_WITH_COMBINER(weightedSum, 
-                          sum,
-                          get_one_redundant_probability, 
-                          noop_joint_probability, 
-                          saved_value_type);
+    FN_BODY_WITH_COMBINER(weightedSum, sum, saved_value_type);
     return weightedSum;
 }
 
