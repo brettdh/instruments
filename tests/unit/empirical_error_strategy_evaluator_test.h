@@ -27,7 +27,7 @@ class EmpiricalErrorStrategyEvaluatorTest : public CppUnit::TestFixture {
   private:
     void assertRestoredEvaluationMatches(Strategy **strategies, double *expected_values,
                                          size_t num_strategies, 
-                                         StrategyEvaluator *evaluator, void *chooser_arg);
+                                         StrategyEvaluator *evaluator, void **chooser_args);
 
 };
 

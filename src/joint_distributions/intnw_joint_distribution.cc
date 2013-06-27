@@ -317,7 +317,7 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
 
     double weightedSum = 0.0;
 
-    size_t max_i, max_j, max_k;
+    size_t max_i, max_j, max_k=0;
     max_i = samples_count[0];
     max_j = samples_count[1];
     if (wifi) {
@@ -330,7 +330,7 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
             estimatorIndices[current_strategy_estimators[1]] = j;
             double probability = strategy_probabilities[0][i] * strategy_probabilities[1][j];
             if (wifi) {
-                for (size_t k = 0; i < max_k; ++k) {
+                for (size_t k = 0; k < max_k; ++k) {
                     estimatorIndices[current_strategy_estimators[2]] = k;
                     double value = fn(this, strategy_arg, chooser_arg);
                     double k_probability = probability * strategy_probabilities[2][k];

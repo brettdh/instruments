@@ -51,6 +51,9 @@ estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg
     
     double bw = get_estimator_value(ctx, args->estimators[0]);
     double latency = get_estimator_value(ctx, args->estimators[1]);
+    if (args->num_estimators > 2) {
+        get_estimator_value(ctx, args->estimators[2]);
+    }
     return bytes/bw + latency;
 }
 

@@ -30,6 +30,9 @@ network_time(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
     
     double bw = get_estimator_value(ctx, args->estimators[0]);
     double latency = get_estimator_value(ctx, args->estimators[1]);
+    if (!args->is_cellular) {
+        get_estimator_value(ctx, args->estimators[2]);
+    }
     return bytes/bw + latency;
 }
 
@@ -193,7 +196,7 @@ static void init_network_params(struct common_test_data *cdata,
     double values[] = { bandwidth1, latency1, UNUSED_WIFI_SESSION_DURATION, bandwidth2, latency2 };
 
     int i, j;
-    for (i = 0; i < NUM_ESIMATORS; ++i) {
+    for (i = 0; i < NUM_ESTIMATORS; ++i) {
         // set single-bin histogram for the trivial bayesian tests.
         // i.e. if you're calling init_network_params, you're initializing
         // a network with very steady params for a sanity check.
@@ -201,8 +204,10 @@ static void init_network_params(struct common_test_data *cdata,
     }
     set_estimator_range_hints(cdata->estimators[2], -1, 1, 1);
 
+    add_observation(cdata->estimators[2], values[2], values[2]);
     for (i = 0; i < num_samples; ++i) {
         for (j = 0; j < NUM_ESTIMATORS; ++j) {
+            if (j == 2) continue;
             add_observation(cdata->estimators[j], values[j], values[j]);
         }
     }
@@ -292,11 +297,11 @@ static void test_both_networks_best(struct common_test_data *cdata)
     //instruments_set_debug_level(DEBUG);
     set_range_hints(cdata);
 
+    add_observation(cdata->estimators[2], 0.0, 0.0);
     // do this twice so that the bayesian method can make an initial decision.
     for (i = 0; i < 2; ++i) {
         add_observation(cdata->estimators[0], stable_bandwidth, stable_bandwidth);
         add_observation(cdata->estimators[1], 0.0, 0.0);
-        add_observation(cdata->estimators[2], 0.0, 0.0);
         add_observation(cdata->estimators[3], better_bandwidth, better_bandwidth);
         add_observation(cdata->estimators[4], 0.0, 0.0);
     }
@@ -305,10 +310,10 @@ static void test_both_networks_best(struct common_test_data *cdata)
     
     double avg_bandwidth = 0.0;
 
+    add_observation(cdata->estimators[2], 0.0, 0.0);
     for (i = 0; i < num_samples; ++i) {
         add_observation(cdata->estimators[0], stable_bandwidth, stable_bandwidth);
         add_observation(cdata->estimators[1], 0.0, 0.0);
-        add_observation(cdata->estimators[2], 0.0, 0.0);
 
         double new_bandwidth;
         if (i % 2 == 0) {

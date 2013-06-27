@@ -89,12 +89,11 @@ create_estimators_and_strategies(Estimator **estimators, size_t num_estimators,
         estimators[i] = Estimator::create(RUNNING_MEAN, name.str());
     }
 
-    void *chooser_arg = (void *) (num_estimators / 2);
     strategies[0] = new Strategy(get_time_all_estimators, 
-                                 get_energy_cost, get_data_cost, estimators, chooser_arg);
+                                 get_energy_cost, get_data_cost, estimators, (void *) 3);
     strategies[1] = new Strategy(get_time_all_estimators, 
                                  get_energy_cost, get_data_cost, 
-                                 estimators + 2, chooser_arg);
+                                 estimators + 3, (void *) 2);
     strategies[2] = new Strategy((instruments_strategy_t *) strategies, 2);
 }
 
@@ -102,13 +101,13 @@ void
 EmpiricalErrorStrategyEvaluatorTest::
 assertRestoredEvaluationMatches(Strategy **strategies, double *expected_values,
                                 size_t num_strategies, 
-                                StrategyEvaluator *evaluator, void *chooser_arg)
+                                StrategyEvaluator *evaluator, void **chooser_args)
 {
     for (size_t i = 0; i < num_strategies; ++i) {
         Strategy *strategy = strategies[i];
         double expected_value = expected_values[i];
         double value = evaluator->expectedValue(strategy, strategy->time_fn,
-                                                strategy->strategy_arg, chooser_arg);
+                                                strategy->strategy_arg, chooser_args[i]);
         CPPUNIT_ASSERT_DOUBLES_EQUAL(expected_value, value, 0.001);
     }
 }
@@ -116,7 +115,7 @@ assertRestoredEvaluationMatches(Strategy **strategies, double *expected_values,
 void 
 EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
 {
-    const int NUM_INTNW_ESTIMATORS = 4;
+    const int NUM_INTNW_ESTIMATORS = 5;
     const int NUM_STRATEGIES = 3;
 
     for (int i = 0; i < 5; ++i) {
@@ -135,14 +134,13 @@ EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
             }
         }
 
-        void *chooser_arg = (void *) (NUM_INTNW_ESTIMATORS / 2);
-        
+        void *chooser_args[] = { (void *) 3, (void *) 2 };
         // skip redundant strategy, since its fn and arg are internal
         double expected_values[NUM_STRATEGIES-1];
         for (int i = 0; i < NUM_STRATEGIES-1; ++i) {
             Strategy *strategy = strategies[i];
             expected_values[i] = evaluator->expectedValue(strategy, strategy->time_fn,
-                                                          strategy->strategy_arg, chooser_arg);
+                                                          strategy->strategy_arg, chooser_args[i]);
         }
 
         const char *FILENAME = "/tmp/instruments_saved_distribution.txt";
@@ -155,7 +153,7 @@ EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
         restored_evaluator->restoreFromFile(FILENAME);
 
         assertRestoredEvaluationMatches(strategies, expected_values, NUM_STRATEGIES - 1,
-                                        evaluator, chooser_arg);
+                                        evaluator, chooser_args);
 
 
         // now try it with newly-created estimators and strategies,
@@ -173,7 +171,7 @@ EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
         }
         
         assertRestoredEvaluationMatches(new_strategies, expected_values, NUM_STRATEGIES - 1,
-                                        new_evaluator, chooser_arg);
+                                        new_evaluator, chooser_args);
     }
 }
 
