@@ -6,7 +6,7 @@
 #include "error_calculation.h"
 #include "debug.h"
 namespace inst = instruments;
-using inst::ERROR; using inst::INFO;
+using inst::ERROR; using inst::INFO; using inst::DEBUG;
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -330,12 +330,14 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
             if (wifi) {
                 for (size_t k = 0; k < max_k; ++k) {
                     estimatorIndices[current_strategy_estimators[2]] = k;
-                    double value = fn(this, strategy_arg, chooser_arg);
                     double k_probability = probability * strategy_probabilities[2][k];
+                    inst::dbgprintf(DEBUG, "  probability: %f\n", k_probability);
+                    double value = fn(this, strategy_arg, chooser_arg);
                     wifi_strategy_saved_values[saved_value_type][i][j][k] = value;
                     weightedSum += value * k_probability;
                 }
             } else {
+                inst::dbgprintf(DEBUG, "  probability: %f\n", probability);
                 double value = fn(this, strategy_arg, chooser_arg);
                 cellular_strategy_saved_values[saved_value_type][i][j] = value;
                 weightedSum += (value * probability);
@@ -449,6 +451,9 @@ IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
     size_t index = estimatorIndices[estimator];
     double error = estimator_samples_values[index];
     double adjusted_value = adjusted_estimate(estimate, error);
+
+    inst::dbgprintf(DEBUG, "    %15s: %f\n", estimator->getName().c_str(), adjusted_value);
+    
     return adjusted_value;
 }
 
@@ -461,7 +466,8 @@ IntNWJointDistribution::processObservation(Estimator *estimator, double observat
         double error = calculate_error(old_estimate, observation);
         estimatorSamples[estimator]->addValue(error);
         
-        inst::dbgprintf(INFO, "IntNWJoint: Added error observation to estimator %p: %f\n", estimator, error);
+        inst::dbgprintf(INFO, "IntNWJoint: Added error observation to estimator %s: %f\n", 
+                        estimator->getName().c_str(), error);
     } else if (estimatorSamples.count(estimator) == 0) {
         ensureSamplesDistributionExists(estimator);
     }
