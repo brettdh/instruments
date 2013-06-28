@@ -307,7 +307,9 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
             current_strategy_estimators = singular_strategy_estimators[i];
             samples_count = singular_samples_count[i];
             strategy_probabilities = singular_probabilities[i];
+
             wifi = (i == WIFI_STRATEGY_INDEX);
+            
             break;
         }
     }
@@ -324,8 +326,11 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
     }
 
     if (inst::is_debugging_on(DEBUG)) {
+        inst::dbgprintf(DEBUG, "strategy \"%s\" (fn %s) uses %zu estimators\n", 
+                        strategy->getName(), get_value_name(strategy, fn).c_str(), 
+                        current_strategy_estimators.size());
         const size_t sizes[] = { max_i, max_j, max_k };
-        for (size_t m = 0; m < wifi ? 3 : 2; ++m) {
+        for (size_t m = 0; m < (wifi ? 3 : 2); ++m) {
             Estimator *estimator = current_strategy_estimators[m];
             ostringstream s;
             s << "  " << estimator->getName() << ": ";
