@@ -318,8 +318,23 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
     size_t max_i, max_j, max_k=0;
     max_i = samples_count[0];
     max_j = samples_count[1];
+
     if (wifi) {
         max_k = samples_count[2];
+    }
+
+    if (inst::is_debugging_on(DEBUG)) {
+        const size_t sizes[] = { max_i, max_j, max_k };
+        for (size_t m = 0; m < wifi ? 3 : 2; ++m) {
+            Estimator *estimator = current_strategy_estimators[m];
+            ostringstream s;
+            s << "  " << estimator->getName() << ": ";
+            for (size_t n = 0; n < sizes[m]; ++n) {
+                estimatorIndices[estimator] = n;
+                s << getAdjustedEstimatorValue(estimator) << " ";
+            }
+            inst::dbgprintf(DEBUG, "%s\n", s.str().c_str());
+        }
     }
 
     for (size_t i = 0; i < max_i; ++i) {
@@ -331,13 +346,11 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
                 for (size_t k = 0; k < max_k; ++k) {
                     estimatorIndices[current_strategy_estimators[2]] = k;
                     double k_probability = probability * strategy_probabilities[2][k];
-                    inst::dbgprintf(DEBUG, "  probability: %f\n", k_probability);
                     double value = fn(this, strategy_arg, chooser_arg);
                     wifi_strategy_saved_values[saved_value_type][i][j][k] = value;
                     weightedSum += value * k_probability;
                 }
             } else {
-                inst::dbgprintf(DEBUG, "  probability: %f\n", probability);
                 double value = fn(this, strategy_arg, chooser_arg);
                 cellular_strategy_saved_values[saved_value_type][i][j] = value;
                 weightedSum += (value * probability);
@@ -452,8 +465,6 @@ IntNWJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
     double error = estimator_samples_values[index];
     double adjusted_value = adjusted_estimate(estimate, error);
 
-    inst::dbgprintf(DEBUG, "    %15s: %f\n", estimator->getName().c_str(), adjusted_value);
-    
     return adjusted_value;
 }
 
