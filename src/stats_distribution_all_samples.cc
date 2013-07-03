@@ -12,9 +12,10 @@ using std::endl; using std::setprecision;
 using std::runtime_error; using std::count;
 using std::deque;
 
-static const double MIN_SIZE_THRESHOLD = 0.01;
-static const size_t MAX_SAMPLES = 20;
-static double NEW_SAMPLE_WEIGHT = 0.0;
+#include "error_weight_params.h"
+using instruments::NEW_SAMPLE_WEIGHT;
+using instruments::MAX_SAMPLES;
+
 static deque<double> normalizers;
 
 static double calculateWeight(size_t sample_index, size_t num_samples)
@@ -30,7 +31,6 @@ calculateWeightedProbability(size_t num_samples, double weight)
 
 static struct StaticIniter {
     StaticIniter() {
-        NEW_SAMPLE_WEIGHT = pow(MIN_SIZE_THRESHOLD, 1.0/MAX_SAMPLES);
         normalizers.resize(MAX_SAMPLES + 1);
         normalizers[0] = strtod("NAN", NULL);
         for (size_t i = 1; i < normalizers.size(); ++i) {

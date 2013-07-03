@@ -38,6 +38,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	abstract_joint_distribution.cc \
 	debug.cc \
 	error_calculation.cc \
+	error_weight_params.cc \
 	estimator.cc \
 	estimator_registry.cc \
 	eval_method.cc \

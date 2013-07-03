@@ -9,7 +9,7 @@
 
 class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
   public:
-    ConfidenceBoundsStrategyEvaluator();
+    ConfidenceBoundsStrategyEvaluator(bool weighted_);
     virtual ~ConfidenceBoundsStrategyEvaluator();
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg);
@@ -48,6 +48,8 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     void *last_chooser_arg;
     std::map<std::pair<Strategy*, typesafe_eval_fn_t>, double> cache;
     void clearCache();
+
+    bool weighted;
 };
 
 #endif

@@ -28,7 +28,7 @@ class StatsDistributionBinned;
  */
 class BayesianStrategyEvaluator : public StrategyEvaluator {
   public:
-    BayesianStrategyEvaluator();
+    BayesianStrategyEvaluator(bool weighted_);
     virtual ~BayesianStrategyEvaluator();
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
@@ -77,6 +77,8 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
     Estimator *getEstimator(const std::string& name);
 
     void clearDistributions();
+
+    bool weighted;
 };
 
 #endif

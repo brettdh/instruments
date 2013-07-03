@@ -24,8 +24,10 @@ CDECL const int JOINT_DISTRIBUTION_TYPE_MASK;
 CDECL enum EvalMethod {
     TRUSTED_ORACLE,    // No error evaluation; estimators assumed perfect
     CONFIDENCE_BOUNDS, // probabilistic bounds on predictor error
+    CONFIDENCE_BOUNDS_WEIGHTED,
     BAYESIAN,          // Bayesian estimation of posterior 
                        //   estimator distribution
+    BAYESIAN_WEIGHTED,
 
     EMPIRICAL_ERROR=0x100,   // Historical predictor error distribution
     EMPIRICAL_ERROR_ALL_SAMPLES=(EMPIRICAL_ERROR | ALL_SAMPLES),

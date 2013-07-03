@@ -27,6 +27,7 @@ project "InstrumentsTests"
      "evaluators/students_t.cc",
      "evaluators/trusted_oracle_strategy_evaluator.cc",
      "error_calculation.cc",
+     "error_weight_params.cc",
      "estimator.cc",
      "estimator_registry.cc",
      "eval_method.cc",

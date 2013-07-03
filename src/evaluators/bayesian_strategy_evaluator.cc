@@ -241,8 +241,8 @@ class BayesianStrategyEvaluator::DecisionsHistogram {
     map<Strategy *, double> last_winner_probability;
 };
 
-BayesianStrategyEvaluator::BayesianStrategyEvaluator()
-    : simple_evaluator(NULL)
+BayesianStrategyEvaluator::BayesianStrategyEvaluator(bool weighted_)
+    : simple_evaluator(NULL), weighted(weighted_)
 {
     likelihood = new Likelihood(this);
     normalizer = new DecisionsHistogram(this);

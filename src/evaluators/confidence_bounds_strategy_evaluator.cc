@@ -18,13 +18,13 @@ using inst::INFO;
 using std::ifstream; using std::ofstream;
 using std::ostringstream; using std::runtime_error;
 using std::string; using std::setprecision; using std::endl;
-using std::pair; using std::make_pair;
+using std::pair; using std::make_pair; using std::min;
 
 #include "students_t.h"
 
 class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
   public:
-    ErrorConfidenceBounds(Estimator *estimator_=NULL);
+    ErrorConfidenceBounds(bool weighted_, Estimator *estimator_=NULL);
     void processObservation(double observation, double old_estimate, double new_estimate);
     double getBound(BoundType type);
     void saveToFile(ofstream& out);
@@ -37,8 +37,8 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
     Estimator *estimator;
 
     // let's try making these log-transformed.
-    double error_mean;
-    double error_variance;
+    double log_error_mean;
+    double log_error_variance;
     double M2; // for running variance algorithm
     
     size_t num_samples;
@@ -48,16 +48,21 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
     double error_bounds[UPPER + 1];
 
     double getBoundDistance();
+    void updateErrorDistribution(double log_error);
+    void updateErrorDistributionLinear(double log_error);
+    void updateErrorDistributionEWMA(double log_error);
+
+    bool weighted;
 };
 
 
 const double ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::CONFIDENCE_ALPHA = 0.05;
 
-ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::ErrorConfidenceBounds(Estimator *estimator_)
-    : estimator(estimator_)
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::ErrorConfidenceBounds(bool weighted_, Estimator *estimator_)
+    : estimator(estimator_), weighted(weighted_)
 {
-    error_mean = 0.0;
-    error_variance = 0.0;
+    log_error_mean = 0.0;
+    log_error_variance = 0.0;
     M2 = 0.0;
     num_samples = 0;
 }
@@ -102,11 +107,67 @@ double
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBoundDistance()
 {
     if (false) {
-        return get_chebyshev_bound(CONFIDENCE_ALPHA, error_variance);
+        return get_chebyshev_bound(CONFIDENCE_ALPHA, log_error_variance);
     } else if (false) {
-        return get_confidence_interval_width(CONFIDENCE_ALPHA, error_variance, num_samples);
+        return get_confidence_interval_width(CONFIDENCE_ALPHA, log_error_variance, num_samples);
     } else {
-        return get_prediction_interval_width(CONFIDENCE_ALPHA, error_variance, num_samples);
+        return get_prediction_interval_width(CONFIDENCE_ALPHA, log_error_variance, num_samples);
+    }
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistribution(double log_error)
+{
+    if (weighted) {
+        updateErrorDistributionEWMA(log_error);
+    } else {
+        updateErrorDistributionLinear(log_error);
+    }
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionLinear(double log_error)
+{
+    /*
+     * Algorithm borrowed from
+     * http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#On-line_algorithm
+     * which cites Knuth's /The Art of Computer Programming/, Volume 1.
+     */
+    ++num_samples;
+    double delta = log_error - log_error_mean;
+    log_error_mean += delta / num_samples;
+    M2 += delta * (log_error - log_error_mean);
+    if (num_samples > 1) {
+        log_error_variance = M2 / (num_samples-1);
+    }
+}
+
+#include "error_weight_params.h"
+using instruments::MAX_SAMPLES;
+using instruments::NEW_SAMPLE_WEIGHT;
+
+// new sample weight is large for agile, small for stable.
+//  the 'gain' in EWMA parlance is always the weight on the old value.
+//  so here's the gain for straight use in an EWMA calculation.
+static const double EWMA_GAIN = 1.0 - NEW_SAMPLE_WEIGHT;
+
+static void update_ewma(double& ewma, double spot, double gain)
+{
+    ewma = ewma * gain + spot * (1.0 - gain);
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionEWMA(double log_error)
+{
+    num_samples = min(MAX_SAMPLES, num_samples + 1);
+    if (num_samples == 1) {
+        log_error_mean = log_error;
+        log_error_variance = 0.0;
+    } else {
+        double deviation = log_error_mean - log_error;
+        
+        update_ewma(log_error_mean, log_error, EWMA_GAIN);
+        update_ewma(log_error_variance, deviation * deviation, EWMA_GAIN);
     }
 }
 
@@ -117,27 +178,18 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(dou
 {
     inst::dbgprintf(INFO, "Getting error sample from estimator %p\n", estimator);
 
-    /*
-     * Algorithm borrowed from
-     * http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#On-line_algorithm
-     * which cites Knuth's /The Art of Computer Programming/, Volume 1.
-     */
-    ++num_samples;
     double error = calculate_error(old_estimate, observation);
-    error = log(error); // natural logarithm
-    
-    double delta = error - error_mean;
-    error_mean += delta / num_samples;
-    M2 += delta * (error - error_mean);
-    if (num_samples > 1) {
-        error_variance = M2 / (num_samples-1);
-    }
+    double log_error = log(error); // natural logarithm
+
+    updateErrorDistribution(log_error);
+    inst::dbgprintf(INFO, "Adding error sample to estimator %p: %f\n",
+                    estimator, error);
 
     double bound_distance = getBoundDistance();
     double bounds[2];
 
-    bounds[0] = exp(error_mean - bound_distance);
-    bounds[1] = exp(error_mean + bound_distance);
+    bounds[0] = exp(log_error_mean - bound_distance);
+    bounds[1] = exp(log_error_mean + bound_distance);
     if (adjusted_estimate(old_estimate, bounds[0]) < adjusted_estimate(old_estimate, bounds[1])) {
         error_bounds[LOWER] = bounds[0];
         error_bounds[UPPER] = bounds[1];
@@ -145,8 +197,6 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(dou
         error_bounds[LOWER] = bounds[1];
         error_bounds[UPPER] = bounds[0];
     }
-    inst::dbgprintf(INFO, "Adding error sample to estimator %p: %f\n",
-                    estimator, exp(error));
     inst::dbgprintf(INFO, "n=%4zu; error bounds: [%f, %f]\n", 
                     num_samples, error_bounds[LOWER], error_bounds[UPPER]);
     if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
@@ -170,8 +220,8 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::saveToFile(ofstream& o
 {
     out << estimator->getName() << " " << setprecision(PRECISION)
         << "num_samples " << num_samples
-        << " mean " << error_mean 
-        << " variance " << error_variance
+        << " mean " << log_error_mean 
+        << " variance " << log_error_variance
         << " M2 " << M2 
         << " bounds " << error_bounds[LOWER] << " " << error_bounds[UPPER] << endl;
 }
@@ -188,8 +238,8 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
         double& field;
     } field_t;
     field_t fields[] = {
-        { "mean", error_mean },
-        { "variance", error_variance },
+        { "mean", log_error_mean },
+        { "variance", log_error_variance },
         { "M2", M2 },
         { "bounds", error_bounds[LOWER] }
     };
@@ -246,9 +296,9 @@ ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, doub
 ConfidenceBoundsStrategyEvaluator::EvalMode
 ConfidenceBoundsStrategyEvaluator::DEFAULT_EVAL_MODE = AGGRESSIVE;
 
-ConfidenceBoundsStrategyEvaluator::ConfidenceBoundsStrategyEvaluator()
+ConfidenceBoundsStrategyEvaluator::ConfidenceBoundsStrategyEvaluator(bool weighted_)
     : eval_mode(DEFAULT_EVAL_MODE), // TODO: set as option?
-      step(0), last_chooser_arg(NULL)
+      step(0), last_chooser_arg(NULL), weighted(weighted_)
 {
 }
 
