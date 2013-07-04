@@ -29,6 +29,7 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
     double getBound(BoundType type);
     void saveToFile(ofstream& out);
     string restoreFromFile(ifstream& in);
+    string getName();
 
     void setEstimator(Estimator *estimator_);
   private:
@@ -71,6 +72,18 @@ void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::setEstimator(Estimator *estimator_)
 {
     estimator = estimator_;
+}
+
+string 
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getName()
+{
+    if (estimator) {
+        return estimator->getName();
+    }
+    
+    ostringstream s;
+    s << this;
+    return s.str();
 }
 
           
@@ -176,14 +189,14 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(dou
                                                                              double old_estimate,
                                                                              double new_estimate)
 {
-    inst::dbgprintf(INFO, "Getting error sample from estimator %p\n", estimator);
+    inst::dbgprintf(INFO, "Getting error sample from estimator %s\n", estimator->getName().c_str());
 
     double error = calculate_error(old_estimate, observation);
     double log_error = log(error); // natural logarithm
 
     updateErrorDistribution(log_error);
-    inst::dbgprintf(INFO, "Adding error sample to estimator %p: %f\n",
-                    estimator, error);
+    inst::dbgprintf(INFO, "Adding error sample to estimator %s: %f\n",
+                    estimator->getName().c_str(), error);
 
     double bound_distance = getBoundDistance();
     double bounds[2];
@@ -258,7 +271,8 @@ void
 ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, double observation, 
                                                       double old_estimate, double new_estimate)
 {
-    inst::dbgprintf(INFO, "Adding observation %f to estimator %p\n", observation, estimator);
+    inst::dbgprintf(INFO, "Adding observation %f to estimator %s\n", 
+                    observation, estimator->getName().c_str());
     
     assert(estimator);
     string name = estimator->getName();
@@ -284,8 +298,8 @@ ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, doub
     }
     
     if (estimate_is_valid(old_estimate)) {
-        inst::dbgprintf(INFO, "Adding observation %f to estimator-bounds %p\n",
-                        observation, bounds);
+        inst::dbgprintf(INFO, "Adding observation %f to estimator-bounds %s\n",
+                        observation, bounds->getName().c_str());
         bounds->processObservation(observation, old_estimate, new_estimate);
     }
 
