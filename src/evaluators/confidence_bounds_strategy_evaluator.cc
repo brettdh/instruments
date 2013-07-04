@@ -24,7 +24,7 @@ using std::pair; using std::make_pair; using std::min;
 
 class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
   public:
-    ErrorConfidenceBounds(bool weighted_, Estimator *estimator_=NULL);
+    ErrorConfidenceBounds(bool weighted_, Estimator *estimator_);
     void processObservation(double observation, double old_estimate, double new_estimate);
     double getBound(BoundType type);
     void saveToFile(ofstream& out);
@@ -269,7 +269,7 @@ ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, doub
             bounds->setEstimator(estimator);
             placeholders.erase(name);
         } else {
-            bounds = new ErrorConfidenceBounds(estimator);
+            bounds = new ErrorConfidenceBounds(weighted, estimator);
         }
         error_bounds.push_back(bounds);
         bounds_by_estimator[estimator] = error_bounds.back();
@@ -461,7 +461,7 @@ ConfidenceBoundsStrategyEvaluator::restoreFromFileImpl(const char *filename)
     error_bounds.clear();
     
     for (int i = 0; i < num_estimators; ++i) {
-        ErrorConfidenceBounds *bounds = new ErrorConfidenceBounds(NULL);
+        ErrorConfidenceBounds *bounds = new ErrorConfidenceBounds(weighted, NULL);
         string name = bounds->restoreFromFile(in);
         if (estimators_by_name.count(name) > 0) {
             Estimator *estimator = estimators_by_name[name];

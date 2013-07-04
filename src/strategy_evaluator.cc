@@ -116,11 +116,11 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
         evaluator = new EmpiricalErrorStrategyEvaluator(type);
     } else if (type == CONFIDENCE_BOUNDS) {
         evaluator = new ConfidenceBoundsStrategyEvaluator(false);
-    } else if (type == CONFIDENCE_BOUNDS) {
+    } else if (type == CONFIDENCE_BOUNDS_WEIGHTED) {
         evaluator = new ConfidenceBoundsStrategyEvaluator(true);
     } else if (type == BAYESIAN) {
         evaluator = new BayesianStrategyEvaluator(false);
-    } else if (type == BAYESIAN) {
+    } else if (type == BAYESIAN_WEIGHTED) {
         evaluator = new BayesianStrategyEvaluator(true);
     } else {
         // TODO: implement the rest.
