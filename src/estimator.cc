@@ -133,3 +133,21 @@ Estimator::setRangeHints(double min, double max, size_t num_bins)
     range_hints.num_bins = num_bins;
     has_range_hints = true;
 }
+
+void
+Estimator::setCondition(enum ConditionType type, double value)
+{
+    conditions[type] = value;
+}
+
+void Estimator::clearConditions()
+{
+    conditions.clear();
+}
+
+bool
+Estimator::valueMeetsConditions(double value)
+{
+    return ((conditions.count(AT_LEAST) == 0 || value >= conditions[AT_LEAST]) &&
+            (conditions.count(AT_MOST) == 0 || value <= conditions[AT_MOST]));
+}

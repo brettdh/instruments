@@ -9,6 +9,11 @@
 
 class StrategyEvaluator;
 
+enum ConditionType {
+    AT_LEAST,
+    AT_MOST
+};
+
 /* Pure virtual base class for all types of estimators.{}
  * Takes in values, returns an estimate.
  * Possible ways to implement this:
@@ -36,6 +41,15 @@ class Estimator {
     bool hasRangeHints();
     EstimatorRangeHints getRangeHints();
     void setRangeHints(double min, double max, size_t num_bins);
+
+    // used to set conditional probability bounds on the value of an estimator
+    //   that can be used during strategy evaluation.
+    // for instance, if I know the current wifi session is at least
+    //   60 seconds long, I can ignore prior error observations
+    //   that tell me that it's only 30 seconds long.
+    void setCondition(enum ConditionType type, double value);
+    void clearConditions();
+    bool valueMeetsConditions(double value);
   protected:
     Estimator(const std::string& name_);
 
@@ -51,6 +65,8 @@ class Estimator {
 
     bool has_range_hints;
     EstimatorRangeHints range_hints;
+
+    std::map<enum ConditionType, double) conditions;
 };
 
 bool estimate_is_valid(double estimate);
