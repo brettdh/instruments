@@ -16,6 +16,7 @@ project "InstrumentsTests"
      "multi_dimension_array_test.cc",
      "running_mean_estimator_test.cc",
      "strategy_estimators_discovery_test.cc",
+     "test_common.cc",
      "thread_pool_test.cc",
   }
   local support_files = {

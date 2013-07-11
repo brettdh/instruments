@@ -108,7 +108,17 @@ static double *get_estimator_samples_values(Estimator *estimator, StatsDistribut
 
 static double *get_estimator_samples_probs(Estimator *estimator, StatsDistribution *estimator_samples, size_t& count)
 {
-    return get_estimator_values(estimator, estimator_samples, &StatsDistribution::Iterator::probability, count);
+    double *values = get_estimator_values(estimator, estimator_samples, &StatsDistribution::Iterator::probability, count);
+
+    // normalize the array, since estimator error values might have been filtered
+    double prob_sum = 0.0;
+    for (size_t i = 0; i < count; ++i) {
+        prob_sum += values[i];
+    }
+    for (size_t i = 0; i < count; ++i) {
+        values[i] /= prob_sum;
+    }
+    return values;
 }
 
 IntNWJointDistribution::IntNWJointDistribution(StatsDistributionType dist_type,

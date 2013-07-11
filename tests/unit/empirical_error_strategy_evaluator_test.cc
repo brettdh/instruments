@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 
 #include <cppunit/Test.h>
 #include <cppunit/TestAssert.h>
@@ -7,6 +8,7 @@
 #include "instruments.h"
 #include "instruments_private.h"
 
+#include "test_common.h"
 #include "empirical_error_strategy_evaluator_test.h"
 #include "empirical_error_strategy_evaluator.h"
 #include "eval_method.h"
@@ -81,12 +83,13 @@ EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
 
 static void
 create_estimators_and_strategies(Estimator **estimators, size_t num_estimators,
-                                 Strategy **strategies, size_t num_strategies)
+                                 Strategy **strategies, size_t num_strategies,
+                                 EstimatorType estimator_type=RUNNING_MEAN)
 {
     for (size_t i = 0; i < num_estimators; ++i) {
         ostringstream name;
         name << "estimator-" << i;
-        estimators[i] = Estimator::create(RUNNING_MEAN, name.str());
+        estimators[i] = Estimator::create(estimator_type, name.str());
     }
 
     strategies[0] = new Strategy(get_time_all_estimators, 
@@ -308,4 +311,76 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     CPPUNIT_ASSERT(estimator1_new_calls <= 6);
     CPPUNIT_ASSERT(estimator2_new_calls >= 2);
     CPPUNIT_ASSERT(estimator2_new_calls <= 6);
+}
+
+void 
+EmpiricalErrorStrategyEvaluatorTest::testEstimatorConditions()
+{
+    const int NUM_INTNW_ESTIMATORS = 5;
+    const int NUM_STRATEGIES = 3;
+
+    Estimator *estimators[NUM_INTNW_ESTIMATORS];
+    Strategy *strategies[NUM_STRATEGIES];
+    create_estimators_and_strategies(estimators, NUM_INTNW_ESTIMATORS,
+                                     strategies, NUM_STRATEGIES,
+                                     LAST_OBSERVATION);
+    
+    StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *) strategies, 
+                                                             NUM_STRATEGIES, 
+                                                             EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+    
+    for (int i = 0; i < 10; ++i) {
+        estimators[0]->addObservation((i % 2 == 0) ? 5.0 : 6.0);
+        estimators[3]->addObservation((i % 2 == 0) ? 1.0 : 20.0);
+    }
+    estimators[1]->addObservation(0.0);
+    estimators[2]->addObservation(0.0);
+    estimators[4]->addObservation(0.0);
+
+    double mid_value = evaluator->expectedValue(strategies[0], strategies[0]->time_fn,
+                                                strategies[0]->strategy_arg, (void *) 3);
+    assertValueBetweenErrors("mid-value", mid_value, 
+                             calculate_error(6.0, 5.0),
+                             calculate_error(5.0, 6.0));
+
+    double hilo_value = evaluator->expectedValue(strategies[1], strategies[1]->time_fn,
+                                                 strategies[1]->strategy_arg, (void *) 2);
+    assertValueBetweenErrors("hilo-value", hilo_value, 
+                             calculate_error(20.0, 1.0),
+                             calculate_error(1.0, 20.0));
+
+    CPPUNIT_ASSERT_MESSAGE("mid-value wins", mid_value < hilo_value);
+
+    estimators[3]->setCondition(AT_MOST, 19.0);
+
+    hilo_value = evaluator->expectedValue(strategies[1], strategies[1]->time_fn,
+                                          strategies[1]->strategy_arg, (void *) 2);
+
+    CPPUNIT_ASSERT_MESSAGE("hilo-conditional-value wins", hilo_value < mid_value);
+    double expected = adjusted_estimate(20.0, calculate_error(20.0, 1.0));
+    MY_CPPUNIT_ASSERT_EQWITHIN_MESSAGE(expected, hilo_value, 0.001, 
+                                       "hilo-conditional-value matches expected");
+
+    estimators[3]->clearConditions();
+
+    hilo_value = evaluator->expectedValue(strategies[1], strategies[1]->time_fn,
+                                          strategies[1]->strategy_arg, (void *) 2);
+    assertValueBetweenErrors("hilo-value", hilo_value, 
+                             calculate_error(20.0, 1.0),
+                             calculate_error(1.0, 20.0));
+
+    CPPUNIT_ASSERT_MESSAGE("mid-value wins", mid_value < hilo_value);
+}
+
+void
+EmpiricalErrorStrategyEvaluatorTest::assertValueBetweenErrors(const char *name, double value, 
+                                                              double low_error, double high_error)
+{
+    char msg[256];
+    double low_value = adjusted_estimate(value, low_error);
+    double high_value = adjusted_estimate(value, high_error);
+
+    snprintf(msg, 256, "%s (%f) is between %f and %f", 
+             name, value, low_value, high_value);
+    CPPUNIT_ASSERT_MESSAGE(msg, value >= low_value && value <= high_value);
 }
