@@ -91,7 +91,7 @@ static double *get_estimator_values(Estimator *estimator, StatsDistribution *est
     count = 0;
     for (size_t i = 0; i < all_samples_count; ++i) {
         double error_value = it->at(i);
-        double error_adjusted_estimate = adjusted_estimate(estimator, error_value);
+        double error_adjusted_estimate = adjusted_estimate(estimator->getEstimate(), error_value);
         if (estimator->valueMeetsConditions(error_adjusted_estimate)) {
             values[count++] = (it->*fn)(i);
         }
@@ -109,14 +109,6 @@ static double *get_estimator_samples_values(Estimator *estimator, StatsDistribut
 static double *get_estimator_samples_probs(Estimator *estimator, StatsDistribution *estimator_samples, size_t& count)
 {
     return get_estimator_values(estimator, estimator_samples, &StatsDistribution::Iterator::probability, count);
-}
-
-static size_t get_estimator_samples_count(StatsDistribution *estimator_samples)
-{
-    StatsDistribution::Iterator *it = estimator_samples->getIterator();
-    size_t len = it->totalCount();
-    estimator_samples->finishIterator(it);
-    return len;
 }
 
 IntNWJointDistribution::IntNWJointDistribution(StatsDistributionType dist_type,

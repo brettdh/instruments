@@ -238,6 +238,30 @@ CDECL void set_estimator_range_hints(instruments_estimator_t estimator,
  */
 CDECL int estimator_has_range_hints(instruments_estimator_t estimator);
 
+
+typedef enum {
+    INSTRUMENTS_ESTIMATOR_VALUE_AT_LEAST,
+    INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST,
+} instruments_estimator_condition_type_t;
+
+/** Set a condition on the range of this estimator, 
+ *  most likely because of a known-good current observation.
+ *  For instance, if the estimator tracks wifi session length,
+ *  and it's known that the current session is at least 30 seconds long,
+ *  setting a condition of AT_LEAST 30 will tell instruments to
+ *  take that into account in its evaluation.
+ *
+ *  If the given condition is already set on this estimator, 
+ *  the new bound value replaces the old one.
+ */
+CDECL void set_estimator_condition(instruments_estimator_t estimator, 
+                                   instruments_estimator_condition_type_t condition_type,
+                                   double value);
+
+/** Clear all conditions on this estimator set by set_estimator_condition.
+ */
+CDECL void clear_estimator_conditions(instruments_estimator_t estimator);
+
 typedef enum {
     INSTRUMENTS_DEBUG_LEVEL_NONE=0, /* shut it. */
     INSTRUMENTS_DEBUG_LEVEL_ERROR,  /* exceptional situations only. */

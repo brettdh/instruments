@@ -1,17 +1,19 @@
 #ifndef ESTIMATOR_H_INCL
 #define ESTIMATOR_H_INCL
 
+#include "instruments.h"
 #include "estimator_range_hints.h"
 #include "estimator_type.h"
 #include "small_set.h"
 
 #include <string>
+#include <map>
 
 class StrategyEvaluator;
 
 enum ConditionType {
-    AT_LEAST,
-    AT_MOST
+    AT_LEAST = INSTRUMENTS_ESTIMATOR_VALUE_AT_LEAST,
+    AT_MOST = INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST
 };
 
 /* Pure virtual base class for all types of estimators.{}
@@ -66,7 +68,7 @@ class Estimator {
     bool has_range_hints;
     EstimatorRangeHints range_hints;
 
-    std::map<enum ConditionType, double) conditions;
+    std::map<enum ConditionType, double> conditions;
 };
 
 bool estimate_is_valid(double estimate);

@@ -200,3 +200,18 @@ int estimator_has_range_hints(instruments_estimator_t est_handle)
     Estimator *estimator = static_cast<Estimator *>(est_handle);
     return estimator->hasRangeHints() ? 1 : 0;
 }
+
+void set_estimator_condition(instruments_estimator_t est_handle,
+                             instruments_estimator_condition_type_t condition_type,
+                             double value)
+{
+    Estimator *estimator = static_cast<Estimator *>(est_handle);
+    ConditionType type = ConditionType(condition_type);
+    estimator->setCondition(type, value);
+}
+
+void set_estimator_condition(instruments_estimator_t est_handle)
+{
+    Estimator *estimator = static_cast<Estimator *>(est_handle);
+    estimator->clearConditions();
+}
