@@ -590,6 +590,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     
     // here's the normalization.  summing the posterior values ensures that
     //  I'm using the correct value.
+    assert(posterior_sum > 0.0);
     return weightedSum / posterior_sum;
 }
 

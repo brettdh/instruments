@@ -619,7 +619,7 @@ static double update_mean(double mean, double value, int n)
     return (mean * n + value) / (n + 1);
 }
 
-CTEST2_SKIP(bayesian_method_test, test_proposal_example)
+CTEST2(bayesian_method_test, test_proposal_example)
 {
     //instruments_set_debug_level(DEBUG);
     
@@ -650,8 +650,9 @@ CTEST2_SKIP(bayesian_method_test, test_proposal_example)
     const int num_steps = sizeof(bandwidth1_steps) / sizeof(double);
     int i;
 
-    // no latency variation for this test.
+    // no latency or wifi-session-length variation for this test.
     add_observation(cdata->estimators[1], 0.0, 0.0);
+    add_observation(cdata->estimators[2], 3600.0, 3600.0);
     add_observation(cdata->estimators[4], 0.0, 0.0);
 
     // make the two networks have the same small cost,

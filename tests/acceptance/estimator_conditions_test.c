@@ -1,4 +1,5 @@
 #include <instruments.h>
+#include <instruments_private.h>
 #include <eval_method.h>
 #include <stdio.h>
 #include "ctest.h"
@@ -18,8 +19,6 @@ struct test_data {
 
 CTEST_SETUP(estimator_conditions)
 {
-    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
-
     data->mid_estimator = create_external_estimator("mid");
     data->hilo_estimator = create_external_estimator("hilo");
     
@@ -35,8 +34,6 @@ CTEST_TEARDOWN(estimator_conditions)
 {
     free_external_estimator(data->mid_estimator);
     free_external_estimator(data->hilo_estimator);
-
-    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
 }
 
 static double estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
@@ -84,8 +81,9 @@ CTEST2(estimator_conditions, set_and_clear_condition)
     strategies[2] = make_redundant_strategy(strategies, 2);
     ASSERT_NOT_NULL(strategies[2]);
 
-    instruments_strategy_evaluator_t evaluator = register_strategy_set_with_method(strategies, 3,
-                                                                                   EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+    instruments_strategy_evaluator_t evaluator = 
+        register_strategy_set_with_method(strategies, 3,
+                                          EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
 
     for (i = 0; i < 10; ++i) {
         double mid_value = (i % 2 == 0 ? 5.0 : 6.0);
