@@ -82,43 +82,51 @@ static void destroy_array(double ***array, size_t dim1, size_t dim2)
     delete [] array;
 }
 
-static double *get_estimator_values(Estimator *estimator, StatsDistribution *estimator_samples, 
+static double *get_estimator_values(StatsDistribution *estimator_samples, 
                                     double (StatsDistribution::Iterator::*fn)(size_t), size_t& count)
 {
     StatsDistribution::Iterator *it = estimator_samples->getIterator();
-    size_t all_samples_count = it->totalCount();
-    double *values = new double[all_samples_count];
-    count = 0;
-    for (size_t i = 0; i < all_samples_count; ++i) {
-        double error_value = it->at(i);
-        double error_adjusted_estimate = adjusted_estimate(estimator->getEstimate(), error_value);
-        if (estimator->valueMeetsConditions(error_adjusted_estimate)) {
-            values[count++] = (it->*fn)(i);
-        }
+    count = it->totalCount();
+    double *values = new double[count];
+    for (size_t i = 0; i < count; ++i) {
+        values[i] = (it->*fn)(i);
     }
     
     estimator_samples->finishIterator(it);
     return values;
 }
 
-static double *get_estimator_samples_values(Estimator *estimator, StatsDistribution *estimator_samples, size_t& count)
+static double *get_estimator_samples_values(StatsDistribution *estimator_samples, size_t& count)
 {
-    return get_estimator_values(estimator, estimator_samples, &StatsDistribution::Iterator::at, count);
+    return get_estimator_values(estimator_samples, &StatsDistribution::Iterator::at, count);
 }
 
-static double *get_estimator_samples_probs(Estimator *estimator, StatsDistribution *estimator_samples, size_t& count)
+static double *get_estimator_samples_probs(StatsDistribution *estimator_samples, size_t& count)
 {
-    double *values = get_estimator_values(estimator, estimator_samples, &StatsDistribution::Iterator::probability, count);
+    double *values = get_estimator_values(estimator_samples, &StatsDistribution::Iterator::probability, count);
+    return values;
+}
 
+static void adjust_probs_for_estimator_conditions(Estimator *estimator, double *& values, double *& probs, size_t& count)
+{
+    for (size_t i = 0; i < count; ++i) {
+        double error_value = values[i];
+        double error_adjusted_estimate = adjusted_estimate(estimator->getEstimate(), error_value);
+        
+        // this weight represents how wrong the value is,
+        //  based on the bound set (if any) and the value itself.
+        double conditional_weight = estimator->getConditionalWeight(error_adjusted_estimate);
+        probs[i] *= conditional_weight;
+    }
+    
     // normalize the array, since estimator error values might have been filtered
     double prob_sum = 0.0;
     for (size_t i = 0; i < count; ++i) {
-        prob_sum += values[i];
+        prob_sum += probs[i];
     }
     for (size_t i = 0; i < count; ++i) {
-        values[i] /= prob_sum;
+        probs[i] /= prob_sum;
     }
-    return values;
 }
 
 IntNWJointDistribution::IntNWJointDistribution(StatsDistributionType dist_type,
@@ -217,9 +225,14 @@ IntNWJointDistribution::getEstimatorSamplesDistributions()
             StatsDistribution *distribution = estimatorSamples[estimator];
             ASSERT(distribution != NULL);
             size_t count = 0, count_probs = 42;
-            singular_probabilities[i][j] = get_estimator_samples_probs(estimator, distribution, count_probs);
-            singular_samples_values[i][j] = get_estimator_samples_values(estimator, distribution, count);
+            singular_probabilities[i][j] = get_estimator_samples_probs(distribution, count_probs);
+            singular_samples_values[i][j] = get_estimator_samples_values(distribution, count);
             assert(count == count_probs);
+
+            adjust_probs_for_estimator_conditions(estimator, 
+                                                  singular_probabilities[i][j], 
+                                                  singular_samples_values[i][j], count);
+
             singular_samples_count[i][j] = count;
         }
     }

@@ -6,6 +6,7 @@
 #include "running_mean_estimator.h"
 #include "strategy_evaluator.h"
 #include "debug.h"
+namespace inst = instruments;
 
 #include <stdexcept>
 #include <string>
@@ -136,6 +137,15 @@ void
 Estimator::setCondition(enum ConditionType type, double value)
 {
     conditions[type] = value;
+    ConditionType other_type = (type == AT_MOST ? AT_LEAST : AT_MOST);
+    if (conditions.count(other_type) > 0) {
+        if (conditions[AT_LEAST] > conditions[AT_MOST]) {
+            inst::dbgprintf(inst::ERROR, "Warning: tried to set impossible conditions [>= %f, <= %f] on estimator %s (both are now %f)\n",
+                            conditions[AT_LEAST], conditions[AT_MOST], name.c_str(), conditions[other_type]);
+            conditions[type] = conditions[other_type];
+        }
+    }
+
     for (StrategyEvaluator *subscriber : subscribers) {
         subscriber->estimatorConditionsChanged(this);
     }
@@ -154,4 +164,19 @@ Estimator::valueMeetsConditions(double value)
 {
     return ((conditions.count(AT_LEAST) == 0 || value >= conditions[AT_LEAST]) &&
             (conditions.count(AT_MOST) == 0 || value <= conditions[AT_MOST]));
+}
+
+double 
+Estimator::getConditionalWeight(double value)
+{
+    if (conditions.count(AT_LEAST) > 0 && value < conditions[AT_LEAST]) {
+        // further below bound = lower weight
+        return value / conditions[AT_LEAST];
+    } else if (conditions.count(AT_MOST) > 0 && value > conditions[AT_MOST]) {
+        // further above bound = lower weight
+        return conditions[AT_MOST] / value;
+    } else {
+        // within bounds = even weight
+        return 1.0;
+    }
 }

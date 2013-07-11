@@ -52,6 +52,14 @@ class Estimator {
     void setCondition(enum ConditionType type, double value);
     void clearConditions();
     bool valueMeetsConditions(double value);
+
+    // returns a number in [0.0, 1.0] representing the 'wrongness' 
+    //  of the given value with respect to the conditions set
+    //  on this estimator.
+    // for instance, if an AT_LEAST bound is set at 30,
+    //  then the value 10 is more 'wrong' than the value 20,
+    //  so the weight returned would be smaller.
+    double getConditionalWeight(double value);
   protected:
     Estimator(const std::string& name_);
 
