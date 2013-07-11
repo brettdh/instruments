@@ -81,9 +81,7 @@ Estimator::addObservation(double observation)
     has_estimate = true;
     new_estimate = getEstimate();
 
-    for (small_set<StrategyEvaluator*>::const_iterator it = subscribers.begin();
-         it != subscribers.end(); ++it) {
-        StrategyEvaluator *subscriber = *it;
+    for (StrategyEvaluator *subscriber : subscribers) {
         subscriber->observationAdded(this, observation, old_estimate, new_estimate);
     }
 }
@@ -138,11 +136,17 @@ void
 Estimator::setCondition(enum ConditionType type, double value)
 {
     conditions[type] = value;
+    for (StrategyEvaluator *subscriber : subscribers) {
+        subscriber->estimatorConditionsChanged(this);
+    }
 }
 
 void Estimator::clearConditions()
 {
     conditions.clear();
+    for (StrategyEvaluator *subscriber : subscribers) {
+        subscriber->estimatorConditionsChanged(this);
+    }
 }
 
 bool

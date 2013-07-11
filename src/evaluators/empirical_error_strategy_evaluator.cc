@@ -67,6 +67,12 @@ EmpiricalErrorStrategyEvaluator::processObservation(Estimator *estimator, double
     jointDistribution->processObservation(estimator, observation, old_estimate, new_estimate);
 }
 
+void 
+EmpiricalErrorStrategyEvaluator::processEstimatorConditionsChange(Estimator *estimator)
+{
+    jointDistribution->processEstimatorConditionsChange(estimator);
+}
+
 
 double
 EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 

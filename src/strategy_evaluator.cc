@@ -199,6 +199,15 @@ StrategyEvaluator::observationAdded(Estimator *estimator, double observation,
     processObservation(estimator, observation, old_estimate, new_estimate);
 }
 
+void
+StrategyEvaluator::estimatorConditionsChanged(Estimator *estimator)
+{
+    clearCache();
+
+    PthreadScopedLock lock(&evaluator_mutex);
+    processEstimatorConditionsChange(estimator);
+}
+
 instruments_strategy_t
 StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
 {

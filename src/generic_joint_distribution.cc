@@ -227,6 +227,12 @@ GenericJointDistribution::processObservation(Estimator *estimator, double observ
     }
 }
 
+void 
+GenericJointDistribution::processEstimatorConditionsChange(Estimator *estimator)
+{
+    clearMemos();
+}
+
 vector<MultiDimensionArray<double> *>&
 GenericJointDistribution::getMemoList(Strategy *strategy, typesafe_eval_fn_t fn)
 {

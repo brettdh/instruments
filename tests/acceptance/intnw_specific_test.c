@@ -619,7 +619,7 @@ static double update_mean(double mean, double value, int n)
     return (mean * n + value) / (n + 1);
 }
 
-CTEST2(bayesian_method_test, test_proposal_example)
+CTEST2_SKIP(bayesian_method_test, test_proposal_example)
 {
     //instruments_set_debug_level(DEBUG);
     

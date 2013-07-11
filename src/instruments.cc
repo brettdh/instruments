@@ -210,7 +210,7 @@ void set_estimator_condition(instruments_estimator_t est_handle,
     estimator->setCondition(type, value);
 }
 
-void set_estimator_condition(instruments_estimator_t est_handle)
+void clear_estimator_conditions(instruments_estimator_t est_handle)
 {
     Estimator *estimator = static_cast<Estimator *>(est_handle);
     estimator->clearConditions();

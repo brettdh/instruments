@@ -47,7 +47,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
                                  void *strategy_arg, void *chooser_arg) = 0;
     void observationAdded(Estimator *estimator, double observation, 
                           double old_estimate, double new_estimate);
-
+    void estimatorConditionsChanged(Estimator *estimator);
+    
     virtual void saveToFile(const char *filename) = 0;
 
     // also clears the cache.
@@ -64,6 +65,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
 
     virtual void processObservation(Estimator *estimator, double observation, 
                                     double old_estimate, double new_estimate) { /* ignore by default */ }
+    virtual void processEstimatorConditionsChange(Estimator *estimator) { /* ignore by default */ }
     virtual void restoreFromFileImpl(const char *filename) = 0;
 
     // TODO: change to a better default.

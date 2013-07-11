@@ -490,6 +490,12 @@ IntNWJointDistribution::processObservation(Estimator *estimator, double observat
 }
 
 void
+IntNWJointDistribution::processEstimatorConditionsChange(Estimator *estimator)
+{
+    clearEstimatorSamplesDistributions();
+}
+
+void
 IntNWJointDistribution::saveToFile(ofstream& out)
 {
     try {

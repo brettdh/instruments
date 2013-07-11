@@ -29,6 +29,7 @@ class GenericJointDistribution : public AbstractJointDistribution {
     double getAdjustedEstimatorValue(Estimator *estimator);
     void processObservation(Estimator *estimator, double observation,
                             double old_estimate, double new_estimate);
+    void processEstimatorConditionsChange(Estimator *estimator);
 
     virtual void saveToFile(std::ofstream& out);
     virtual void restoreFromFile(std::ifstream& in);
