@@ -234,6 +234,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
                             currentStrategy->getName());
             inst::dbgprintf(INFO, "Calculating time\n");
             double time = calculateTime(currentStrategy, chooser_arg);
+            ASSERT(isnormal(time));
 
             double cost = 0.0;
             if (redundancy) {
@@ -243,6 +244,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
                 // XXX: HACK.  This is a caching decision that belongs inside
                 // XXX:  the class that does the caching.
                 cost = calculateCost(currentStrategy, chooser_arg);
+                ASSERT(isnormal(cost));
                 inst::dbgprintf(INFO, "Singular strategy \"%s\"  time: %f  cost: %f\n",
                                 currentStrategy->getName(), time, cost);
             } else {
@@ -279,9 +281,11 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
             inst::dbgprintf(INFO, "Evaluating redundant strategy \"%s\"\n",
                             currentStrategy->getName());
             double redundant_time = calculateTime(currentStrategy, chooser_arg);
+            ASSERT(isnormal(redundant_time));
             double benefit = best_singular_time - redundant_time;
 
             double redundant_cost = calculateCost(currentStrategy, chooser_arg);
+            ASSERT(isnormal(redundant_cost));
             double extra_redundant_cost = redundant_cost - best_singular_cost;
             double net_benefit = benefit - extra_redundant_cost;
 
