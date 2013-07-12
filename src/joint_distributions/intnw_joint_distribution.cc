@@ -230,8 +230,8 @@ IntNWJointDistribution::getEstimatorSamplesDistributions()
             assert(count == count_probs);
 
             adjust_probs_for_estimator_conditions(estimator, 
-                                                  singular_probabilities[i][j], 
-                                                  singular_samples_values[i][j], count);
+                                                  singular_samples_values[i][j],
+                                                  singular_probabilities[i][j], count);
 
             singular_samples_count[i][j] = count;
         }

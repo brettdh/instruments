@@ -316,6 +316,8 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
 void 
 EmpiricalErrorStrategyEvaluatorTest::testEstimatorConditions()
 {
+    //instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
+
     const int NUM_INTNW_ESTIMATORS = 5;
     const int NUM_STRATEGIES = 3;
 
@@ -329,7 +331,7 @@ EmpiricalErrorStrategyEvaluatorTest::testEstimatorConditions()
                                                              NUM_STRATEGIES, 
                                                              EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
     
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 11; ++i) {
         estimators[0]->addObservation((i % 2 == 0) ? 5.0 : 6.0);
         estimators[3]->addObservation((i % 2 == 0) ? 1.0 : 20.0);
     }
@@ -351,14 +353,17 @@ EmpiricalErrorStrategyEvaluatorTest::testEstimatorConditions()
 
     CPPUNIT_ASSERT_MESSAGE("mid-value wins", mid_value < hilo_value);
 
-    estimators[3]->setCondition(AT_MOST, 19.0);
+    estimators[3]->setCondition(AT_MOST, 2.0);
 
     hilo_value = evaluator->expectedValue(strategies[1], strategies[1]->time_fn,
                                           strategies[1]->strategy_arg, (void *) 2);
 
     CPPUNIT_ASSERT_MESSAGE("hilo-conditional-value wins", hilo_value < mid_value);
-    double expected = adjusted_estimate(20.0, calculate_error(20.0, 1.0));
-    MY_CPPUNIT_ASSERT_EQWITHIN_MESSAGE(expected, hilo_value, 0.001, 
+    
+    // based on weighting of out-of-bounds samples
+    double normalizer = 5.0/11.0 + (5.0/11.0 * 2.0 / 20.0) + 1.0/11.0;
+    double expected = (1.0 * 1.0/11.0) + (1.0 * (1.0/20.0) * (5.0/11.0)) + (20.0 * (2.0/20.0) * (5.0/11.0));
+    MY_CPPUNIT_ASSERT_EQWITHIN_MESSAGE(expected/normalizer, hilo_value, 0.001, 
                                        "hilo-conditional-value matches expected");
 
     estimators[3]->clearConditions();
