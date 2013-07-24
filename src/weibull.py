@@ -10,7 +10,7 @@ def fit_weibull(values):
     '''Returns (shape, location, scale) parameters for a Weibull distribution 
     fit to the values using MLE.
     '''
-    shape, location, scale = stats.weibull_min.fit(values, loc=0.0)
+    shape, location, scale = stats.weibull_min.fit(values, loc=0.0, floc=0.0)
     return shape, location, scale
 
 
