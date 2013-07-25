@@ -23,18 +23,27 @@ def run_tests():
 
 def cdf_xvalues(max_x):
     max_x *= 1.05
-    return np.arange(0.0, max_x * 1.001, max_x * 0.001)
+    num_samples = 10000
+    return np.arange(0.0, max_x * (1 + (1.0 / num_samples)), max_x / num_samples)
 
 def failure_prob(distribution, samples, failure_window):
-    '''Pr(X < upper | X >= lower)
+    '''
+       p(failure) = Pr(X < cur_x + failure_window | X >= cur_x)
+       
+       Pr(X < upper | X >= lower)
        = Pr(X < upper ^ X >= lower) / Pr(X >= lower)
        = ( F(upper) - F(lower) ) / (1 - F(lower))
+
+       upper = cur_x + failure_window
+       lower = cur_x
     '''
     cdf = distribution.cdf
-    lower = samples - failure_window
-    lower[lower < 0] = 0.0
-    upper = samples
+    lower = samples
+    upper = samples + failure_window
     return ( cdf(upper) - cdf(lower)) / (1.0 - cdf(lower))
+
+
+max_value = None
 
 def plot_fit(samples, failure_window):
     shape, loc, scale = fit_weibull(samples)
@@ -47,15 +56,28 @@ def plot_fit(samples, failure_window):
     num_samples = len(samples)
     cdf = np.arange(1, num_samples + 1) / float(num_samples)
     
-    plt.plot(sorted(samples), cdf, color="black", linestyle='none', marker='.', label='samples')
-    plt.plot(x, fit_cdf_values, color="blue", marker='none', label='fit CDF')
+    if max_value:
+        x_to_plot = x[x <= max_value]
+        samples_to_plot = filter(lambda v: v <= max_value, sorted(samples))
+    else:
+        x_to_plot = x
+        samples_to_plot = sorted(samples)
+
+    fit_cdf_values_to_plot = fit_cdf_values[:len(x_to_plot)]
+    cdf_to_plot = cdf[:len(samples_to_plot)]
+    
+    plt.plot(samples_to_plot, cdf_to_plot, color="black", linestyle='none',
+             marker='.', label='samples')
+    plt.plot(x_to_plot, fit_cdf_values_to_plot, color="blue", marker='none', label='fit CDF')
 
     if failure_window:
-        failure_pdf = failure_prob(fit_dist, x, failure_window)
+        failure_pdf = failure_prob(fit_dist, x_to_plot, failure_window)
         max_i, max_val = np.argmax(failure_pdf), np.max(failure_pdf)
         print "Max failure prob %f at time %f" % (max_val, x[max_i])
-        plt.plot(x, failure_pdf, color="red", marker='none', 
+        plt.plot(x_to_plot, failure_pdf, color="red", marker='none', 
                  label="%d-second\nfailure PDF" % failure_window)
+
+
 
 def generate_weibull_samples(num_samples=100, params=None):
     fixed_shape = 2.0
@@ -67,14 +89,25 @@ def generate_weibull_samples(num_samples=100, params=None):
     print "actual: (shape=%f loc=%f scale=%f)" % (fixed_shape, fixed_loc, fixed_scale)
     weibull = stats.weibull_min(fixed_shape, loc=fixed_loc, scale=fixed_scale)
 
-    max_value = 10.0
-    
-    x = cdf_xvalues(max_value)
-    cdf_values = weibull.cdf(x)
     samples = weibull.rvs(num_samples)
+    if max_value:
+        x = cdf_xvalues(max_value)
+    else:
+        x = cdf_xvalues(max(samples))
+    cdf_values = weibull.cdf(x)
 
     plt.plot(x, cdf_values, color="green", marker='none', label='actual CDF')
     return samples
+
+def plot_weibull_ccdf(shape, scale, max_value):
+    weibull = stats.weibull_min(shape, loc=0.0, scale=scale)
+
+    x = cdf_xvalues(max_value)
+    ccdf_values = 1 - weibull.cdf(x)
+    print ("Weibull: shape %f scale %f mean %f median %f" 
+           % (shape, scale, weibull.mean(), weibull.median()))
+    plt.loglog(x, ccdf_values)
+    
 
 def main():
     import argparse
@@ -84,16 +117,32 @@ def main():
     parser.add_argument("--stdin", action="store_true", default=False)
     parser.add_argument("--failure-window", type=int)
     parser.add_argument("--kaist-paper-params", action="store_true", default=False)
+    parser.add_argument("--max-value", type=float)
     args = parser.parse_args()
+    
+    if args.max_value:
+        global max_value
+        max_value = args.max_value
+
     if args.gen_samples:
         samples = generate_weibull_samples(args.gen_samples, args.params)
     elif args.stdin:
         samples = [float(x.strip()) for x in sys.stdin.readlines()]
     elif args.kaist_paper_params:
+        # None of these seem to match the CCDF in the paper.
+        plot_weibull_ccdf(0.52, 6.17 * np.e - 4, 100)
+        plt.figure()
+        plot_weibull_ccdf(0.52, 6.17 * (np.e ** -4), 100)
+        plt.figure()
+        plot_weibull_ccdf(0.52, 6.17 * (10 ** -4), 100)
+        plt.figure()
+
         samples = generate_weibull_samples(100000, params=[0.52, 6.17 * np.e - 4])
         if args.failure_window:
             args.failure_window /= 3600.0 # seconds to hours
             print "Converted failure window to %f hours" % args.failure_window
+
+        
         
     else:
         samples = generate_weibull_samples(params=args.params)
