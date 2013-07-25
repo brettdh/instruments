@@ -169,12 +169,21 @@ Estimator::valueMeetsConditions(double value)
 double 
 Estimator::getConditionalWeight(double value)
 {
+    /*
+     * The weighting is bogus.  What's really going on here is just
+     * a conditional probability expectation, which  means that
+     * the weights on out-of-bounds values should just be zero.
+     
     if (conditions.count(AT_LEAST) > 0 && value < conditions[AT_LEAST]) {
         // further below bound = lower weight
         return value / conditions[AT_LEAST];
     } else if (conditions.count(AT_MOST) > 0 && value > conditions[AT_MOST]) {
         // further above bound = lower weight
         return conditions[AT_MOST] / value;
+    */
+    if ((conditions.count(AT_LEAST) > 0 && value < conditions[AT_LEAST]) ||
+        (conditions.count(AT_MOST) > 0 && value > conditions[AT_MOST])) {
+        return 0.0;
     } else {
         // within bounds = even weight
         return 1.0;
