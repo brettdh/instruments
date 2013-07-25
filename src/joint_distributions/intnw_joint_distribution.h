@@ -49,7 +49,12 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     double ***singular_samples_values;
     size_t **singular_samples_count;
 
+//#define WIFI_SESSION_LENGTH_ESTIMATOR
+#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
     double ****wifi_strategy_saved_values;
+#else
+    double ***wifi_strategy_saved_values;
+#endif
     double ***cellular_strategy_saved_values;
 
     std::map<std::pair<Strategy *, typesafe_eval_fn_t>, double> cache;
