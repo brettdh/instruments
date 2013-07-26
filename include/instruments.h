@@ -268,9 +268,9 @@ typedef void * instruments_continuous_distribution_t;
  */
 CDECL instruments_continuous_distribution_t create_continuous_distribution(double shape, double scale);
 
-/** Destroy the given distribution object.
+/** Frees the given distribution object.
  */
-CDECL void destroy_continuous_distribution(instruments_continuous_distribution_t distribution);
+CDECL void free_continuous_distribution(instruments_continuous_distribution_t distribution);
 
 /** Returns the probability that a sample from the distribution 
  *  is in [lower, upper] given that it is >= lower.

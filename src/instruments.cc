@@ -222,7 +222,7 @@ instruments_continuous_distribution_t create_continuous_distribution(double shap
     return new ContinuousDistribution(shape, scale);
 }
 
-void destroy_continuous_distribution(instruments_continuous_distribution_t distribution_handle)
+void free_continuous_distribution(instruments_continuous_distribution_t distribution_handle)
 {
     ContinuousDistribution *dist = (ContinuousDistribution *) distribution_handle;
     delete dist;
