@@ -28,11 +28,8 @@ using std::runtime_error; using std::string;
 static const size_t WIFI_STRATEGY_INDEX = 0;
 static const size_t CELLULAR_STRATEGY_INDEX = 1;
 
-#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
-static const size_t NUM_ESTIMATORS_SINGULAR[] = {3, 2};
-#else
-static const size_t NUM_ESTIMATORS_SINGULAR[] = {2, 2};
-#endif
+static const size_t WIFI_ESTIMATORS_WITH_SESSIONS = 3;
+static size_t NUM_ESTIMATORS_SINGULAR[] = {2, 2};
 
 static const size_t REDUNDANT_STRATEGY_CHILDREN = 2;
 
@@ -58,7 +55,6 @@ static double **create_array(size_t dim1, size_t dim2, double value)
     return array;
 }
 
-#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
 static double ***create_array(size_t dim1, size_t dim2, size_t dim3, double value)
 {
     double ***array = new double**[dim1];
@@ -67,7 +63,6 @@ static double ***create_array(size_t dim1, size_t dim2, size_t dim3, double valu
     }
     return array;
 }
-#endif
 
 static void destroy_array(double *array)
 {
@@ -76,21 +71,23 @@ static void destroy_array(double *array)
 
 static void destroy_array(double **array, size_t dim1)
 {
-    for (size_t i = 0; i < dim1; ++i) {
-        destroy_array(array[i]);
+    if (array) {
+        for (size_t i = 0; i < dim1; ++i) {
+            destroy_array(array[i]);
+        }
     }
     delete [] array;
 }
 
-#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
 static void destroy_array(double ***array, size_t dim1, size_t dim2)
 {
-    for (size_t i = 0; i < dim1; ++i) {
-        destroy_array(array[i], dim2);
+    if (array) {
+        for (size_t i = 0; i < dim1; ++i) {
+            destroy_array(array[i], dim2);
+        }
     }
     delete [] array;
 }
-#endif
 
 static double *get_estimator_values(StatsDistribution *estimator_samples, 
                                     double (StatsDistribution::Iterator::*fn)(size_t), size_t& count)
@@ -145,12 +142,18 @@ IntNWJointDistribution::IntNWJointDistribution(StatsDistributionType dist_type,
 {
     strategy_arg = NULL;
     chooser_arg = NULL;
+    wifi_uses_sessions = false;
 
     assert(strategies.size() == NUM_STRATEGIES);
     for (size_t i = 0; i < strategies.size(); ++i) {
         if (!strategies[i]->isRedundant()) {
             singular_strategies.push_back(strategies[i]);
             singular_strategy_estimators.push_back(strategies[i]->getEstimators());
+            if (singular_strategy_estimators.back().size() == WIFI_ESTIMATORS_WITH_SESSIONS) {
+                assert(i == WIFI_STRATEGY_INDEX);
+                wifi_uses_sessions = true;
+                NUM_ESTIMATORS_SINGULAR[i] = WIFI_ESTIMATORS_WITH_SESSIONS;
+            }
         }
     }
     assert(singular_strategies.size() == REDUNDANT_STRATEGY_CHILDREN);
@@ -158,13 +161,11 @@ IntNWJointDistribution::IntNWJointDistribution(StatsDistributionType dist_type,
     singular_probabilities = new double**[singular_strategy_estimators.size()];
     singular_samples_values = new double**[singular_strategy_estimators.size()];
     singular_samples_count = new size_t*[singular_strategy_estimators.size()];
-#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
-    wifi_strategy_saved_values = new double***[NUM_SAVED_VALUE_TYPES];
-#else
+    wifi_strategy_with_sessions_saved_values = new double***[NUM_SAVED_VALUE_TYPES];
     wifi_strategy_saved_values = new double**[NUM_SAVED_VALUE_TYPES];
-#endif
     cellular_strategy_saved_values = new double**[NUM_SAVED_VALUE_TYPES];
     for (size_t i = 0; i < NUM_SAVED_VALUE_TYPES; ++i) {
+        wifi_strategy_with_sessions_saved_values[i] = NULL;
         wifi_strategy_saved_values[i] = NULL;
         cellular_strategy_saved_values[i] = NULL;
     }
@@ -192,6 +193,7 @@ IntNWJointDistribution::~IntNWJointDistribution()
     delete [] singular_probabilities;
     delete [] singular_samples_values;
     delete [] singular_samples_count;
+    delete [] wifi_strategy_with_sessions_saved_values;
     delete [] wifi_strategy_saved_values;
     delete [] cellular_strategy_saved_values;
 
@@ -259,12 +261,16 @@ IntNWJointDistribution::getEstimatorSamplesDistributions()
         }
     }
     for (size_t i = 0; i < NUM_SAVED_VALUE_TYPES; ++i) {
-        wifi_strategy_saved_values[i] = create_array(singular_samples_count[0][0],
-                                                     singular_samples_count[0][1],
-#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
-                                                     singular_samples_count[0][2],
-#endif
-                                                     DBL_MAX);
+        if (wifi_uses_sessions) {
+            wifi_strategy_with_sessions_saved_values[i] = create_array(singular_samples_count[0][0],
+                                                                       singular_samples_count[0][1],
+                                                                       singular_samples_count[0][2],
+                                                                       DBL_MAX);
+        } else {
+            wifi_strategy_saved_values[i] = create_array(singular_samples_count[0][0],
+                                                         singular_samples_count[0][1],
+                                                         DBL_MAX);
+        }
         cellular_strategy_saved_values[i] = create_array(singular_samples_count[1][0],
                                                          singular_samples_count[1][1],
                                                          DBL_MAX);
@@ -275,12 +281,12 @@ void
 IntNWJointDistribution::clearEstimatorSamplesDistributions()
 {
     for (size_t i = 0; i < NUM_SAVED_VALUE_TYPES; ++i) {
-        destroy_array(wifi_strategy_saved_values[i], singular_samples_count[0][0]
-#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
-            , singular_samples_count[0][1]
-#endif
-            );
+        destroy_array(wifi_strategy_with_sessions_saved_values[i], 
+                      singular_samples_count[0][0],
+                      singular_samples_count[0][1]);
+        destroy_array(wifi_strategy_saved_values[i], singular_samples_count[0][0]);
         destroy_array(cellular_strategy_saved_values[i], singular_samples_count[1][0]);
+        wifi_strategy_with_sessions_saved_values[i] = NULL;
         wifi_strategy_saved_values[i] = NULL;
         cellular_strategy_saved_values[i] = NULL;
     }
@@ -349,21 +355,21 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
             current_strategy_estimators = singular_strategy_estimators[i];
             samples_count = singular_samples_count[i];
             strategy_probabilities = singular_probabilities[i];
-
+            
             wifi = (i == WIFI_STRATEGY_INDEX);
             
             break;
         }
     }
     assert(samples_count);
-
+    
     double weightedSum = 0.0;
-
+    
     size_t max_i, max_j, max_k=0;
     max_i = samples_count[0];
     max_j = samples_count[1];
-
-    if (wifi) {
+    
+    if (wifi && wifi_uses_sessions) {
         max_k = samples_count[2];
     }
 
@@ -390,19 +396,19 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
             estimatorIndices[current_strategy_estimators[1]] = j;
             double probability = strategy_probabilities[0][i] * strategy_probabilities[1][j];
             if (wifi) {
-#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
-                for (size_t k = 0; k < max_k; ++k) {
-                    estimatorIndices[current_strategy_estimators[2]] = k;
-                    double k_probability = probability * strategy_probabilities[2][k];
+                if (wifi_uses_sessions) {
+                    for (size_t k = 0; k < max_k; ++k) {
+                        estimatorIndices[current_strategy_estimators[2]] = k;
+                        double k_probability = probability * strategy_probabilities[2][k];
+                        double value = fn(this, strategy_arg, chooser_arg);
+                        wifi_strategy_with_sessions_saved_values[saved_value_type][i][j][k] = value;
+                        weightedSum += value * k_probability;
+                    }
+                } else {
                     double value = fn(this, strategy_arg, chooser_arg);
-                    wifi_strategy_saved_values[saved_value_type][i][j][k] = value;
-                    weightedSum += value * k_probability;
+                    wifi_strategy_saved_values[saved_value_type][i][j] = value;
+                    weightedSum += (value * probability);
                 }
-#else
-                double value = fn(this, strategy_arg, chooser_arg);
-                wifi_strategy_saved_values[saved_value_type][i][j] = value;
-                weightedSum += (value * probability);
-#endif
             } else {
                 double value = fn(this, strategy_arg, chooser_arg);
                 cellular_strategy_saved_values[saved_value_type][i][j] = value;
@@ -456,24 +462,24 @@ ensure_values_valid(double **saved_values, size_t max_i, size_t max_j,
 void
 IntNWJointDistribution::ensureValidMemoizedValues(eval_fn_type_t saved_value_type)
 {
-    size_t max_i, max_j, max_m, max_n;  /* counts for: */
+    size_t max_i, max_j, max_k, max_m, max_n;  /* counts for: */
     max_i = singular_samples_count[0][0]; /* (strategy 0, estimator 0) */
     max_j = singular_samples_count[0][1]; /* (strategy 0, estimator 1) */
-#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
-    size_t max_k = singular_samples_count[0][2]; /* (strategy 0, estimator 2) */
-#endif
+    if (wifi_uses_sessions) {
+        max_k = singular_samples_count[0][2]; /* (strategy 0, estimator 2) */
+    }
     max_m = singular_samples_count[1][0]; /* (strategy 1, estimator 3) */
     max_n = singular_samples_count[1][1]; /* (strategy 1, estimator 4) */
 
-#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
-    for (size_t i = 0; i < max_i; ++i) {
-        ensure_values_valid(wifi_strategy_saved_values[saved_value_type][i], max_j, max_k,
+    if (wifi_uses_sessions) {
+        for (size_t i = 0; i < max_i; ++i) {
+            ensure_values_valid(wifi_strategy_with_sessions_saved_values[saved_value_type][i], max_j, max_k,
+                                singular_strategies[0]->getEvalFn(saved_value_type));
+        }
+    } else {
+        ensure_values_valid(wifi_strategy_saved_values[saved_value_type], max_i, max_j,
                             singular_strategies[0]->getEvalFn(saved_value_type));
     }
-#else
-    ensure_values_valid(wifi_strategy_saved_values[saved_value_type], max_i, max_j,
-                        singular_strategies[0]->getEvalFn(saved_value_type));
-#endif
     ensure_values_valid(cellular_strategy_saved_values[saved_value_type], max_m, max_n,
                         singular_strategies[1]->getEvalFn(saved_value_type));
 }

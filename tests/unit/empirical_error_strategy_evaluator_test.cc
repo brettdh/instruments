@@ -23,7 +23,8 @@ using std::ostringstream;
 
 CPPUNIT_TEST_SUITE_REGISTRATION(EmpiricalErrorStrategyEvaluatorTest);
 
-#include "intnw_joint_distribution.h"
+// should work either way.
+//#define WIFI_SESSION_LENGTH_ESTIMATOR
 #ifdef WIFI_SESSION_LENGTH_ESTIMATOR
 const int NUM_INTNW_ESTIMATORS = 5;
 const int CELLULAR_ESTIMATORS_INDEX = 3;
