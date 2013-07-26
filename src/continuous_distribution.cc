@@ -2,7 +2,7 @@
 
 
 // creates a Weibull distribution.
-ContinuousDistribution::ContinuousDistribution(double shape_, double scale_)
+ContinuousDistribution::ContinuousDistribution(double shape, double scale)
     : distribution(shape, scale)
 {
 }

@@ -16,7 +16,9 @@ class ContinuousDistribution {
     double getProbabilityValueIsInRange(double lower, double upper);
 
   private:
-    boost::math::weibull_distribution distribution;
+    boost::math::weibull_distribution<double> distribution;
+
+    double cdf(double value);
 };
 
 #endif
