@@ -36,6 +36,7 @@ LOCAL_CPP_EXTENSION:=.cc
 LOCAL_MODULE := instruments
 LOCAL_SRC_FILES := $(addprefix ../src/, \
 	abstract_joint_distribution.cc \
+	continuous_distribution.cc \
 	debug.cc \
 	error_calculation.cc \
 	error_weight_params.cc \

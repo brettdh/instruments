@@ -28,7 +28,7 @@
                                                                         \
     for (size_t i = 0; i < max_i; ++i) {                                \
         double prob_i = singular_probabilities[0][0][i];                \
-        double **tmp_i_with_sessions, *tmp_i;                           \
+        double **tmp_i_with_sessions = NULL, *tmp_i = NULL;                           \
         if (wifi_uses_sessions) {                                       \
             tmp_i_with_sessions = wifi_strategy_with_sessions_cur_saved_values[i]; \
         } else {                                                        \
@@ -36,7 +36,7 @@
         }                                                               \
         for (size_t j = 0; j < max_j; ++j) {                            \
             double prob_j = prob_i * singular_probabilities[0][1][j];   \
-            double *tmp_j_with_sessions;                                \
+            double *tmp_j_with_sessions = NULL;                                \
             double tmp_wifi_strategy = DBL_MAX;                         \
             if (wifi_uses_sessions) {                                   \
                 tmp_j_with_sessions = tmp_i_with_sessions[j];           \
@@ -44,7 +44,7 @@
                 tmp_wifi_strategy = tmp_i[j];                           \
             }                                                           \
             for (size_t k = 0; k < max_k; ++k) {                        \
-                double prob_k;                                          \
+                double prob_k = 0.0;                                          \
                 if (wifi_uses_sessions) {                               \
                     prob_k = prob_j * singular_probabilities[0][2][k];  \
                     tmp_wifi_strategy = tmp_j_with_sessions[k];         \
