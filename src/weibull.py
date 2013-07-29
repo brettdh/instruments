@@ -11,8 +11,9 @@ def fit_weibull(values):
     fit to the values using MLE.
     '''
     shape, location, scale = stats.weibull_min.fit(values, loc=0.0, floc=0.0)
-    return shape, location, scale
+    print "   fit: (shape=%f loc=%f scale=%f)" % (shape, location, scale)
 
+    return stats.weibull_min(shape, loc=location, scale=scale)
 
 def goodness_of_fit(shape, location, scale, values):
     '''Returns log-likelihood of the distribution given the observed values.'''
@@ -26,9 +27,9 @@ def cdf_xvalues(max_x):
     num_samples = 10000
     return np.arange(0.0, max_x * (1 + (1.0 / num_samples)), max_x / num_samples)
 
-def failure_prob(distribution, samples, failure_window):
+def failure_prob(distribution, samples, failure_window, tx_time=0.0):
     '''
-       p(failure) = Pr(X < cur_x + failure_window | X >= cur_x)
+       p(failure) = Pr(X < cur_x + tx_time + failure_window | X >= cur_x)
        
        Pr(X < upper | X >= lower)
        = Pr(X < upper ^ X >= lower) / Pr(X >= lower)
@@ -45,17 +46,20 @@ def failure_prob(distribution, samples, failure_window):
 
 max_value = None
 
-def plot_fit(samples, failure_window):
-    shape, loc, scale = fit_weibull(samples)
-    x = cdf_xvalues(max(samples))
+def plot_fit(samples, failure_window, xlabel="value"):
+    fit_dist = fit_weibull(samples)
+    if max_value:
+        x = cdf_xvalues(max_value)
+    else:
+        x = cdf_xvalues(max(samples))
 
-    print "   fit: (shape=%f loc=%f scale=%f)" % (shape, loc, scale)
-    fit_dist = stats.weibull_min(shape, loc=loc, scale=scale)
     fit_cdf_values = fit_dist.cdf(x)
 
     num_samples = len(samples)
-    cdf = np.arange(1, num_samples + 1) / float(num_samples)
+    samples = [0.0] + samples
+    cdf = np.arange(num_samples + 1) / float(num_samples)
     
+
     if max_value:
         x_to_plot = x[x <= max_value]
         samples_to_plot = filter(lambda v: v <= max_value, sorted(samples))
@@ -66,7 +70,7 @@ def plot_fit(samples, failure_window):
     fit_cdf_values_to_plot = fit_cdf_values[:len(x_to_plot)]
     cdf_to_plot = cdf[:len(samples_to_plot)]
     
-    plt.plot(samples_to_plot, cdf_to_plot, color="black", linestyle='none',
+    plt.step(samples_to_plot, cdf_to_plot, where="post", color="black", #linestyle='none',
              marker='.', label='samples')
     plt.plot(x_to_plot, fit_cdf_values_to_plot, color="blue", marker='none', label='fit CDF')
 
@@ -77,7 +81,13 @@ def plot_fit(samples, failure_window):
         plt.plot(x_to_plot, failure_pdf, color="red", marker='none', 
                  label="%d-second\nfailure PDF" % failure_window)
 
+    fit_pdf_values_to_plot = fit_dist.pdf(x_to_plot)
+    plt.xlabel(xlabel)
+    plt.legend(loc=2)
 
+    plt.figure()
+    plt.plot(x_to_plot, fit_pdf_values_to_plot, label="fit PDF")
+    
 
 def generate_weibull_samples(num_samples=100, params=None):
     fixed_shape = 2.0
@@ -88,24 +98,28 @@ def generate_weibull_samples(num_samples=100, params=None):
 
     print "actual: (shape=%f loc=%f scale=%f)" % (fixed_shape, fixed_loc, fixed_scale)
     weibull = stats.weibull_min(fixed_shape, loc=fixed_loc, scale=fixed_scale)
+    return generate_samples(weibull, num_samples)
 
-    samples = weibull.rvs(num_samples)
+def generate_samples(distribution, num_samples):
+    samples = distribution.rvs(num_samples)
     if max_value:
         x = cdf_xvalues(max_value)
     else:
         x = cdf_xvalues(max(samples))
-    cdf_values = weibull.cdf(x)
+    cdf_values = distribution.cdf(x)
 
     plt.plot(x, cdf_values, color="green", marker='none', label='actual CDF')
     return samples
 
 def plot_weibull_ccdf(shape, scale, max_value):
     weibull = stats.weibull_min(shape, loc=0.0, scale=scale)
+    return plot_ccdf(distribution, "Weibull")
 
+def plot_ccdf(distribution, name):
     x = cdf_xvalues(max_value)
-    ccdf_values = 1 - weibull.cdf(x)
-    print ("Weibull: shape %f scale %f mean %f median %f" 
-           % (shape, scale, weibull.mean(), weibull.median()))
+    ccdf_values = 1 - distribution.cdf(x)
+    print ("%s: shape %f scale %f mean %f median %f" 
+           % (name, shape, scale, distribution.mean(), distribution.median()))
     plt.loglog(x, ccdf_values)
     
 
@@ -118,6 +132,7 @@ def main():
     parser.add_argument("--failure-window", type=int)
     parser.add_argument("--kaist-paper-params", action="store_true", default=False)
     parser.add_argument("--max-value", type=float)
+    parser.add_argument("--xlabel", default="value")
     args = parser.parse_args()
     
     if args.max_value:
@@ -128,6 +143,7 @@ def main():
         samples = generate_weibull_samples(args.gen_samples, args.params)
     elif args.stdin:
         samples = [float(x.strip()) for x in sys.stdin.readlines()]
+        print samples
     elif args.kaist_paper_params:
         # None of these seem to match the CCDF in the paper.
         plot_weibull_ccdf(0.52, 6.17 * np.e - 4, 100)
@@ -147,10 +163,7 @@ def main():
     else:
         samples = generate_weibull_samples(params=args.params)
         
-    plot_fit(samples, args.failure_window)
-
-    plt.xlabel("value")
-    plt.legend(loc=4)
+    plot_fit(samples, args.failure_window, xlabel=args.xlabel)
     plt.show()
 
 if __name__ == '__main__':
