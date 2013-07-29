@@ -262,6 +262,24 @@ CDECL void set_estimator_condition(instruments_estimator_t estimator,
  */
 CDECL void clear_estimator_conditions(instruments_estimator_t estimator);
 
+typedef void * instruments_continuous_distribution_t;
+
+/** Create a Weibull distribution with the given parameters.
+ */
+CDECL instruments_continuous_distribution_t create_continuous_distribution(double shape, double scale);
+
+/** Frees the given distribution object.
+ */
+CDECL void free_continuous_distribution(instruments_continuous_distribution_t distribution);
+
+/** Returns the probability that a sample from the distribution 
+ *  is in [lower, upper] given that it is >= lower.
+ *  Note that this is NOT Pr(X >= lower ^ X < upper); 
+ *  it is instead Pr(X < upper | X >= lower).
+ */
+CDECL double get_probability_value_is_in_range(instruments_continuous_distribution_t distribution,
+                                               double lower, double upper);
+
 typedef enum {
     INSTRUMENTS_DEBUG_LEVEL_NONE=0, /* shut it. */
     INSTRUMENTS_DEBUG_LEVEL_ERROR,  /* exceptional situations only. */

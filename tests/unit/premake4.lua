@@ -21,6 +21,7 @@ project "InstrumentsTests"
   }
   local support_files = {
      "abstract_joint_distribution.cc",
+     "continuous_distribution.cc",
      "evaluators/bayesian_strategy_evaluator.cc",
      "debug.cc",
      "evaluators/confidence_bounds_strategy_evaluator.cc",

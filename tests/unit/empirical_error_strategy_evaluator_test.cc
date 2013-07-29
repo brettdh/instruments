@@ -23,6 +23,18 @@ using std::ostringstream;
 
 CPPUNIT_TEST_SUITE_REGISTRATION(EmpiricalErrorStrategyEvaluatorTest);
 
+// should work either way.
+//#define WIFI_SESSION_LENGTH_ESTIMATOR
+#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
+const int NUM_INTNW_ESTIMATORS = 5;
+const int CELLULAR_ESTIMATORS_INDEX = 3;
+#else
+const int NUM_INTNW_ESTIMATORS = 4;
+const int CELLULAR_ESTIMATORS_INDEX = 2;
+#endif
+
+
+
 double get_time(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
     Estimator *estimator = (Estimator *) strategy_arg;
@@ -93,10 +105,10 @@ create_estimators_and_strategies(Estimator **estimators, size_t num_estimators,
     }
 
     strategies[0] = new Strategy(get_time_all_estimators, 
-                                 get_energy_cost, get_data_cost, estimators, (void *) 3);
+                                 get_energy_cost, get_data_cost, estimators, (void *) CELLULAR_ESTIMATORS_INDEX);
     strategies[1] = new Strategy(get_time_all_estimators, 
                                  get_energy_cost, get_data_cost, 
-                                 estimators + 3, (void *) 2);
+                                 estimators + CELLULAR_ESTIMATORS_INDEX, (void *) 2);
     strategies[2] = new Strategy((instruments_strategy_t *) strategies, 2);
 }
 
@@ -118,10 +130,9 @@ assertRestoredEvaluationMatches(Strategy **strategies, double *expected_values,
 void 
 EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
 {
-    const int NUM_INTNW_ESTIMATORS = 5;
     const int NUM_STRATEGIES = 3;
 
-    for (int i = 0; i < 5; ++i) {
+    for (int n = 0; n < 5; ++n) {
         Estimator *estimators[NUM_INTNW_ESTIMATORS];
         Strategy *strategies[NUM_STRATEGIES];
         create_estimators_and_strategies(estimators, NUM_INTNW_ESTIMATORS,
@@ -137,7 +148,7 @@ EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
             }
         }
 
-        void *chooser_args[] = { (void *) 3, (void *) 2 };
+        void *chooser_args[] = { (void *) CELLULAR_ESTIMATORS_INDEX, (void *) 2 };
         // skip redundant strategy, since its fn and arg are internal
         double expected_values[NUM_STRATEGIES-1];
         for (int i = 0; i < NUM_STRATEGIES-1; ++i) {
@@ -318,7 +329,6 @@ EmpiricalErrorStrategyEvaluatorTest::testEstimatorConditions()
 {
     //instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
 
-    const int NUM_INTNW_ESTIMATORS = 5;
     const int NUM_STRATEGIES = 3;
 
     Estimator *estimators[NUM_INTNW_ESTIMATORS];
@@ -333,14 +343,16 @@ EmpiricalErrorStrategyEvaluatorTest::testEstimatorConditions()
     
     for (int i = 0; i < 11; ++i) {
         estimators[0]->addObservation((i % 2 == 0) ? 5.0 : 6.0);
-        estimators[3]->addObservation((i % 2 == 0) ? 1.0 : 20.0);
+        estimators[CELLULAR_ESTIMATORS_INDEX]->addObservation((i % 2 == 0) ? 1.0 : 20.0);
     }
     estimators[1]->addObservation(0.0);
+#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
     estimators[2]->addObservation(0.0);
-    estimators[4]->addObservation(0.0);
+#endif
+    estimators[CELLULAR_ESTIMATORS_INDEX + 1]->addObservation(0.0);
 
     double mid_value = evaluator->expectedValue(strategies[0], strategies[0]->time_fn,
-                                                strategies[0]->strategy_arg, (void *) 3);
+                                                strategies[0]->strategy_arg, (void *) CELLULAR_ESTIMATORS_INDEX);
     assertValueBetweenErrors("mid-value", mid_value, 
                              calculate_error(6.0, 5.0),
                              calculate_error(5.0, 6.0));
@@ -353,20 +365,27 @@ EmpiricalErrorStrategyEvaluatorTest::testEstimatorConditions()
 
     CPPUNIT_ASSERT_MESSAGE("mid-value wins", mid_value < hilo_value);
 
-    estimators[3]->setCondition(AT_MOST, 2.0);
+    estimators[CELLULAR_ESTIMATORS_INDEX]->setCondition(AT_MOST, 2.0);
 
     hilo_value = evaluator->expectedValue(strategies[1], strategies[1]->time_fn,
                                           strategies[1]->strategy_arg, (void *) 2);
 
     CPPUNIT_ASSERT_MESSAGE("hilo-conditional-value wins", hilo_value < mid_value);
     
+#if 0
+    // just kidding.  the weighting was bogus.  all such weights are now zero.
     // based on weighting of out-of-bounds samples
     double normalizer = 5.0/11.0 + (5.0/11.0 * 2.0 / 20.0) + 1.0/11.0;
     double expected = (1.0 * 1.0/11.0) + (1.0 * (1.0/20.0) * (5.0/11.0)) + (20.0 * (2.0/20.0) * (5.0/11.0));
+#else
+    // just removed the terms with zero-weights.
+    double normalizer = 1.0/11.0 + 5.0/11.0;
+    double expected = 1.0 * 1.0/11.0 + (1.0/20.0 * 5.0/11.0);
+#endif
     MY_CPPUNIT_ASSERT_EQWITHIN_MESSAGE(expected/normalizer, hilo_value, 0.001, 
                                        "hilo-conditional-value matches expected");
 
-    estimators[3]->clearConditions();
+    estimators[CELLULAR_ESTIMATORS_INDEX]->clearConditions();
 
     hilo_value = evaluator->expectedValue(strategies[1], strategies[1]->time_fn,
                                           strategies[1]->strategy_arg, (void *) 2);

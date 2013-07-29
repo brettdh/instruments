@@ -12,6 +12,7 @@ using std::thread;
 #include "estimator_registry.h"
 #include "strategy_evaluator.h"
 #include "strategy_evaluation_context.h"
+#include "continuous_distribution.h"
 
 instruments_strategy_t
 make_strategy(eval_fn_t time_fn, /* return seconds */
@@ -214,4 +215,22 @@ void clear_estimator_conditions(instruments_estimator_t est_handle)
 {
     Estimator *estimator = static_cast<Estimator *>(est_handle);
     estimator->clearConditions();
+}
+
+instruments_continuous_distribution_t create_continuous_distribution(double shape, double scale)
+{
+    return new ContinuousDistribution(shape, scale);
+}
+
+void free_continuous_distribution(instruments_continuous_distribution_t distribution_handle)
+{
+    ContinuousDistribution *dist = (ContinuousDistribution *) distribution_handle;
+    delete dist;
+}
+
+double get_probability_value_is_in_range(instruments_continuous_distribution_t distribution_handle,
+                                         double lower, double upper)
+{
+    ContinuousDistribution *dist = (ContinuousDistribution *) distribution_handle;
+    return dist->getProbabilityValueIsInRange(lower, upper);
 }

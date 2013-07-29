@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include "strategy_evaluator.h"
 #include "trusted_oracle_strategy_evaluator.h"
 #include "empirical_error_strategy_evaluator.h"

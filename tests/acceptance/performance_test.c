@@ -94,7 +94,18 @@ static double get_sample()
     return normal_stddev * normal_sample + normal_mean;
 }
 
-static const size_t NUM_ESTIMATORS = 5;
+// should work either way.
+//#define WIFI_SESSION_LENGTH_ESTIMATOR
+#ifdef WIFI_SESSION_LENGTH_ESTIMATOR
+#define NUM_WIFI_ESTIMATORS 3
+#else
+#define NUM_WIFI_ESTIMATORS 2
+#endif
+
+static const int CELLULAR_ESTIMATORS_INDEX = NUM_WIFI_ESTIMATORS;
+#define NUM_CELLULAR_ESTIMATORS 2
+static const int NUM_ESTIMATORS = NUM_WIFI_ESTIMATORS + NUM_CELLULAR_ESTIMATORS;
+
 static const size_t NUM_STRATEGIES = 3;
 
 static void init_estimators(instruments_external_estimator_t *estimators,
@@ -121,12 +132,12 @@ static struct timeval run_test(int num_samples, enum EvalMethod method,
 
     struct strategy_args args[2] = {
         {
-        num_estimators: 3,
+        num_estimators: NUM_WIFI_ESTIMATORS,
         estimators: &estimators[0]
         },
         {
-        num_estimators: 2,
-        estimators: &estimators[3]
+        num_estimators: NUM_CELLULAR_ESTIMATORS,
+        estimators: &estimators[CELLULAR_ESTIMATORS_INDEX]
         },
     };
 
