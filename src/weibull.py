@@ -113,13 +113,13 @@ def generate_samples(distribution, num_samples):
 
 def plot_weibull_ccdf(shape, scale, max_value):
     weibull = stats.weibull_min(shape, loc=0.0, scale=scale)
-    return plot_ccdf(distribution, "Weibull")
+    print ("Weibull: shape %f scale %f mean %f median %f" 
+           % (shape, scale, weibull.mean(), weibull.median()))
+    return plot_ccdf(weibull)
 
-def plot_ccdf(distribution, name):
+def plot_ccdf(distribution):
     x = cdf_xvalues(max_value)
     ccdf_values = 1 - distribution.cdf(x)
-    print ("%s: shape %f scale %f mean %f median %f" 
-           % (name, shape, scale, distribution.mean(), distribution.median()))
     plt.loglog(x, ccdf_values)
     
 
@@ -146,19 +146,14 @@ def main():
         print samples
     elif args.kaist_paper_params:
         # None of these seem to match the CCDF in the paper.
-        plot_weibull_ccdf(0.52, 6.17 * np.e - 4, 100)
+        plot_weibull_ccdf(0.52, (6.17 * np.e - 4), 100)
         plt.figure()
-        plot_weibull_ccdf(0.52, 6.17 * (np.e ** -4), 100)
+        plot_weibull_ccdf(0.52, (6.17 * (np.e ** -4)), 100)
         plt.figure()
-        plot_weibull_ccdf(0.52, 6.17 * (10 ** -4), 100)
+        plot_weibull_ccdf(0.52, (6.17 * (10 ** -4)), 100)
         plt.figure()
 
-        samples = generate_weibull_samples(100000, params=[0.52, 6.17 * np.e - 4])
-        if args.failure_window:
-            args.failure_window /= 3600.0 # seconds to hours
-            print "Converted failure window to %f hours" % args.failure_window
-
-        
+        samples = generate_weibull_samples(100000, params=[0.52, (6.17 * np.e - 4) * 3600])
         
     else:
         samples = generate_weibull_samples(params=args.params)
