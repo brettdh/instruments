@@ -1,0 +1,89 @@
+\documentclass{article}
+\usepackage{fullpage,color}
+\usepackage{amsmath,amssymb,amsthm,enumitem,cancel,verbatim}
+\begin{document}
+
+Given a failure detection delay (window) of $W$ seconds, my first formulation
+of wifi failure penalty calculated at time $t$ was:
+\begin{equation*}
+TotalPenalty(t) = W * Pr(X < t + W | X \ge t)
+\end{equation*}
+or, the failover delay times the probability that the failure detection window
+at the end of the current wifi session overlaps with the current transfer.
+Problem: the failure penalty isn't the same for every point in the failure window.
+\begin{itemize}
+\item If the failure is observed IMMEDIATELY after the decision is made, 
+  the penalty is zero.
+\item If the failure occurs now and isn't observed until the full failure window
+  passes, the penalty is $W$ (window length).
+\end{itemize}
+If the failure window is $W$ seconds, the current time is $t$, and the failure 
+occurs at time $x \ge t$, then the penalty is simply:
+\begin{equation*}
+  Penalty(t, x) = \left\{
+  \begin{array}{lr}
+    x - t & : x < t + W\\
+    0     & : x \ge t + W
+  \end{array}
+  \right.
+\end{equation*}
+
+This means that the penalty should be expressed as an integral over the entire
+failure window, rather than just a constant multiplied by the probability that
+the current session length lies in the failure window.  Thus, the wifi failure 
+penalty as a function of the current time $t$ is:
+
+\begin{align*}
+TotalPenalty(t) & = \int_t^{t+W}{Penalty(t, x) * Pr(X = x | X \ge t) dx} &&  & \\
+% & = \int_t^{t+W}{Penalty(t, x) * \frac{Pr(X = x \land X \ge t)}{Pr(X \ge t)} dx} && \mbox{Conditional probability definition.} & \\ 
+& = \int_t^{t+W}{(x - t) * Pr(X = x | X \ge t) dx} &&  & \\
+& = \int_t^{t+W}{x * Pr(X = x | X \ge t) dx} - t \int_t^{t+W}{Pr(X = x | X \ge t) dx} &&  & \\
+\end{align*}
+I can use the truncated distribution formulation here to pull out some constants and 
+simplify the remainder of this.
+\begin{align*}
+Pr(X = x | X \ge t) & = \frac{Pr(X = x)}{1 - F(t)} && \mbox{as long as $x \ge t$; zero otherwise} & \\
+\end{align*}
+where $F(x)$ is the CDF.  Using this with the previous formula, we have
+\begin{align*}
+& = \int_t^{t+W}{x * \frac{Pr(X = x)}{1 - F(t)} dx} -
+  t \int_t^{t+W}{\frac{Pr(X = x)}{1 - F(t)} dx} && \mbox{Truncated distribution substitution} & \\
+& = \frac{1}{1 - F(t)}\left[\int_t^{t+W}{x * Pr(X = x) dx} -
+  t \int_t^{t+W}{Pr(X = x) dx}\right] &&  & \\
+& = \frac{1}{1 - F(t)}\left[\textcolor{red}{\int_t^{t+W}{x * Pr(X = x) dx}} -
+  t (F(t+W) - F(t))\right] &&  & \\
+\end{align*}
+...aaaand stuck again. Closer, I think, but I still have to
+calculate an integral that looks the expected value, but over an interval.
+
+\begin{comment}
+Actually, what about this...
+\begin{align*}
+  \int_t^{t+W}{x * Pr(X = x) dx}
+  & = \int_t^{\infty}{x * Pr(X = x) dx} - \int_{t+W}^{\infty}{x * Pr(X = x) dx}
+  & =
+% ...not sure where I was going with this.
+\end{align*}
+\end{comment}
+
+\begin{comment}
+Since I know how to integrate the conditional probability using the CDF, I'll use 
+integration by parts to simplify the rest of the integration.
+\begin{align*}
+          u  & = x \\
+          dv & = \frac{Pr(X = x \land X \ge t)}{1 - F(t)} dx \\
+  \int{u dv} & = u v - \int{v du} \\
+          du & = 1 dx \\
+           v & = \int{\frac{Pr(X = x \land X \ge t)}{1 - F(t)} dx} \\
+             & = \frac{F(x) - F(t)}{1 - F(t)} \\
+\end{align*}
+Then, using the formulation of integration by parts:
+\begin{align*}
+  \int{u dv} & = u v - \int{v du} \\
+             & = x \frac{F(x) - F(t)}{1 - F(t)}\biggr\rvert_t^{t+W} - \int_t^{t+W}{\frac{F(x) - F(t)}{1 - F(t)} dx} \\
+             & = \frac{1}{1 - F(t)} \left[x (F(x) - F(t))\biggr\rvert_t^{t+W} - \int_t^{t+W}{F(x) dx} - F(t)\right] \\
+  & = \frac{1}{1 - F(t)} \left[(t+W) (F(t+W) - F(t)) - \cancelto{0}{t (F(t) - F(t))} - \int_t^{t+W}{F(x) dx} - F(t)\right] \\
+\end{align*}
+\end{comment}
+
+\end{document}

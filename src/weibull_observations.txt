@@ -1,0 +1,28 @@
+p(failure) 
+    = Pr(X < cur_x + tx_time + failure_window | X >= cur_x)
+    = Pr(X < cur_x + tx_time + failure_window ^ X >= cur_x) / Pr(X >= cur_x)
+    = F(upper) - F(lower)
+      -------------------
+          1 - F(lower)
+     = 1 - e^{-((upper/scale)^shape)} - (1 - e^{-((lower/scale)^shape)})
+       ---------------------------------------------------------------
+                 1 - (1 - e^{-((lower/scale)^shape)})
+     = - e^{-((upper/scale)^shape)} + e^{-((lower/scale)^shape)}
+       ---------------------------------------------------------------
+                  e^{-((lower/scale)^shape)}
+     = - e^{-((upper/scale)^shape)}
+       ----------------------------   + 1
+         e^{-((lower/scale)^shape)}
+
+     =         {-((upper/scale)^shape) - (-((lower/scale)^shape))}
+         1 - e^
+     =         {(lower/scale)^shape - ((upper/scale)^shape)}
+         1 - e^
+     =         {(x/scale)^shape - (((x+C)/scale)^shape)}
+         1 - e^
+     =         {(   x   )^shape - (( x + C )^shape)}
+                  -----             -------
+                  scale              scale
+         1 - e^
+
+if shape is 1, this is constant.
