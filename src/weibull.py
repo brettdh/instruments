@@ -43,6 +43,8 @@ def failure_prob(distribution, samples, failure_window, tx_time=0.0):
     upper = samples + failure_window
     return ( cdf(upper) - cdf(lower)) / (1.0 - cdf(lower))
 
+def failure_penalty(failure_probs, failure_window):
+    return failure_probs * failure_window / 2.0
 
 max_value = None
 
@@ -74,16 +76,26 @@ def plot_fit(samples, failure_window, xlabel="value"):
              marker='.', label='samples')
     plt.plot(x_to_plot, fit_cdf_values_to_plot, color="blue", marker='none', label='fit CDF')
 
+    plt.xlabel(xlabel)
+    plt.ylabel("probability")
     if failure_window:
         failure_pdf = failure_prob(fit_dist, x_to_plot, failure_window)
         max_i, max_val = np.argmax(failure_pdf), np.max(failure_pdf)
-        print "Max failure prob %f at time %f" % (max_val, x[max_i])
+        max_penalty = failure_penalty(max_val, failure_window)
+        print "Max failure prob %f (penalty %f) at time %f" % (max_val, max_penalty, x[max_i])
         plt.plot(x_to_plot, failure_pdf, color="red", marker='none', 
-                 label="%d-second\nfailure PDF" % failure_window)
+                 label="%f-second\nfailure PDF" % failure_window)
+
+        plt.legend(loc=4)
+
+        penalties = failure_penalty(failure_pdf, failure_window)
+        twin = plt.twinx()
+        twin.set_ylabel("Failure penalty (sec)")
+        twin.plot(x_to_plot, penalties, color="purple", linestyle="-", marker="none",
+                  label="failure penalty")
+        plt.legend(loc=4)
 
     fit_pdf_values_to_plot = fit_dist.pdf(x_to_plot)
-    plt.xlabel(xlabel)
-    plt.legend(loc=2)
 
     plt.figure()
     plt.plot(x_to_plot, fit_pdf_values_to_plot, label="fit PDF")
@@ -129,7 +141,7 @@ def main():
     parser.add_argument("--gen-samples", type=int, metavar="NUM_SAMPLES")
     parser.add_argument("--params", type=float, nargs=2, metavar=['SHAPE', 'SCALE'])
     parser.add_argument("--stdin", action="store_true", default=False)
-    parser.add_argument("--failure-window", type=int)
+    parser.add_argument("--failure-window", type=float)
     parser.add_argument("--kaist-paper-params", action="store_true", default=False)
     parser.add_argument("--max-value", type=float)
     parser.add_argument("--xlabel", default="value")
