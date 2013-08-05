@@ -158,16 +158,8 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributio
 #include "error_weight_params.h"
 using instruments::MAX_SAMPLES;
 using instruments::NEW_SAMPLE_WEIGHT;
-
-// new sample weight is large for agile, small for stable.
-//  the 'gain' in EWMA parlance is always the weight on the old value.
-//  so here's the gain for straight use in an EWMA calculation.
-static const double EWMA_GAIN = 1.0 - NEW_SAMPLE_WEIGHT;
-
-static void update_ewma(double& ewma, double spot, double gain)
-{
-    ewma = ewma * gain + spot * (1.0 - gain);
-}
+using instruments::EWMA_GAIN;
+using instruments::update_ewma;
 
 void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionEWMA(double log_error)

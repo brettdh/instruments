@@ -7,8 +7,10 @@
 //void IntNWJointDistribution::FN_BODY_WITH_COMBINER(double& weightedSum, double (*COMBINER)(double, double), size_t saved_value_type) {
 #define FN_BODY_WITH_COMBINER(weightedSum, COMBINER, saved_value_type) \
     assert(wifi_strategy_saved_values != NULL);                  \
+    assert(wifi_strategy_with_sessions_saved_values != NULL);                  \
     assert(cellular_strategy_saved_values != NULL);                  \
-    assert(wifi_strategy_saved_values[saved_value_type] != NULL); \
+    assert(wifi_strategy_saved_values[saved_value_type] != NULL ||    \
+           wifi_strategy_with_sessions_saved_values[saved_value_type] != NULL);     \
     assert(cellular_strategy_saved_values[saved_value_type] != NULL); \
                                                                                        \
     size_t max_i, max_j, max_k, max_m, max_n;  /* counts for: */              \

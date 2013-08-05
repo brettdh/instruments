@@ -12,11 +12,11 @@ class Estimator;
 
 class StatsDistributionBinned : public StatsDistribution {
   public:
-    StatsDistributionBinned();
-    StatsDistributionBinned(std::vector<double> breaks);
-    StatsDistributionBinned(double min, double max, size_t num_bins);
+    StatsDistributionBinned(bool weighted_error_ = false);
+    StatsDistributionBinned(std::vector<double> breaks, bool weighted_error_ = false);
+    StatsDistributionBinned(double min, double max, size_t num_bins, bool weighted_error_ = false);
 
-    static StatsDistributionBinned *create(Estimator *estimator);
+    static StatsDistributionBinned *create(Estimator *estimator, bool weighted_error_ = false);
     
     virtual void addValue(double value);
     virtual void appendToFile(const std::string& name, std::ofstream& out);
@@ -64,6 +64,10 @@ class StatsDistributionBinned : public StatsDistribution {
     // the value of each will be the average of all values added to the tail.
     //  TODO: decide between mean and median for the tails.
 
+    // total of bin weights = probability normalizer
+    std::vector<double> bin_weights; //size: number of bins + 2 (left & right tail)
+    double total_bin_weights; // computed and cached upon each sample addition
+
     // used until we have "enough" samples to pick bins.
     StatsDistributionAllSamples all_samples;
 
@@ -76,7 +80,7 @@ class StatsDistributionBinned : public StatsDistribution {
     void setBreaks(const std::vector<double>& new_breaks);
 
     void addToHistogram(double value);
-    void addToTail(int& count, double& mid, double value);
+    void addToTail(int index, double value);
     bool shouldRebin();
     void calculateBins();
     bool binsAreSet();
@@ -84,6 +88,7 @@ class StatsDistributionBinned : public StatsDistribution {
     void updateBin(int index, double value);
     double probabilityAtIndex(size_t index);
 
+    void updateBinWeights(int new_sample_bin);
 
     std::string r_samples_name;
     void initRInside();
@@ -92,6 +97,8 @@ class StatsDistributionBinned : public StatsDistribution {
 
     void assertValidHistogram();
     void printHistogram();
+
+    bool weighted_error;
 };
 
 #endif

@@ -350,7 +350,7 @@ BayesianStrategyEvaluator::processObservation(Estimator *estimator, double obser
 StatsDistributionBinned *
 BayesianStrategyEvaluator::createStatsDistribution(Estimator *estimator)
 {
-    return StatsDistributionBinned::create(estimator);
+    return StatsDistributionBinned::create(estimator, weighted);
 }
 
 

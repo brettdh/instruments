@@ -110,3 +110,40 @@ StatsDistributionTest::sanityCheckPDF(StatsDistribution *dist)
     
     CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0, pdf_sum, 0.001);
 }
+
+void
+StatsDistributionTest::testBinnedWeightedSamples()
+{
+    StatsDistribution *all_samples = new StatsDistributionAllSamples(true);
+    StatsDistribution *binned = new StatsDistributionBinned(breaks[0], 
+                                                            breaks[breaks.size() - 1], 
+                                                            breaks.size() - 1, true);
+    all_samples->addValue(breaks[0] - 0.5);
+    binned->addValue(breaks[0] - 0.5);
+    sanityCheckPDF(all_samples);
+    sanityCheckPDF(binned);
+    for (size_t i = 0; i < breaks.size(); ++i) {
+        all_samples->addValue(breaks[i] + 0.5);
+        binned->addValue(breaks[i] + 0.5);
+        sanityCheckPDF(all_samples);
+        sanityCheckPDF(binned);
+    }
+
+    double last_prob = 0.0;
+    StatsDistribution::Iterator *all_samples_it, *binned_it;
+    for (all_samples_it = all_samples->getIterator(),
+             binned_it = binned->getIterator();
+         !all_samples_it->isDone() && !binned_it->isDone();
+         all_samples_it->advance(), binned_it->advance()) {
+        // probs should be monotonically increasing due to adding samples in order
+        //  and decreasing weight as samples age.
+        CPPUNIT_ASSERT(all_samples_it->probability() - last_prob > 0.001);
+        CPPUNIT_ASSERT(binned_it->probability() - last_prob > 0.001);
+        
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(all_samples_it->probability(), binned_it->probability(), 0.0001);
+        CPPUNIT_ASSERT_DOUBLES_EQUAL(all_samples_it->value(), binned_it->value(), 0.0001);
+        last_prob = all_samples_it->probability();
+    }
+    CPPUNIT_ASSERT(all_samples_it->isDone());
+    CPPUNIT_ASSERT(binned_it->isDone());
+}

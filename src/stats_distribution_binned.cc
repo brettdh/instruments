@@ -41,7 +41,8 @@ class NoRInsideOnAndroid : public runtime_error {
         runtime_error("Can't auto-determine histogram bins on Android. (no R)") {}
 };
 
-StatsDistributionBinned::StatsDistributionBinned()
+StatsDistributionBinned::StatsDistributionBinned(bool weighted_error_)
+    : all_samples(weighted_error_), weighted_error(weighted_error_)
 {
 #ifdef ANDROID
     throw NoRInsideOnAndroid();
@@ -51,7 +52,9 @@ StatsDistributionBinned::StatsDistributionBinned()
 #endif
 }
 
-StatsDistributionBinned::StatsDistributionBinned(vector<double> new_breaks)
+StatsDistributionBinned::StatsDistributionBinned(vector<double> new_breaks,
+                                                 bool weighted_error_)
+    : all_samples(weighted_error_), weighted_error(weighted_error_)
 {
     setBreaks(new_breaks);
     
@@ -64,6 +67,7 @@ StatsDistributionBinned::setBreaks(const vector<double>& new_breaks)
     preset_breaks = true;
     breaks = new_breaks;
     counts.resize(breaks.size() + 1, 0);
+    bin_weights.resize(breaks.size() + 2, 0.0);
     mids.clear();
     mids.push_back(0.0);
     for (size_t i = 0; i < breaks.size() - 1; ++i) {
@@ -76,7 +80,9 @@ StatsDistributionBinned::setBreaks(const vector<double>& new_breaks)
 // construct a regular histogram with num_bins bins ranging from min to max.
 // e.g. min=0, max=10, num_bins=4 results in 
 //      breaks: [0, 2.5, 5, 7.5, 10], the endpoints of 4 bins.
-StatsDistributionBinned::StatsDistributionBinned(double min, double max, size_t num_bins)
+StatsDistributionBinned::StatsDistributionBinned(double min, double max, size_t num_bins,
+                                                 bool weighted_error_)
+    : all_samples(weighted_error_), weighted_error(weighted_error_)
 {
     vector<double> new_breaks;
     double width = (max - min) / num_bins;
@@ -87,13 +93,13 @@ StatsDistributionBinned::StatsDistributionBinned(double min, double max, size_t 
 }
 
 StatsDistributionBinned *
-StatsDistributionBinned::create(Estimator *estimator)
+StatsDistributionBinned::create(Estimator *estimator, bool weighted_error_)
 {
     if (estimator && estimator->hasRangeHints()) {
         EstimatorRangeHints hints = estimator->getRangeHints();
-        return new StatsDistributionBinned(hints.min, hints.max, hints.num_bins);
+        return new StatsDistributionBinned(hints.min, hints.max, hints.num_bins, weighted_error_);
     } else {
-        return new StatsDistributionBinned;
+        return new StatsDistributionBinned(weighted_error_);
     }
 }
 
@@ -140,7 +146,11 @@ double
 StatsDistributionBinned::probabilityAtIndex(size_t index)
 {
     ASSERT(index < counts.size());
-    return (double(counts[index]) / all_samples_sorted.size());
+    if (weighted_error) {
+        return bin_weights[index] / total_bin_weights;
+    } else {
+        return (double(counts[index]) / all_samples_sorted.size());
+    }
 }
 
 double 
@@ -270,9 +280,12 @@ void StatsDistributionBinned::calculateBins()
     mids.insert(mids.end(), tmp_mids.begin(), tmp_mids.end());
     mids.push_back(0.0);
 
-    counts.assign(1, 0);
-    counts.insert(counts.end(), tmp_counts.begin(), tmp_counts.end());
-    counts.push_back(0);
+    counts.assign(tmp_counts.size() + 2, 0);
+    bin_weights.resize(tmp_counts.size() + 2, 0.0);
+    for (double sample : samples) {
+        size_t index = getIndex(sample);
+        updateBin(index, sample);
+    }
     
     // tails are now empty, because all the data fits in the bins.
 
@@ -365,9 +378,37 @@ void
 StatsDistributionBinned::updateBin(int index, double value)
 {
     if (index == 0 || index == (int) breaks.size()) {
-        addToTail(counts[index], mids[index], value);
+        addToTail(index, value);
     } else {
         counts[index]++;
+    }
+    if (weighted_error) {
+        updateBinWeights(index);
+    }
+}
+
+#include "error_weight_params.h"
+using instruments::NEW_SAMPLE_WEIGHT;
+using instruments::update_ewma;
+
+void
+StatsDistributionBinned::updateBinWeights(int new_sample_bin)
+{
+    total_bin_weights = 0.0;
+    for (size_t i = 0; i < counts.size(); ++i) {
+        // 
+        if (counts[i] > 0) {
+            if ((int) i == new_sample_bin) {
+                // new sample increases the weight on its bin
+                bin_weights[i] = NEW_SAMPLE_WEIGHT;
+            } else {
+                // aging sample decreases the weight on its bin
+                // (a sample N iterations old has weight (NEW_SAMPLE_WEIGHT ^ N),
+                //  same as with the all-samples version)
+                bin_weights[i] *= NEW_SAMPLE_WEIGHT;
+            }
+        }
+        total_bin_weights += bin_weights[i];
     }
 }
 
@@ -397,8 +438,11 @@ StatsDistributionBinned::assertValidHistogram()
 }
 
 void
-StatsDistributionBinned::addToTail(int& count, double& mid, double value)
+StatsDistributionBinned::addToTail(int index, double value)
 {
+    int& count = counts[index];
+    double& mid = mids[index];
+    
     double sum = (count * mid);
     count++;
     mid = (sum + value) / count;

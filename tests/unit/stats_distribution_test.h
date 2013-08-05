@@ -13,6 +13,7 @@ class StatsDistributionTest : public CppUnit::TestFixture {
     CPPUNIT_TEST(testHistogram);
     CPPUNIT_TEST(testHistogramWithKnownBinsExplicit);
     CPPUNIT_TEST(testHistogramWithKnownBinsRange);
+    CPPUNIT_TEST(testBinnedWeightedSamples);
     CPPUNIT_TEST_SUITE_END();
 
   public:
@@ -20,6 +21,7 @@ class StatsDistributionTest : public CppUnit::TestFixture {
     void testHistogram();
     void testHistogramWithKnownBinsExplicit();
     void testHistogramWithKnownBinsRange();
+    void testBinnedWeightedSamples();
     
   private:
     void sanityCheckPDF(StatsDistribution *dist);
