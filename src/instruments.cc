@@ -119,7 +119,36 @@ choose_strategy_async(instruments_strategy_evaluator_t evaluator_handle,
 {
     StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
     evaluator->chooseStrategyAsync(chooser_arg, callback, callback_arg);
- }
+}
+
+
+instruments_scheduled_reevaluation_t
+schedule_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
+                      void *chooser_arg,
+                      instruments_pre_evaluation_callback_t pre_evaluation_callback,
+                      void *pre_eval_callback_arg,
+                      instruments_strategy_chosen_callback_t chosen_callback,
+                      void *chosen_callback_arg,
+                      double seconds_in_future)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    return evaluator->scheduleReevaluation(chooser_arg, 
+                                           pre_evaluation_callback, pre_eval_callback_arg,
+                                           chosen_callback, chosen_callback_arg, 
+                                           seconds_in_future);
+}
+
+void cancel_reevaluation(instruments_scheduled_reevaluation_t handle)
+{
+    auto real_handle = static_cast<ScheduledReevaluationHandle *>(handle);
+    real_handle->cancel();
+}
+
+void free_scheduled_reevaluation(instruments_scheduled_reevaluation_t handle)
+{
+    auto real_handle = static_cast<ScheduledReevaluationHandle *>(handle);
+    delete real_handle;
+}
 
 void
 save_evaluator(instruments_strategy_evaluator_t evaluator_handle, const char *filename)
@@ -135,15 +164,6 @@ restore_evaluator(instruments_strategy_evaluator_t evaluator_handle, const char 
     evaluator->restoreFromFile(filename);
 }
 
-
-struct timeval
-get_retry_time(instruments_strategy_evaluator_t evaluator_handle)
-{
-    // TODO: implement for real.
-    struct timeval now;
-    gettimeofday(&now, NULL);
-    return now;
-}
 
 static instruments_estimator_t
 get_coin_flip_heads_estimator()

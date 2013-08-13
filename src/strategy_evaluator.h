@@ -38,6 +38,15 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     void chooseStrategyAsync(void *chooser_arg, 
                              instruments_strategy_chosen_callback_t callback,
                              void *callback_arg);
+
+    instruments_scheduled_reevaluation_t
+    scheduleReevaluation(void *chooser_arg, 
+                         instruments_pre_evaluation_callback_t pre_evaluation_callback,
+                         void *pre_eval_callback_arg,
+                         instruments_strategy_chosen_callback_t chosen_callback,
+                         void *chosen_callback_arg,
+                         double seconds_in_future);
+    void cancelReevaluation(instruments_scheduled_reevaluation_t handle);
     
     void addEstimator(Estimator *estimator);
     void removeEstimator(Estimator *estimator);
@@ -92,6 +101,13 @@ class StrategyEvaluator : public StrategyEvaluationContext {
 
     // for asynchronous strategy decisions.
     ThreadPool *pool;
+};
+
+struct ScheduledReevaluationHandle {
+    ScheduledReevaluationHandle(ThreadPool::TimerTaskPtr task_);
+    void cancel();
+  private:
+    ThreadPool::TimerTaskPtr task;
 };
 
 #endif

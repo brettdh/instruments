@@ -141,13 +141,44 @@ choose_strategy_async(instruments_strategy_evaluator_t evaluator, void *chooser_
                       instruments_strategy_chosen_callback_t callback, void *callback_arg);
 
 
-/** Queries the evaluator for the recommended time at which
- *  the strategies should be re-evaluated.
- *  This time may be in the past; this indicates that
- *  the strategies should be re-evaluated now.
+typedef void * instruments_scheduled_reevaluation_t;
+typedef void (*instruments_pre_evaluation_callback_t)(void *);
+
+/** Schedule an asynchronous re-evaluation the specified time in the future.
+ * 
+ *  This is equivalent to choose_strategy_async, with two simple differences:
+ *  1) The evaluation happens in the future, as opposed to immediately.
+ *  2) Before the evaluation, pre_evaluation_callback is called with the provided argument.
+ *     This gives the application a chance to update its estimators
+ *     (especially to set conditions, in order to use conditional probabilities
+ *      when doing re-evaluation) before the evaluation is done.
+ *
+ *  The return value is a handle that allows the application to cancel a re-evaluation.
+ *  This handle should be destroyed with free_scheduled_reevaluation() when
+ *  the application has no further use for it.
  */
-CDECL struct timeval
-get_retry_time(instruments_strategy_evaluator_t evaluator);
+instruments_scheduled_reevaluation_t
+schedule_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
+                      void *chooser_arg,
+                      instruments_pre_evaluation_callback_t pre_evaluation_callback,
+                      void *pre_eval_callback_arg,
+                      instruments_strategy_chosen_callback_t chosen_callback,
+                      void *chosen_callback_arg,
+                      double seconds_in_future);
+
+/** Cancel the scheduled re-evaluation.
+ *
+ *  If the re-evaluation has not already run, it will not run in the future.
+ *  The handle still must be freed with free_scheduled_reevaluation().
+ */
+void cancel_scheduled_reevaluation(instruments_scheduled_reevaluation_t handle);
+
+/** Frees the memory associated with the scheduled re-evaluation.
+ *
+ *  Note that this does NOT cancel the reevaluation, and that
+ *  it is (obviously) invalid to do so after freeing it.
+ */ 
+void free_scheduled_reevaluation(instruments_scheduled_reevaluation_t handle);
 
 /** Save the evaluator's state to a file.
  *  A later call to restore_evaluator will restore this state.

@@ -344,9 +344,44 @@ StrategyEvaluator::chooseStrategyAsync(void *chooser_arg,
     pool->startTask(async_choose);
 }
 
+instruments_scheduled_reevaluation_t
+StrategyEvaluator::scheduleReevaluation(void *chooser_arg, 
+                                        instruments_pre_evaluation_callback_t pre_evaluation_callback,
+                                        void *pre_eval_callback_arg,
+                                        instruments_strategy_chosen_callback_t chosen_callback,
+                                        void *chosen_callback_arg,
+                                        double seconds_in_future)
+{
+    auto reevaluate = [=]() {
+        pre_evaluation_callback(pre_eval_callback_arg);
+        chooseStrategyAsync(chooser_arg, chosen_callback, chosen_callback_arg);
+    };
+    ThreadPool::TimerTaskPtr task = pool->scheduleTask(seconds_in_future, reevaluate);
+    return new ScheduledReevaluationHandle(task);
+}
+
+void
+StrategyEvaluator::cancelReevaluation(instruments_scheduled_reevaluation_t handle)
+{
+    ScheduledReevaluationHandle *wrapper = (ScheduledReevaluationHandle *) handle;
+    wrapper->cancel();
+}
+
 void 
 StrategyEvaluator::restoreFromFile(const char *filename)
 {
     clearCache();
     restoreFromFileImpl(filename);
+}
+
+ScheduledReevaluationHandle::ScheduledReevaluationHandle(ThreadPool::TimerTaskPtr task_)
+    : task(task_)
+{
+    // implicit destructor takes care of freeing shared ptr
+}
+
+void 
+ScheduledReevaluationHandle::cancel()
+{
+    task->cancel();
 }

@@ -9,11 +9,13 @@ class ThreadPoolTest : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE(ThreadPoolTest);
     CPPUNIT_TEST(testAsynchrony);
     CPPUNIT_TEST(testThreadCount);
+    CPPUNIT_TEST(testTaskScheduling);
     CPPUNIT_TEST_SUITE_END();
 
   public:
     void testAsynchrony();
     void testThreadCount();
+    void testTaskScheduling();
 };
 
 #endif
