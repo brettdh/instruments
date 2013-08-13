@@ -157,7 +157,7 @@ typedef void (*instruments_pre_evaluation_callback_t)(void *);
  *  This handle should be destroyed with free_scheduled_reevaluation() when
  *  the application has no further use for it.
  */
-instruments_scheduled_reevaluation_t
+CDECL instruments_scheduled_reevaluation_t
 schedule_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
                       void *chooser_arg,
                       instruments_pre_evaluation_callback_t pre_evaluation_callback,
@@ -171,14 +171,16 @@ schedule_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
  *  If the re-evaluation has not already run, it will not run in the future.
  *  The handle still must be freed with free_scheduled_reevaluation().
  */
-void cancel_scheduled_reevaluation(instruments_scheduled_reevaluation_t handle);
+CDECL void 
+cancel_scheduled_reevaluation(instruments_scheduled_reevaluation_t handle);
 
 /** Frees the memory associated with the scheduled re-evaluation.
  *
  *  Note that this does NOT cancel the reevaluation, and that
  *  it is (obviously) invalid to do so after freeing it.
  */ 
-void free_scheduled_reevaluation(instruments_scheduled_reevaluation_t handle);
+CDECL void 
+free_scheduled_reevaluation(instruments_scheduled_reevaluation_t handle);
 
 /** Save the evaluator's state to a file.
  *  A later call to restore_evaluator will restore this state.

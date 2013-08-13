@@ -2,6 +2,7 @@
 #include <instruments_private.h>
 #include <eval_method.h>
 #include <stdio.h>
+#include <pthread.h>
 #include "ctest.h"
 
 CTEST_DATA(estimator_conditions) {
@@ -19,7 +20,7 @@ struct test_data {
 
 CTEST_SETUP(estimator_conditions)
 {
-    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
+    //instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
 
     data->mid_estimator = create_external_estimator("mid");
     data->hilo_estimator = create_external_estimator("hilo");
@@ -38,7 +39,7 @@ CTEST_TEARDOWN(estimator_conditions)
     free_external_estimator(data->hilo_estimator);
 
 
-    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
+    //instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
 }
 
 static double estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
@@ -57,16 +58,42 @@ static double no_cost(instruments_context_t ctx, void *strategy_arg, void *choos
     return 0.0;
 }
 
+static void check_strategy(instruments_strategy_t correct_strategy,
+                           instruments_strategy_t chosen_strategy,
+                           char *msg)
+{
+    if (correct_strategy != chosen_strategy) {
+        CTEST_LOG(msg);
+    }
+    ASSERT_EQUAL((int)correct_strategy, (int) chosen_strategy);
+}
+
 static void
 check_chosen_strategy(instruments_strategy_evaluator_t evaluator,
                       instruments_strategy_t correct_strategy,
                       char *msg)
 {
     instruments_strategy_t chosen = choose_nonredundant_strategy(evaluator, NULL);
-    if (correct_strategy != chosen) {
-        CTEST_LOG(msg);
-    }
-    ASSERT_EQUAL((int)correct_strategy, (int) chosen);
+    check_strategy(correct_strategy, chosen, msg);
+}
+
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
+static instruments_strategy_t strategy;
+
+static void set_reeval_condition(void *arg)
+{
+    CTEST_DATA(estimator_conditions) *data = (CTEST_DATA(estimator_conditions) *) arg;
+    set_estimator_condition(data->hilo_estimator, INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST, 2.0);
+}
+
+static void set_chosen_strategy(instruments_strategy_t chosen_strategy, void *arg)
+{
+    pthread_mutex_lock(&mutex);
+    strategy = chosen_strategy;
+    pthread_cond_signal(&cv);
+    pthread_mutex_unlock(&mutex);
+    
 }
 
 CTEST2(estimator_conditions, set_and_clear_condition)
@@ -107,4 +134,19 @@ CTEST2(estimator_conditions, set_and_clear_condition)
 
     clear_estimator_conditions(data->hilo_estimator);
     check_chosen_strategy(evaluator, strategies[0], "Failed to choose mid strategy after clearing conditions");
+
+    instruments_scheduled_reevaluation_t eval = 
+        schedule_reevaluation(evaluator, NULL, 
+                              set_reeval_condition, data, 
+                              set_chosen_strategy, data,
+                              0.25);
+    pthread_mutex_lock(&mutex);
+    strategy = NULL;
+    while (strategy == NULL) {
+        pthread_cond_wait(&cv, &mutex);
+    }
+    check_strategy(strategies[1], strategy, "Failed to choose hilo strategy after re-evaluation");
+    pthread_mutex_unlock(&mutex);
+
+    free_scheduled_reevaluation(eval);
 }
