@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <float.h>
+#include <math.h>
 #include "estimator.h"
 #include "last_observation_estimator.h"
 #include "running_mean_estimator.h"
@@ -166,6 +167,23 @@ Estimator::valueMeetsConditions(double value)
             (conditions.count(AT_MOST) == 0 || value <= conditions[AT_MOST]));
 }
 
+#define THRESHOLD 0.0001
+
+#define float_diff(a, cmp, b) \
+    ( (fabs((a) - (b)) > THRESHOLD) && ((a) cmp (b)) )
+
+inline double
+float_greater(double a, double b)
+{
+    return float_diff(a, >, b);
+}
+
+inline double
+float_less(double a, double b)
+{
+    return float_diff(a, <, b);
+}
+
 double 
 Estimator::getConditionalWeight(double value)
 {
@@ -181,8 +199,8 @@ Estimator::getConditionalWeight(double value)
         // further above bound = lower weight
         return conditions[AT_MOST] / value;
     */
-    if ((conditions.count(AT_LEAST) > 0 && value < conditions[AT_LEAST]) ||
-        (conditions.count(AT_MOST) > 0 && value > conditions[AT_MOST])) {
+    if ((conditions.count(AT_LEAST) > 0 && float_less(value, conditions[AT_LEAST])) ||
+        (conditions.count(AT_MOST) > 0 && float_greater(value, conditions[AT_MOST]))) {
         return 0.0;
     } else {
         // within bounds = even weight
