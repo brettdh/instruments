@@ -38,7 +38,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     void chooseStrategyAsync(void *chooser_arg, 
                              instruments_strategy_chosen_callback_t callback,
                              void *callback_arg);
-
+    double getLastStrategyTime(instruments_strategy_t strategy);
+    
     instruments_scheduled_reevaluation_t
     scheduleReevaluation(void *chooser_arg, 
                          instruments_pre_evaluation_callback_t pre_evaluation_callback,
@@ -91,9 +92,11 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     pthread_mutex_t cache_mutex;
     std::map<void *, instruments_strategy_t> nonredundant_choice_cache;
     std::map<void *, instruments_strategy_t> redundant_choice_cache;
+    std::map<instruments_strategy_t, double> strategy_times_cache;
 
     instruments_strategy_t getCachedChoice(void *chooser_arg, bool redundancy);
-    void saveCachedChoice(instruments_strategy_t winner, void *chooser_arg, bool redundancy);
+    void saveCachedChoice(instruments_strategy_t winner, void *chooser_arg, bool redundancy,
+                          std::map<instruments_strategy_t, double>& strategy_times);
     void clearCache();
 
     

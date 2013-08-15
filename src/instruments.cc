@@ -111,6 +111,14 @@ choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator_handle,
     return evaluator->chooseStrategy(chooser_arg, /* redundancy = */ false);
 }
 
+double
+get_last_strategy_time(instruments_strategy_evaluator_t evaluator_handle,
+                       instruments_strategy_t strategy)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    return evaluator->getLastStrategyTime(strategy);
+}
+
 void
 choose_strategy_async(instruments_strategy_evaluator_t evaluator_handle,
                       void *chooser_arg,
@@ -138,7 +146,7 @@ schedule_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
                                            seconds_in_future);
 }
 
-void cancel_reevaluation(instruments_scheduled_reevaluation_t handle)
+void cancel_scheduled_reevaluation(instruments_scheduled_reevaluation_t handle)
 {
     auto real_handle = static_cast<ScheduledReevaluationHandle *>(handle);
     real_handle->cancel();

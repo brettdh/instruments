@@ -22,7 +22,8 @@ using inst::INFO;
 #include <signal.h>
 
 #include <vector>
-using std::vector;
+#include <map>
+using std::vector; using std::map;
 
 StrategyEvaluator::StrategyEvaluator()
     : currentStrategy(NULL), silent(false)
@@ -172,7 +173,8 @@ StrategyEvaluator::getCachedChoice(void *chooser_arg, bool redundancy)
 }
 
 void
-StrategyEvaluator::saveCachedChoice(instruments_strategy_t winner, void *chooser_arg, bool redundancy)
+StrategyEvaluator::saveCachedChoice(instruments_strategy_t winner, void *chooser_arg, bool redundancy,
+                                    map<instruments_strategy_t, double>& strategy_times)
 {
     PthreadScopedLock lock(&cache_mutex);
     auto& cache = (redundancy ? redundant_choice_cache : nonredundant_choice_cache);
@@ -180,6 +182,12 @@ StrategyEvaluator::saveCachedChoice(instruments_strategy_t winner, void *chooser
     // XXX: chooser_arg needs an equality function, not just pointer equality,
     // XXX: to differentiate whether the same argument has been passed again.
     cache[chooser_arg] = winner;
+    
+    for (auto& p : strategy_times) {
+        instruments_strategy_t strategy = p.first;
+        double strategy_time = p.second;
+        strategy_times_cache[strategy] = strategy_time;
+    }
 }
 
 void
@@ -188,6 +196,7 @@ StrategyEvaluator::clearCache()
     PthreadScopedLock lock(&cache_mutex);
     nonredundant_choice_cache.clear();
     redundant_choice_cache.clear();
+    strategy_times_cache.clear();
 }
 
 void
@@ -221,6 +230,8 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
     
     ASSERT(currentStrategy == NULL);
 
+    map<instruments_strategy_t, double> strategy_times;
+
     // first, pick the singular strategy that takes the least time (expected)
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
@@ -236,6 +247,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
             inst::dbgprintf(INFO, "Calculating time\n");
             double time = calculateTime(currentStrategy, chooser_arg);
             ASSERT(!isnan(time));
+            strategy_times[currentStrategy] = time;
 
             double cost = 0.0;
             if (redundancy) {
@@ -267,7 +279,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
         inst::dbgprintf(INFO, "Not considering redundancy; returning best "
                         "singular strategy (time %f)\n",
                         best_singular_time);
-        saveCachedChoice(best_singular, chooser_arg, redundancy);
+        saveCachedChoice(best_singular, chooser_arg, redundancy, strategy_times);
         return best_singular;
     }
 
@@ -283,6 +295,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
                             currentStrategy->getName());
             double redundant_time = calculateTime(currentStrategy, chooser_arg);
             ASSERT(!isnan(redundant_time));
+            strategy_times[currentStrategy] = redundant_time;
             double benefit = best_singular_time - redundant_time;
 
             double redundant_cost = calculateCost(currentStrategy, chooser_arg);
@@ -326,8 +339,18 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
         winner = best_singular;
     }
     
-    saveCachedChoice(winner, chooser_arg, redundancy);
+    saveCachedChoice(winner, chooser_arg, redundancy, strategy_times);
     return winner;
+}
+
+double
+StrategyEvaluator::getLastStrategyTime(instruments_strategy_t strategy)
+{
+    PthreadScopedLock lock(&cache_mutex);
+    if (strategy_times_cache.count(strategy) > 0) {
+        return strategy_times_cache[strategy];
+    }
+    return 0.0;
 }
 
 

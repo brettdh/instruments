@@ -129,6 +129,15 @@ choose_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
 CDECL instruments_strategy_t
 choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
 
+/** Returns the calculated completion time for the given strategy. 
+ *
+ *  This does not begin a new computation; it merely returns
+ *  the last computed completion time for the given strategy.
+ *  It should therefore only be called after a call to choose_strategy.
+ */
+CDECL double
+get_last_strategy_time(instruments_strategy_evaluator_t evaluator, 
+                       instruments_strategy_t strategy);
 
 typedef void (*instruments_strategy_chosen_callback_t)(instruments_strategy_t, void *);
 
