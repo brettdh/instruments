@@ -99,6 +99,7 @@ StatsDistributionBinned::create(Estimator *estimator, bool weighted_error_)
         EstimatorRangeHints hints = estimator->getRangeHints();
         return new StatsDistributionBinned(hints.min, hints.max, hints.num_bins, weighted_error_);
     } else {
+        ASSERT(false); // must have range hints to create histogram. (may change; probably not)
         return new StatsDistributionBinned(weighted_error_);
     }
 }

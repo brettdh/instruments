@@ -3,6 +3,7 @@
 #include <eval_method.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <assert.h>
 #include "ctest.h"
 
 CTEST_DATA(estimator_conditions) {
@@ -53,28 +54,35 @@ static double estimator_value(instruments_context_t ctx, void *strategy_arg, voi
     return get_estimator_value(ctx, tdata->estimator);
 }
 
-static double no_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
+static double high_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
-    return 0.0;
+    return 1.0;
 }
 
 static void check_strategy(instruments_strategy_t correct_strategy,
                            instruments_strategy_t chosen_strategy,
+                           enum EvalMethod method, 
                            char *msg)
 {
     if (correct_strategy != chosen_strategy) {
-        CTEST_LOG(msg);
+        char buf[4096];
+        snprintf(buf, 4096, "[%s] %s (expected %s, chose %s)", 
+                 get_method_name(method), msg, 
+                 get_strategy_name(correct_strategy),
+                 get_strategy_name(chosen_strategy));
+        CTEST_LOG(buf);
     }
     ASSERT_EQUAL((int)correct_strategy, (int) chosen_strategy);
 }
 
 static void
 check_chosen_strategy(instruments_strategy_evaluator_t evaluator,
+                      enum EvalMethod method, 
                       instruments_strategy_t correct_strategy,
                       char *msg)
 {
     instruments_strategy_t chosen = choose_nonredundant_strategy(evaluator, NULL);
-    check_strategy(correct_strategy, chosen, msg);
+    check_strategy(correct_strategy, chosen, method, msg);
 }
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -96,7 +104,14 @@ static void set_chosen_strategy(instruments_strategy_t chosen_strategy, void *ar
     
 }
 
-CTEST2(estimator_conditions, set_and_clear_condition)
+static double frandom_in(double low, double high)
+{
+    assert(high - low > 0.0001);
+    return low + (random() * (high - low) / ((double) RAND_MAX));
+}
+
+static void run_set_and_clear_condition(CTEST_DATA(estimator_conditions) *data,
+                                        enum EvalMethod method)
 {
     instruments_strategy_t strategies[3];
     int i;
@@ -106,34 +121,54 @@ CTEST2(estimator_conditions, set_and_clear_condition)
         { &data->dummy[0], 2, data->mid_estimator },
         { &data->dummy[2], 1, data->hilo_estimator },
     };
-    strategies[0] = make_strategy(estimator_value, NULL, no_cost, (void*) &tdata[0], NULL);
+    strategies[0] = make_strategy(estimator_value, NULL, high_cost, (void*) &tdata[0], NULL);
     ASSERT_NOT_NULL(strategies[0]);
-    strategies[1] = make_strategy(estimator_value, NULL, no_cost, (void*) &tdata[1], NULL);
+    set_strategy_name(strategies[0], "mid");
+    strategies[1] = make_strategy(estimator_value, NULL, high_cost, (void*) &tdata[1], NULL);
     ASSERT_NOT_NULL(strategies[1]);
+    set_strategy_name(strategies[1], "hilo");
     strategies[2] = make_redundant_strategy(strategies, 2);
     ASSERT_NOT_NULL(strategies[2]);
+    set_strategy_name(strategies[2], "both");
+
+    set_estimator_range_hints(data->mid_estimator, 0.5, 20.5, 20);
+    set_estimator_range_hints(data->hilo_estimator, 0.5, 20.5, 20);
+    for (i = 0; i < 3; ++i) {
+        set_estimator_range_hints(data->dummy[i], 0.5, 20.5, 20);
+    }
 
     instruments_strategy_evaluator_t evaluator = 
-        register_strategy_set_with_method(strategies, 3,
-                                          EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+        register_strategy_set_with_method(strategies, 3, method);
 
-    for (i = 0; i < 11; ++i) {
-        double mid_value = (i % 2 == 0 ? 5.0 : 6.0);
-        double hilo_value = (i % 2 == 0 ? 1.0 : 20.0);
+    for (i = 0; i < 3; ++i) {
+        add_observation(data->dummy[i], 1.0, 1.0);
+    }
+    srand(42424242);
+    int num_iterations = 21;
+    for (i = 0; i < num_iterations; ++i) {
+        double mid_value = frandom_in(5.0, 6.0);
+        double hilo_value = (i % 2 == 1) ? frandom_in(20.0, 21.0) : frandom_in(1.0, 2.0);
+        //CTEST_LOG("Adding observations: mid %f hilo %f", mid_value, hilo_value);
         add_observation(data->mid_estimator, mid_value, mid_value);
         add_observation(data->hilo_estimator, hilo_value, hilo_value);
+        /*
+        if (method & BAYESIAN) {
+            hilo_value = (i % 2 == 1) ? frandom_in(20.0, 21.0) : frandom_in(1.0, 2.0);
+            add_observation(data->hilo_estimator, hilo_value, hilo_value);
+        }
+        */
     }
-    for (i = 0; i < 3; ++i) {
-        add_observation(data->dummy[i], 0.0, 0.0);
-    }
+
+    // no redundancy
+    set_fixed_resource_weights(1.0, 1.0);
     
-    check_chosen_strategy(evaluator, strategies[0], "Failed to choose mid strategy initially");
+    check_chosen_strategy(evaluator, method, strategies[0], "Failed to choose mid strategy initially");
 
     set_estimator_condition(data->hilo_estimator, INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST, 2.0);
-    check_chosen_strategy(evaluator, strategies[1], "Failed to choose hilo strategy with not-high condition");
+    check_chosen_strategy(evaluator, method, strategies[1], "Failed to choose hilo strategy with not-high condition");
 
     clear_estimator_conditions(data->hilo_estimator);
-    check_chosen_strategy(evaluator, strategies[0], "Failed to choose mid strategy after clearing conditions");
+    check_chosen_strategy(evaluator, method, strategies[0], "Failed to choose mid strategy after clearing conditions");
 
     instruments_scheduled_reevaluation_t eval = 
         schedule_reevaluation(evaluator, NULL, 
@@ -145,8 +180,23 @@ CTEST2(estimator_conditions, set_and_clear_condition)
     while (strategy == NULL) {
         pthread_cond_wait(&cv, &mutex);
     }
-    check_strategy(strategies[1], strategy, "Failed to choose hilo strategy after re-evaluation");
+    check_strategy(strategies[1], strategy, method, "Failed to choose hilo strategy after re-evaluation");
     pthread_mutex_unlock(&mutex);
 
     free_scheduled_reevaluation(eval);
+}
+
+CTEST2(estimator_conditions, set_and_clear_condition)
+{
+    run_set_and_clear_condition(data, EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
+}
+
+CTEST2(estimator_conditions, set_and_clear_condition_prob_bounds)
+{
+    run_set_and_clear_condition(data, CONFIDENCE_BOUNDS);
+}
+
+CTEST2(estimator_conditions, set_and_clear_condition_bayesian)
+{
+    run_set_and_clear_condition(data, BAYESIAN);
 }

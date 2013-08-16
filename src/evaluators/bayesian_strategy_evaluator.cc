@@ -74,8 +74,10 @@ class DistributionKey {
     bool operator<(const DistributionKey& other) const;
     bool operator==(const DistributionKey& other) const;
     ostream& print(ostream& os) const;
+    size_t getPrintSize() const;
 
   private:
+    static size_t VALUE_PRINT_WIDTH;
     typedef map<Estimator *, size_t> EstimatorIndicesMap;
     typedef shared_ptr<EstimatorIndicesMap> EstimatorIndicesMapPtr;
     typedef map<BayesianStrategyEvaluator *,  EstimatorIndicesMapPtr> EstimatorIndicesByEvaluatorMap; 
@@ -163,7 +165,7 @@ DistributionKey::print(ostream& os) const
 {
     os << "[ ";
     forEachEstimator([&](Estimator *estimator, double value) {
-            os << setw(10) << value << " ";
+            os << setw(VALUE_PRINT_WIDTH) << value << " ";
             return true;
         });
     os << "]";
@@ -175,6 +177,16 @@ operator<<(ostream& os, const DistributionKey& key)
 {
     return key.print(os);
 }
+
+size_t DistributionKey::VALUE_PRINT_WIDTH = 10;
+
+size_t 
+DistributionKey::getPrintSize() const
+{
+    const size_t extra_chars = 3; // "[ ... ]"
+    return extra_chars + (VALUE_PRINT_WIDTH + 1) * estimator_indices->size();
+}
+
 
 class BayesianStrategyEvaluator::SimpleEvaluator : public StrategyEvaluator {
   public:
@@ -527,8 +539,13 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     Stopwatch stopwatch;
     stopwatch.setEnabled(debugging);
     
-    inst::dbgprintf(DEBUG, "[bayesian] %45s   %13s %10s %10s %10s\n",
-                    "key", "prior", "likelihood", "posterior", value_name.c_str());
+    if (likelihood_distribution.empty()) {
+        inst::dbgprintf(DEBUG, "[bayesian] (no entries in likelihood distribution)\n");
+    } else {
+        size_t print_size = likelihood_distribution.begin()->first.getPrintSize();
+        inst::dbgprintf(DEBUG, "[bayesian] %*s   %13s %10s %10s %10s\n",
+                        print_size - 2,  "key", "prior", "likelihood", "posterior", value_name.c_str());
+    }
 
     for (auto& map_pair : likelihood_distribution) {
         DistributionKey key = map_pair.first;

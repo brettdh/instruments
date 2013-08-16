@@ -38,6 +38,13 @@ set_strategy_name(instruments_strategy_t strategy_handle, const char * name)
     strategy->setName(name);
 }
 
+const char *
+get_strategy_name(instruments_strategy_t strategy_handle)
+{
+    Strategy *strategy = (Strategy *) strategy_handle;
+    return strategy->getName();
+}
+
 void free_strategy(instruments_strategy_t strategy)
 {
     delete ((Strategy *) strategy);
