@@ -160,50 +160,40 @@ void Estimator::clearConditions()
     }
 }
 
-bool
-Estimator::valueMeetsConditions(double value)
-{
-    return ((conditions.count(AT_LEAST) == 0 || value >= conditions[AT_LEAST]) &&
-            (conditions.count(AT_MOST) == 0 || value <= conditions[AT_MOST]));
-}
 
 #define THRESHOLD 0.0001
 
-#define float_diff(a, cmp, b) \
-    ( (fabs((a) - (b)) > THRESHOLD) && ((a) cmp (b)) )
+#define float_equal_or_cmp(a, cmp, b) \
+    ( (fabs((a) - (b)) < THRESHOLD) || ((a) cmp (b)) )
 
 inline double
-float_greater(double a, double b)
+float_is_greater_or_equal(double a, double b)
 {
-    return float_diff(a, >, b);
+    return float_equal_or_cmp(a, >, b);
 }
 
 inline double
-float_less(double a, double b)
+float_is_less_or_equal(double a, double b)
 {
-    return float_diff(a, <, b);
+    return float_equal_or_cmp(a, <, b);
 }
 
-double 
-Estimator::getConditionalWeight(double value)
+bool
+Estimator::valueMeetsConditions(double value)
 {
-    /*
-     * The weighting is bogus.  What's really going on here is just
-     * a conditional probability expectation, which  means that
-     * the weights on out-of-bounds values should just be zero.
-     
-    if (conditions.count(AT_LEAST) > 0 && value < conditions[AT_LEAST]) {
-        // further below bound = lower weight
-        return value / conditions[AT_LEAST];
-    } else if (conditions.count(AT_MOST) > 0 && value > conditions[AT_MOST]) {
-        // further above bound = lower weight
-        return conditions[AT_MOST] / value;
-    */
-    if ((conditions.count(AT_LEAST) > 0 && float_less(value, conditions[AT_LEAST])) ||
-        (conditions.count(AT_MOST) > 0 && float_greater(value, conditions[AT_MOST]))) {
-        return 0.0;
-    } else {
-        // within bounds = even weight
-        return 1.0;
-    }
+    return ((conditions.count(AT_LEAST) == 0 || float_is_greater_or_equal(value, conditions[AT_LEAST])) &&
+            (conditions.count(AT_MOST) == 0 || float_is_less_or_equal(value, conditions[AT_MOST])));
+}
+
+
+double
+Estimator::getLowerBound()
+{
+    return conditions.count(AT_LEAST) == 0 ? DBL_MIN : conditions[AT_LEAST];
+}
+
+double
+Estimator::getUpperBound()
+{
+    return conditions.count(AT_MOST) == 0 ? DBL_MAX : conditions[AT_MOST];
 }

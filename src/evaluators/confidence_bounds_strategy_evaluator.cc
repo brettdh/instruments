@@ -13,12 +13,14 @@ using inst::INFO;
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <deque>
 #include <iomanip>
 #include <map>
 using std::ifstream; using std::ofstream;
 using std::ostringstream; using std::runtime_error;
 using std::string; using std::setprecision; using std::endl;
 using std::pair; using std::make_pair; using std::min;
+using std::deque;
 
 #include "students_t.h"
 
@@ -43,6 +45,9 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
     double M2; // for running variance algorithm
     
     size_t num_samples;
+
+    // only used for conditional probability calculations.
+    deque<double> log_error_samples;
     
     // these are not log-transformed; they are inverse-transformed
     //  before being stored.
@@ -86,13 +91,20 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getName()
     return s.str();
 }
 
-          
+
+//#define CHEBYSHEV_BOUNDS
+//#define CONFIDENCE_INTERVAL_BOUNDS
+#define PREDICTION_INTERVAL_BOUNDS
+
+#if defined(CHEBYSHEV_BOUNDS)
 static double get_chebyshev_bound(double alpha, double variance)
 {
     // Chebyshev interval for error bounds, as described in my proposal.
     return sqrt(variance / alpha);
 }
+#define GET_BOUND_DISTANCE(alpha, variance, num_samples) get_chebyshev_bound(alpha, variance)
 
+#elif defined(CONFIDENCE_INTERVAL_BOUNDS)
 static double get_confidence_interval_width(double alpha, double variance, size_t num_samples)
 {
     // student's-t-based confidence interval
@@ -103,7 +115,9 @@ static double get_confidence_interval_width(double alpha, double variance, size_
         return t * sqrt(variance / num_samples);
     }
 }
+#define GET_BOUND_DISTANCE(alpha, variance, num_samples) get_confidence_interval_width(alpha, variance, num_samples)
 
+#elif defined(PREDICTION_INTERVAL_BOUNDS)
 static double get_prediction_interval_width(double alpha, double variance, size_t num_samples)
 {
     // student's-t-based prediction interval
@@ -115,17 +129,16 @@ static double get_prediction_interval_width(double alpha, double variance, size_
         return t * sqrt(variance * (1 + (1 / num_samples)));
     }
 }
+#define GET_BOUND_DISTANCE(alpha, variance, num_samples) get_prediction_interval_width(alpha, variance, num_samples)
+
+#else
+#error "Must define a bounds calcuation method."
+#endif
 
 double
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBoundDistance()
 {
-    if (false) {
-        return get_chebyshev_bound(CONFIDENCE_ALPHA, log_error_variance);
-    } else if (false) {
-        return get_confidence_interval_width(CONFIDENCE_ALPHA, log_error_variance, num_samples);
-    } else {
-        return get_prediction_interval_width(CONFIDENCE_ALPHA, log_error_variance, num_samples);
-    }
+    return GET_BOUND_DISTANCE(CONFIDENCE_ALPHA, log_error_variance, num_samples);
 }
 
 void
@@ -153,6 +166,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributio
     if (num_samples > 1) {
         log_error_variance = M2 / (num_samples-1);
     }
+    log_error_samples.push_back(log_error);
 }
 
 #include "error_weight_params.h"
@@ -173,6 +187,11 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributio
         
         update_ewma(log_error_mean, log_error, EWMA_GAIN);
         update_ewma(log_error_variance, deviation * deviation, EWMA_GAIN);
+    }
+    log_error_samples.push_back(log_error);
+    if (log_error_samples.size() > num_samples) {
+        assert(num_samples + 1 == log_error_samples.size());
+        log_error_samples.pop_front();
     }
 }
 

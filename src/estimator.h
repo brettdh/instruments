@@ -53,13 +53,11 @@ class Estimator {
     void clearConditions();
     bool valueMeetsConditions(double value);
 
-    // returns a number in [0.0, 1.0] representing the 'wrongness' 
-    //  of the given value with respect to the conditions set
-    //  on this estimator.
-    // for instance, if an AT_LEAST bound is set at 30,
-    //  then the value 10 is more 'wrong' than the value 20,
-    //  so the weight returned would be smaller.
-    double getConditionalWeight(double value);
+    // returns lower bound on estimator if set, or DBL_MIN if none.
+    double getLowerBound();
+
+    // returns upper bound on estimator if set, or DBL_MAX if none.
+    double getUpperBound();
   protected:
     Estimator(const std::string& name_);
 

@@ -69,7 +69,7 @@ class DistributionKey {
     DistributionKey(BayesianStrategyEvaluator *evaluator);
     ~DistributionKey();
     void addEstimatorValue(Estimator *estimator, double value);
-    void forEachEstimator(std::function<void(Estimator *, double)> fn) const;
+    void forEachEstimator(std::function<bool(Estimator *, double)> fn) const;
 
     bool operator<(const DistributionKey& other) const;
     bool operator==(const DistributionKey& other) const;
@@ -128,7 +128,7 @@ DistributionKey::addEstimatorValue(Estimator *estimator, double value)
 }
 
 void
-DistributionKey::forEachEstimator(std::function<void(Estimator *, double)> fn) const
+DistributionKey::forEachEstimator(std::function<bool(Estimator *, double)> fn) const
 {
     assert(estimator_indices != nullptr);
     assert(estimator_indices->size() == key.size());
@@ -140,7 +140,9 @@ DistributionKey::forEachEstimator(std::function<void(Estimator *, double)> fn) c
         // unnecessary most of the time, except when the tail values can change.
         double value = evaluator->estimatorSamples[estimator]->getValueAtIndex(key[index]);
         
-        fn(estimator, value);
+        if (fn(estimator, value) == false) {
+            break;
+        }
     }
 }
 
@@ -162,6 +164,7 @@ DistributionKey::print(ostream& os) const
     os << "[ ";
     forEachEstimator([&](Estimator *estimator, double value) {
             os << setw(10) << value << " ";
+            return true;
         });
     os << "]";
     return os;
@@ -431,6 +434,7 @@ BayesianStrategyEvaluator::Likelihood::setEstimatorSamples(DistributionKey& key)
 {
     key.forEachEstimator([&](Estimator *estimator, double sample) {
             currentEstimatorSamples[estimator] = sample;
+            return true;
         });
 }
 
@@ -466,11 +470,18 @@ BayesianStrategyEvaluator::Likelihood::jointPriorProbability(DistributionKey& ke
     }
     key.forEachEstimator([&](Estimator *estimator, double sample) {
             assert(evaluator->estimatorSamples.count(estimator) > 0);
+            if (!estimator->valueMeetsConditions(sample)) {
+                // we're doing a conditional probability summation, so
+                // prune this sample from the joint prior distribution
+                probability = 0.0;
+                return false; // break the foreach iteration
+            }
             double single_prob = evaluator->estimatorSamples[estimator]->getProbability(sample);
             probability *= single_prob;
             if (inst::is_debugging_on(DEBUG)) {
                 oss << single_prob << " ";
             }
+            return true;
         });
     /*
     if (inst::is_debugging_on(DEBUG)) {

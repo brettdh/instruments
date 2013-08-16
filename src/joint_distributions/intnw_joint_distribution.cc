@@ -120,10 +120,9 @@ static void adjust_probs_for_estimator_conditions(Estimator *estimator, double *
         double error_value = values[i];
         double error_adjusted_estimate = adjusted_estimate(estimator->getEstimate(), error_value);
         
-        // this weight represents how wrong the value is,
-        //  based on the bound set (if any) and the value itself.
-        double conditional_weight = estimator->getConditionalWeight(error_adjusted_estimate);
-        probs[i] *= conditional_weight;
+        if (!estimator->valueMeetsConditions(error_adjusted_estimate)) {
+            probs[i] = 0.0;
+        }
     }
     
     // normalize the array, since estimator error values might have been filtered
