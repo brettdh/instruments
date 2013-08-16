@@ -15,33 +15,9 @@ using std::deque;
 #include "error_weight_params.h"
 using instruments::NEW_SAMPLE_WEIGHT;
 using instruments::MAX_SAMPLES;
-
-static deque<double> normalizers;
-
-static double calculateWeight(size_t sample_index, size_t num_samples)
-{
-    return pow(NEW_SAMPLE_WEIGHT, num_samples - sample_index);
-}
-
-static double
-calculateWeightedProbability(size_t num_samples, double weight)
-{
-    return 1.0 / num_samples * weight;
-}
-
-static struct StaticIniter {
-    StaticIniter() {
-        normalizers.resize(MAX_SAMPLES + 1);
-        normalizers[0] = strtod("NAN", NULL);
-        for (size_t i = 1; i < normalizers.size(); ++i) {
-            normalizers[i] = 0.0;
-            for (size_t j = 0; j < i; ++j) {
-                double weight = calculateWeight(j, i);
-                normalizers[i] += calculateWeightedProbability(i, weight);
-            }
-        }
-    }
-} initer;
+using instruments::calculate_sample_weight;
+using instruments::calculate_weighted_probability;
+using instruments::calculate_normalized_sample_weight;
 
 
 StatsDistributionAllSamples::StatsDistributionAllSamples(bool weighted_error_)
@@ -74,10 +50,7 @@ double
 StatsDistributionAllSamples::getWeight(size_t sample_index)
 {
     if (weighted_error) {
-        size_t num_values = values.size();
-        assert(num_values > 0);
-        assert(num_values < normalizers.size());
-        return calculateWeight(sample_index, num_values) / normalizers[num_values];
+        return calculate_normalized_sample_weight(sample_index, values.size());
     } else {
         return 1.0;
     }
@@ -86,7 +59,7 @@ StatsDistributionAllSamples::getWeight(size_t sample_index)
 double 
 StatsDistributionAllSamples::calculateProbability(size_t sample_index)
 {
-    return calculateWeightedProbability(values.size(), getWeight(sample_index));
+    return calculate_weighted_probability(values.size(), getWeight(sample_index));
 }
 
 double

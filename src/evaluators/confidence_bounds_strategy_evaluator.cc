@@ -16,11 +16,12 @@ using inst::INFO;
 #include <deque>
 #include <iomanip>
 #include <map>
+#include <functional>
 using std::ifstream; using std::ofstream;
 using std::ostringstream; using std::runtime_error;
 using std::string; using std::setprecision; using std::endl;
 using std::pair; using std::make_pair; using std::min;
-using std::deque;
+using std::deque; using std::function;
 
 #include "students_t.h"
 
@@ -32,6 +33,8 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
     void saveToFile(ofstream& out);
     string restoreFromFile(ifstream& in);
     string getName();
+    void setConditionalBounds();
+    void clearConditionalBounds();
 
     void setEstimator(Estimator *estimator_);
   private:
@@ -53,10 +56,16 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
     //  before being stored.
     double error_bounds[UPPER + 1];
 
-    double getBoundDistance();
+    double getBoundDistance(double cur_log_error_variance,
+                            size_t cur_num_samples);
+    void setBounds(double cur_log_error_mean, 
+                   double cur_log_error_variance,
+                   size_t cur_num_samples);
     void updateErrorDistribution(double log_error);
     void updateErrorDistributionLinear(double log_error);
     void updateErrorDistributionEWMA(double log_error);
+
+    void setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample);
 
     bool weighted;
 };
@@ -136,9 +145,9 @@ static double get_prediction_interval_width(double alpha, double variance, size_
 #endif
 
 double
-ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBoundDistance()
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBoundDistance(double variance, size_t num_samples)
 {
-    return GET_BOUND_DISTANCE(CONFIDENCE_ALPHA, log_error_variance, num_samples);
+    return GET_BOUND_DISTANCE(CONFIDENCE_ALPHA, variance, num_samples);
 }
 
 void
@@ -151,8 +160,12 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributio
     }
 }
 
-void
-ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionLinear(double log_error)
+static void
+update_error_distribution_linear(size_t& num_samples,
+                                 double& log_error_mean,
+                                 double& log_error_variance,
+                                 double& M2,
+                                 double log_error)
 {
     /*
      * Algorithm borrowed from
@@ -166,6 +179,12 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributio
     if (num_samples > 1) {
         log_error_variance = M2 / (num_samples-1);
     }
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionLinear(double log_error)
+{
+    update_error_distribution_linear(num_samples, log_error_mean, log_error_variance, M2, log_error);
     log_error_samples.push_back(log_error);
 }
 
@@ -175,8 +194,11 @@ using instruments::NEW_SAMPLE_WEIGHT;
 using instruments::EWMA_GAIN;
 using instruments::update_ewma;
 
-void
-ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionEWMA(double log_error)
+static void
+update_error_distribution_ewma(size_t& num_samples,
+                               double& log_error_mean,
+                               double& log_error_variance,
+                               double log_error)
 {
     num_samples = min(MAX_SAMPLES, num_samples + 1);
     if (num_samples == 1) {
@@ -188,12 +210,65 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributio
         update_ewma(log_error_mean, log_error, EWMA_GAIN);
         update_ewma(log_error_variance, deviation * deviation, EWMA_GAIN);
     }
+    
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionEWMA(double log_error)
+{
+    update_error_distribution_ewma(num_samples, log_error_mean, log_error_variance, log_error);
+    
     log_error_samples.push_back(log_error);
     if (log_error_samples.size() > num_samples) {
         assert(num_samples + 1 == log_error_samples.size());
         log_error_samples.pop_front();
     }
 }
+
+void 
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::
+setConditionalBounds()
+{
+    auto shouldIncludeSample = [=](double value) {
+        return estimator->valueMeetsConditions(value);
+    };
+    setConditionalBoundsWhere(shouldIncludeSample);
+}
+
+void 
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::
+setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
+{
+    double cur_log_error_mean = 0.0, cur_log_error_variance = 0.0;
+    double cur_M2 = 0.0;
+    size_t cur_num_samples = 0;
+    
+    for (size_t i = 0; i < log_error_samples.size(); ++i) {
+        double log_error = log_error_samples[i];
+        if (shouldIncludeSample(log_error)) {
+            if (weighted) {
+                update_error_distribution_ewma(cur_num_samples,
+                                               cur_log_error_mean,
+                                               cur_log_error_variance,
+                                               log_error);
+            } else {
+                update_error_distribution_linear(cur_num_samples,
+                                                 cur_log_error_mean,
+                                                 cur_log_error_variance,
+                                                 cur_M2,
+                                                 log_error);
+            }
+        }
+    }
+    setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
+}
+
+void 
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::clearConditionalBounds()
+{
+    setConditionalBoundsWhere([](double) { return true; });
+}
+
 
 void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(double observation, 
@@ -209,12 +284,29 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(dou
     inst::dbgprintf(INFO, "Adding error sample to estimator %s: %f\n",
                     estimator->getName().c_str(), error);
 
-    double bound_distance = getBoundDistance();
+    setBounds(log_error_mean, log_error_variance, num_samples);
+
+    if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
+        // PROBLEMATIC.
+        assert(false); // TODO: figure out what to do here.
+    }
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::setBounds(double cur_log_error_mean, 
+                                                                    double cur_log_error_variance,
+                                                                    size_t cur_num_samples)
+{
+    double bound_distance = getBoundDistance(cur_log_error_variance, cur_num_samples);
     double bounds[2];
 
-    bounds[0] = exp(log_error_mean - bound_distance);
-    bounds[1] = exp(log_error_mean + bound_distance);
-    if (adjusted_estimate(old_estimate, bounds[0]) < adjusted_estimate(old_estimate, bounds[1])) {
+    // just need some value so that the sorting of {lower,upper} bounds
+    // is independent of whether it's absolute or relative error.
+    const double ref_value = 100.0;
+
+    bounds[0] = exp(cur_log_error_mean - bound_distance);
+    bounds[1] = exp(cur_log_error_mean + bound_distance);
+    if (adjusted_estimate(ref_value, bounds[0]) < adjusted_estimate(ref_value, bounds[1])) {
         error_bounds[LOWER] = bounds[0];
         error_bounds[UPPER] = bounds[1];
     } else {
@@ -222,11 +314,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(dou
         error_bounds[UPPER] = bounds[0];
     }
     inst::dbgprintf(INFO, "n=%4zu; error bounds: [%f, %f]\n", 
-                    num_samples, error_bounds[LOWER], error_bounds[UPPER]);
-    if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
-        // PROBLEMATIC.
-        assert(false); // TODO: figure out what to do here.
-    }
+                    cur_num_samples, error_bounds[LOWER], error_bounds[UPPER]);
 }
 
 
@@ -247,7 +335,12 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::saveToFile(ofstream& o
         << " mean " << log_error_mean 
         << " variance " << log_error_variance
         << " M2 " << M2 
-        << " bounds " << error_bounds[LOWER] << " " << error_bounds[UPPER] << endl;
+        << " bounds " << error_bounds[LOWER] << " " << error_bounds[UPPER]
+        << " samples ";
+    for (double sample : log_error_samples) {
+        out << sample << " ";
+    }
+    out << endl;
 }
 
 string
@@ -273,8 +366,17 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
         check(tag == fields[i].expected_tag, "Failed to parse field");
     }
     in >> error_bounds[UPPER];
-    
     check(in, "Failed to read bounds from file");
+
+    in >> tag;
+    check(tag == "samples", "Failed to read 'samples' tag from file");
+    for (size_t i = 0; i < num_samples; ++i) {
+        double sample;
+        in >> sample;
+        check(in, "Failed to read sample from file");
+        log_error_samples.push_back(sample);
+        // if weighted, only the max number of samples will have been saved
+    }
     return name;
 }
 
@@ -416,13 +518,32 @@ ConfidenceBoundsStrategyEvaluator::evaluateBounded(BoundType bound_type, typesaf
     //  always be replaced
     bound_fn_t bound_init_fn = bound_fns[(bound_type + 1) % (UPPER + 1)];
 
+    setConditionalBounds();
+
     // yes, it's a 2^N algorithm, but N is small; e.g. 4 for intnw
     unsigned int finish = 1 << error_bounds.size();
     double val = bound_init_fn(0.0, std::numeric_limits<double>::max());
     for (step = 0; step < finish; ++step) {
         val = bound_fn(val, fn(this, strategy_arg, chooser_arg));
     }
+    clearConditionalBounds();
     return val;
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::setConditionalBounds()
+{
+    for (ErrorConfidenceBounds *bounds : error_bounds) {
+        bounds->setConditionalBounds();
+    }
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::clearConditionalBounds()
+{
+    for (ErrorConfidenceBounds *bounds : error_bounds) {
+        bounds->clearConditionalBounds();
+    }
 }
 
 double

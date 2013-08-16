@@ -1,6 +1,11 @@
 #include "error_weight_params.h"
 
 #include <math.h>
+#include <stdlib.h>
+#include <assert.h>
+
+#include <deque>
+using std::deque;
 
 static const double MIN_SIZE_THRESHOLD = 0.01;
 
@@ -21,4 +26,38 @@ double instruments::EWMA_GAIN = 1.0 - NEW_SAMPLE_WEIGHT;
 void instruments::update_ewma(double& ewma, double spot, double gain)
 {
     ewma = ewma * gain + spot * (1.0 - gain);
+}
+
+double instruments::calculate_sample_weight(size_t sample_index, size_t num_samples)
+{
+    return pow(NEW_SAMPLE_WEIGHT, num_samples - sample_index);
+}
+
+double instruments::calculate_weighted_probability(size_t num_samples, double weight)
+{
+    return 1.0 / num_samples * weight;
+}
+
+static deque<double> normalizers;
+
+static struct StaticIniter {
+    StaticIniter() {
+        normalizers.resize(instruments::MAX_SAMPLES + 1);
+        normalizers[0] = strtod("NAN", NULL);
+        for (size_t i = 1; i < normalizers.size(); ++i) {
+            normalizers[i] = 0.0;
+            for (size_t j = 0; j < i; ++j) {
+                double weight = instruments::calculate_sample_weight(j, i);
+                normalizers[i] += instruments::calculate_weighted_probability(i, weight);
+            }
+        }
+    }
+} initer;
+
+
+double instruments::calculate_normalized_sample_weight(size_t sample_index, size_t num_samples)
+{
+    assert(num_samples > 0);
+    assert(num_samples < normalizers.size());
+    return calculate_sample_weight(sample_index, num_samples) / normalizers[num_samples];
 }

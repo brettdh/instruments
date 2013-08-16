@@ -291,7 +291,7 @@ static void set_range_hints(struct common_test_data *cdata)
 
 static void test_both_networks_best(struct common_test_data *cdata)
 {
-    int num_samples = 50;
+    int num_samples = 20;
     int i;
     
     //instruments_set_debug_level(DEBUG);
@@ -343,6 +343,7 @@ CTEST2(intnw_specific_test, test_ignore_redundancy)
 {
     FOREACH_METHOD(cdata_array, i) {
         if (i == 1) {
+            //break;
             //instruments_set_debug_level(DEBUG);
         }
         struct common_test_data *cdata = cdata_array[i];
@@ -429,9 +430,12 @@ CTEST2(confidence_bounds_test, test_both_networks_best)
 
 CTEST2(confidence_bounds_test, test_save_restore)
 {
+    instruments_set_debug_level(DEBUG);
+    
     test_save_restore(&data->common_data, "/tmp/confidence_bounds_saved_evaluation_state.txt", 
                       CONFIDENCE_BOUNDS);
-    
+
+    instruments_set_debug_level(NONE);
 }
 
 static int
