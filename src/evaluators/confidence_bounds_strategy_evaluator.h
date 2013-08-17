@@ -20,6 +20,7 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
   protected:
     virtual void processObservation(Estimator *estimator, double observation,
                                     double old_estimate, double new_estimate);
+    virtual void processEstimatorConditionsChange(Estimator *estimator);
   private:
     enum BoundType {
         LOWER=0, UPPER

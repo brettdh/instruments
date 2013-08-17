@@ -7,6 +7,7 @@ using inst::INFO;
 
 #include <math.h>
 #include <assert.h>
+#include <float.h>
 
 #include <limits>
 #include <fstream>
@@ -229,8 +230,21 @@ void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::
 setConditionalBounds()
 {
-    auto shouldIncludeSample = [=](double value) {
-        return estimator->valueMeetsConditions(value);
+    double lower = estimator->getLowerBound();
+    double upper = estimator->getUpperBound();
+    if (lower != DBL_MIN) {
+        dbgprintf(INFO, "Setting lower bound for estimator %s: %f\n", 
+                  estimator->getName().c_str(), lower);
+    }
+    if (upper != DBL_MAX) {
+        dbgprintf(INFO, "Setting upper bound for estimator %s: %f\n", 
+                  estimator->getName().c_str(), upper);
+    }
+
+    auto shouldIncludeSample = [=](double log_error) {
+        double adjusted_value = adjusted_estimate(estimator->getEstimate(), 
+                                                  exp(log_error));
+        return estimator->valueMeetsConditions(adjusted_value);
     };
     setConditionalBoundsWhere(shouldIncludeSample);
 }
@@ -243,9 +257,11 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
     double cur_M2 = 0.0;
     size_t cur_num_samples = 0;
     
+    ostringstream s;
     for (size_t i = 0; i < log_error_samples.size(); ++i) {
         double log_error = log_error_samples[i];
         if (shouldIncludeSample(log_error)) {
+            s << exp(log_error) << " ";
             if (weighted) {
                 update_error_distribution_ewma(cur_num_samples,
                                                cur_log_error_mean,
@@ -260,6 +276,8 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
             }
         }
     }
+    dbgprintf(INFO, "Estimator %s Using error samples: [ %s]\n", 
+              estimator->getName().c_str(), s.str().c_str());
     setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
 }
 
@@ -313,8 +331,9 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::setBounds(double cur_l
         error_bounds[LOWER] = bounds[1];
         error_bounds[UPPER] = bounds[0];
     }
-    inst::dbgprintf(INFO, "n=%4zu; error bounds: [%f, %f]\n", 
-                    cur_num_samples, error_bounds[LOWER], error_bounds[UPPER]);
+    inst::dbgprintf(INFO, "Estimator %s  n=%4zu; error bounds: [%f, %f]\n", 
+                    estimator->getName().c_str(), cur_num_samples, 
+                    error_bounds[LOWER], error_bounds[UPPER]);
 }
 
 
@@ -416,6 +435,12 @@ ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, doub
         bounds->processObservation(observation, old_estimate, new_estimate);
     }
 
+    clearCache();
+}
+
+void 
+ConfidenceBoundsStrategyEvaluator::processEstimatorConditionsChange(Estimator *estimator)
+{
     clearCache();
 }
 

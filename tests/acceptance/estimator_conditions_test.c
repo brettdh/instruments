@@ -39,8 +39,7 @@ CTEST_TEARDOWN(estimator_conditions)
     free_external_estimator(data->mid_estimator);
     free_external_estimator(data->hilo_estimator);
 
-
-    //instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
+    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
 }
 
 static double estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
@@ -193,10 +192,12 @@ CTEST2(estimator_conditions, set_and_clear_condition)
 
 CTEST2(estimator_conditions, set_and_clear_condition_prob_bounds)
 {
+    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
     run_set_and_clear_condition(data, CONFIDENCE_BOUNDS);
 }
 
 CTEST2(estimator_conditions, set_and_clear_condition_bayesian)
 {
+    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
     run_set_and_clear_condition(data, BAYESIAN);
 }
