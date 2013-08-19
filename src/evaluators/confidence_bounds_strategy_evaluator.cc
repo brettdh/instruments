@@ -259,13 +259,21 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
     double cur_log_error_mean = 0.0, cur_log_error_variance = 0.0;
     double cur_M2 = 0.0;
     size_t cur_num_samples = 0;
-    
+
     vector<double> pruned_samples;
-    copy_if(log_error_samples.begin(), log_error_samples.end(),
-            pruned_samples.begin(), shouldIncludeSample);
+    pruned_samples.reserve(log_error_samples.size());
+    for (double error_sample : log_error_samples) {
+        if (shouldIncludeSample(error_sample)) {
+            pruned_samples.push_back(error_sample);
+        }
+    }
     if (pruned_samples.empty()) {
         // see comments in ../joint_distributions/intnw_joint_distribution.cc
         // for why I'm doing this step
+        if (!estimator->hasConditions()) {
+            // we really just have no error samples yet.
+            return;
+        }
         double value = estimator->getConditionalBound();
         double error = calculate_error(estimator->getEstimate(), value);
         double log_error = log(error);

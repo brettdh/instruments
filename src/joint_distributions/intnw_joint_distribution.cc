@@ -139,6 +139,10 @@ static void adjust_probs_for_estimator_conditions(Estimator *estimator, double *
         // This is probably correct anyway, since the condition being set
         //  means that the app is experiencing an extreme, which often
         //  should cause redundancy (e.g. IntNW, higher-than-usual RTT).
+        if (!estimator->hasConditions()) {
+            // we must not have any error samples yet.
+            return;
+        }
         double value = estimator->getConditionalBound();
         double error_value = calculate_error(estimator->getEstimate(), value);
         values[index] = error_value;

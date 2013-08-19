@@ -51,6 +51,7 @@ class Estimator {
     //   that tell me that it's only 30 seconds long.
     void setCondition(enum ConditionType type, double value);
     void clearConditions();
+    bool hasConditions();
     bool valueMeetsConditions(double value);
 
     // assumes that a bound has been set, and returns that bound.

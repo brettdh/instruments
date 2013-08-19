@@ -185,6 +185,12 @@ Estimator::valueMeetsConditions(double value)
             (conditions.count(AT_MOST) == 0 || float_is_less_or_equal(value, conditions[AT_MOST])));
 }
 
+bool
+Estimator::hasConditions()
+{
+    return ((conditions.count(AT_LEAST) +
+             conditions.count(AT_MOST)) > 0);
+}
 
 double
 Estimator::getLowerBound()
@@ -201,8 +207,7 @@ Estimator::getUpperBound()
 double 
 Estimator::getConditionalBound()
 {
-    ASSERT((conditions.count(AT_LEAST) + 
-            conditions.count(AT_MOST)) > 0);
+    ASSERT(hasConditions());
     
     if (conditions.count(AT_LEAST) > 0 && conditions.count(AT_MOST) > 0) {
         return (conditions[AT_LEAST] + conditions[AT_MOST]) / 2.0;
