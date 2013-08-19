@@ -197,3 +197,21 @@ Estimator::getUpperBound()
 {
     return conditions.count(AT_MOST) == 0 ? DBL_MAX : conditions[AT_MOST];
 }
+
+double 
+Estimator::getConditionalBound()
+{
+    ASSERT((conditions.count(AT_LEAST) + 
+            conditions.count(AT_MOST)) > 0);
+    
+    if (conditions.count(AT_LEAST) > 0 && conditions.count(AT_MOST) > 0) {
+        return (conditions[AT_LEAST] + conditions[AT_MOST]) / 2.0;
+    } else if (conditions.count(AT_LEAST) > 0) {
+        return conditions[AT_LEAST];
+    } else if (conditions.count(AT_MOST) > 0) {
+        return conditions[AT_MOST];
+    } else {
+        ASSERT(false);
+        __builtin_unreachable();
+    }
+}

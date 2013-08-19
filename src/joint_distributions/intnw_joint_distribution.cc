@@ -116,13 +116,33 @@ static double *get_estimator_samples_probs(StatsDistribution *estimator_samples,
 
 static void adjust_probs_for_estimator_conditions(Estimator *estimator, double *& values, double *& probs, size_t& count)
 {
+    size_t index = count;
+    size_t pruned_samples = 0;
+    
     for (size_t i = 0; i < count; ++i) {
         double error_value = values[i];
         double error_adjusted_estimate = adjusted_estimate(estimator->getEstimate(), error_value);
         
         if (!estimator->valueMeetsConditions(error_adjusted_estimate)) {
             probs[i] = 0.0;
+            index = i;
+            ++pruned_samples;
         }
+    }
+    if (pruned_samples == count) {
+        // none of my samples met the conditions,
+        // so assume that I'm observing a new extreme.
+        // Don't store this as an error measurement, because
+        // the app hasn't sent me a new measurement yet.
+        // Just use it in the current conditional calculation, 
+        //  so that the distribution isn't empty.
+        // This is probably correct anyway, since the condition being set
+        //  means that the app is experiencing an extreme, which often
+        //  should cause redundancy (e.g. IntNW, higher-than-usual RTT).
+        double value = estimator->getConditionalBound();
+        double error_value = calculate_error(estimator->getEstimate(), value);
+        values[index] = error_value;
+        probs[index] = 1.0;
     }
     
     // normalize the array, since estimator error values might have been filtered

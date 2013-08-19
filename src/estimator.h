@@ -16,7 +16,7 @@ enum ConditionType {
     AT_MOST = INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST
 };
 
-/* Pure virtual base class for all types of estimators.{}
+/* Pure virtual base class for all types of estimators.
  * Takes in values, returns an estimate.
  * Possible ways to implement this:
  * 1) Return last observation
@@ -52,6 +52,15 @@ class Estimator {
     void setCondition(enum ConditionType type, double value);
     void clearConditions();
     bool valueMeetsConditions(double value);
+
+    // assumes that a bound has been set, and returns that bound.
+    // if only one bound is set, returns that bound.
+    // if two bounds have been set, returns their midpoint.
+    // (This is unlikely in practice, but it's reasonable,
+    // since this is only used when no past estimates satisfy
+    // the bounds, and if the value is somehow known to be
+    // between two bounds, the midpoint is a reasonable guess.
+    double getConditionalBound();
 
     // returns lower bound on estimator if set, or DBL_MIN if none.
     double getLowerBound();

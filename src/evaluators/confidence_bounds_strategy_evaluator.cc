@@ -18,11 +18,14 @@ using inst::INFO;
 #include <iomanip>
 #include <map>
 #include <functional>
+#include <algorithm>
+#include <vector>
 using std::ifstream; using std::ofstream;
 using std::ostringstream; using std::runtime_error;
 using std::string; using std::setprecision; using std::endl;
 using std::pair; using std::make_pair; using std::min;
-using std::deque; using std::function;
+using std::deque; using std::function; using std::vector;
+using std::copy_if;
 
 #include "students_t.h"
 
@@ -256,6 +259,18 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
     double cur_log_error_mean = 0.0, cur_log_error_variance = 0.0;
     double cur_M2 = 0.0;
     size_t cur_num_samples = 0;
+    
+    vector<double> pruned_samples;
+    copy_if(log_error_samples.begin(), log_error_samples.end(),
+            pruned_samples.begin(), shouldIncludeSample);
+    if (pruned_samples.empty()) {
+        // see comments in ../joint_distributions/intnw_joint_distribution.cc
+        // for why I'm doing this step
+        double value = estimator->getConditionalBound();
+        double error = calculate_error(estimator->getEstimate(), value);
+        double log_error = log(error);
+        pruned_samples.push_back(log_error);
+    }
     
     ostringstream s;
     for (size_t i = 0; i < log_error_samples.size(); ++i) {
