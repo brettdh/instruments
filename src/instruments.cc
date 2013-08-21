@@ -53,7 +53,12 @@ void free_strategy(instruments_strategy_t strategy)
 double get_adjusted_estimator_value(instruments_context_t ctx, Estimator *estimator)
 {
     StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext *>(ctx);
-    return context->getAdjustedEstimatorValue(estimator);
+    if (context) {
+        return context->getAdjustedEstimatorValue(estimator);
+    } else {
+        // app just wants the raw value.
+        return estimator->getEstimate();
+    }
 }
 
 double get_estimator_value(instruments_context_t ctx,
