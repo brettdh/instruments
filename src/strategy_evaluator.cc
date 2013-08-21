@@ -232,7 +232,13 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
 
     map<instruments_strategy_t, double> strategy_times;
 
+    // turn this on and off.  if false, uses time as ranking for singular strategies.
+    // if true, uses weighted cost function.
+    // redundancy eval always uses weighted cost function.
+    const bool OPTIMIZE_WEIGHTED_COST_FUNCTION = true;
+
     // first, pick the singular strategy that takes the least time (expected)
+    // WHOOPS!  I should be picking the singular strategy that minimizes the weighted cost function.
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
 
@@ -250,7 +256,9 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
             strategy_times[currentStrategy] = time;
 
             double cost = 0.0;
-            if (redundancy) {
+            bool new_winner = (best_singular == NULL);
+
+            if (OPTIMIZE_WEIGHTED_COST_FUNCTION) {
                 inst::dbgprintf(INFO, "Calculating cost\n");
                 // calculate the singular-strategy cost so I don't have to do it
                 //  later when calculating redundant-strategy costs.
@@ -258,15 +266,17 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
                 // XXX:  the class that does the caching.
                 cost = calculateCost(currentStrategy, chooser_arg);
                 ASSERT(!isnan(cost));
-                inst::dbgprintf(INFO, "Singular strategy \"%s\"  time: %f  cost: %f\n",
-                                currentStrategy->getName(), time, cost);
+                inst::dbgprintf(INFO, "Singular strategy \"%s\"  time: %f  cost: %f  sum: %f\n",
+                                currentStrategy->getName(), time, cost, time + cost);
+
+                new_winner = new_winner || ((time + cost) < (best_singular_time + best_singular_cost));
             } else {
                 inst::dbgprintf(INFO, "Singular strategy \"%s\"  time: %f\n",
                                 currentStrategy->getName(), time);
+                new_winner = new_winner || (time < best_singular_time);
             }
 
-
-            if (!best_singular || time < best_singular_time) {
+            if (new_winner) {
                 best_singular = currentStrategy;
                 best_singular_time = time;
                 best_singular_cost = cost;
