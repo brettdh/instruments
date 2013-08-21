@@ -235,6 +235,7 @@ CTEST2(intnw_specific_test, test_one_network_wins)
 
 CTEST2(intnw_specific_test, test_each_network_wins)
 {
+    set_fixed_resource_weights(0.0, 0.0);
     FOREACH_METHOD(cdata_array, i) {
         struct common_test_data *cdata = cdata_array[i];
         
@@ -246,8 +247,8 @@ CTEST2(intnw_specific_test, test_each_network_wins)
         //  if x > 4000, network 1 wins.
         //  if x < 4000, network 2 wins.
         
-        assert_correct_strategy(cdata, cdata->strategies[0], 4001);
-        assert_correct_strategy(cdata, cdata->strategies[1], 3999);
+        assert_correct_nonredundant_strategy(cdata, cdata->strategies[0], 4001);
+        assert_correct_nonredundant_strategy(cdata, cdata->strategies[1], 3999);
     }
 }
 
@@ -410,6 +411,7 @@ CTEST2(confidence_bounds_test, test_one_network_wins)
 
 CTEST2(confidence_bounds_test, test_each_network_wins)
 {
+    set_fixed_resource_weights(0.0, 0.0);
     struct common_test_data *cdata = &data->common_data;
     init_network_params(cdata, 5000, 1.0, 2500, 0.2);
     // break-even: 
@@ -594,6 +596,7 @@ CTEST2(bayesian_method_test, test_one_network_wins)
 
 CTEST2(bayesian_method_test, test_each_network_wins)
 {
+    set_fixed_resource_weights(0.0, 0.0);
     struct common_test_data *cdata = &data->common_data;
     init_network_params(cdata, 5000, 1.0, 2500, 0.2);
     // break-even: 
