@@ -28,11 +28,15 @@ do {                                                             \
 } while (0)
 
 static struct timeval
-time_choose_strategy(instruments_strategy_evaluator_t evaluator, int bytelen)
+time_choose_strategy(instruments_strategy_evaluator_t evaluator, int bytelen, int redundant)
 {
     struct timeval begin, end, diff;
     gettimeofday(&begin, NULL);
-    (void) choose_strategy(evaluator, (void *) bytelen);
+    if (redundant) {
+        (void) choose_strategy(evaluator, (void *) bytelen);
+    } else {
+        (void) choose_nonredundant_strategy(evaluator, (void *) bytelen);
+    }
     gettimeofday(&end, NULL);
     TIMEDIFF(begin, end, diff);
     return diff;
@@ -41,6 +45,7 @@ time_choose_strategy(instruments_strategy_evaluator_t evaluator, int bytelen)
 struct strategy_args {
     int num_estimators;
     instruments_external_estimator_t *estimators;
+    instruments_external_estimator_t *other_estimators;
 };
 
 static double
@@ -54,12 +59,16 @@ estimator_value(instruments_context_t ctx, void *strategy_arg, void *chooser_arg
     if (args->num_estimators > 2) {
         get_estimator_value(ctx, args->estimators[2]);
     }
+    if (args->other_estimators) {
+        bw += get_estimator_value(NULL, args->other_estimators[0]);
+        latency += get_estimator_value(NULL, args->other_estimators[1]);
+    }
     return bytes/bw + latency;
 }
 
 static double no_cost(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
 {
-    return 0.0;
+    return estimator_value(ctx, strategy_arg, chooser_arg) * 2.0;
 }
 
 static double get_unit_uniform_sample()
@@ -124,7 +133,8 @@ static void init_estimators(instruments_external_estimator_t *estimators,
 }
 
 static struct timeval run_test(int num_samples, enum EvalMethod method,
-                               const char *restore_file, int choose_strategy_count)
+                               const char *restore_file, int choose_strategy_count,
+                               int redundant)
 {
     instruments_external_estimator_t estimators[NUM_ESTIMATORS];
     instruments_strategy_t strategies[NUM_STRATEGIES];
@@ -133,16 +143,18 @@ static struct timeval run_test(int num_samples, enum EvalMethod method,
     struct strategy_args args[2] = {
         {
         num_estimators: NUM_WIFI_ESTIMATORS,
-        estimators: &estimators[0]
+        estimators: &estimators[0],
+        other_estimators: &estimators[CELLULAR_ESTIMATORS_INDEX]
         },
         {
         num_estimators: NUM_CELLULAR_ESTIMATORS,
-        estimators: &estimators[CELLULAR_ESTIMATORS_INDEX]
+        estimators: &estimators[CELLULAR_ESTIMATORS_INDEX],
+        other_estimators: NULL
         },
     };
 
-    strategies[0] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[0], NULL);
-    strategies[1] = make_strategy(estimator_value, NULL, no_cost, (void*) &args[1], NULL);
+    strategies[0] = make_strategy(estimator_value, no_cost, no_cost, (void*) &args[0], NULL);
+    strategies[1] = make_strategy(estimator_value, no_cost, no_cost, (void*) &args[1], NULL);
     strategies[2] = make_redundant_strategy(strategies, 2);
     
     instruments_strategy_evaluator_t evaluator = 
@@ -163,9 +175,9 @@ static struct timeval run_test(int num_samples, enum EvalMethod method,
     }
     struct timeval total_duration = {0, 0};
     for (i = 0; i < choose_strategy_count; ++i) {
-        struct timeval duration = time_choose_strategy(evaluator, bytelen);
+        struct timeval duration = time_choose_strategy(evaluator, bytelen, redundant);
         timeradd(&total_duration, &duration, &total_duration);
-
+        
         add_observation(estimators[i % NUM_ESTIMATORS], get_sample(), get_sample());
     }
     
@@ -205,27 +217,32 @@ int main(int argc, char *argv[])
     };
     const size_t NUM_METHODS = sizeof(methods) / sizeof(enum EvalMethod);
     
-    fprintf(stderr, "%11s", "");
-    for (i = 0; i < NUM_METHODS; ++i) {
-        enum EvalMethod method = methods[i];
-        fprintf(stderr, " %-15s", get_method_name(method));
-    }
-    fprintf(stderr, "\n");
-
     int min_samples = 5;
     int max_samples = 50;
     int new_samples = 5;
     int num_samples;
+    int redundant;
 
-    for (num_samples = min_samples; num_samples <= max_samples; 
-         num_samples += new_samples) {
-        fprintf(stderr, "%3d samples", num_samples);
+    for (redundant = 1; redundant >= 0; --redundant) {
+        fprintf(stderr, "%sconsidering redundant strategy\n", 
+                (redundant ? "" : "not "));
+        fprintf(stderr, "%11s", "");
         for (i = 0; i < NUM_METHODS; ++i) {
             enum EvalMethod method = methods[i];
-            struct timeval duration = run_test(num_samples, method, NULL, 1);
-            fprintf(stderr, " %lu.%06lu%7s", duration.tv_sec, duration.tv_usec, "");
+            fprintf(stderr, " %-15s", get_method_name(method));
         }
         fprintf(stderr, "\n");
+        
+        for (num_samples = min_samples; num_samples <= max_samples; 
+             num_samples += new_samples) {
+            fprintf(stderr, "%3d samples", num_samples);
+            for (i = 0; i < NUM_METHODS; ++i) {
+                enum EvalMethod method = methods[i];
+                struct timeval duration = run_test(num_samples, method, NULL, 1, redundant);
+                fprintf(stderr, " %lu.%06lu%7s", duration.tv_sec, duration.tv_usec, "");
+            }
+            fprintf(stderr, "\n");
+        }
     }
 
 #ifdef ANDROID
@@ -236,16 +253,17 @@ int main(int argc, char *argv[])
     fprintf(stderr, "%11s bayesian-with-history\n", "");
     for (num_samples = min_samples; num_samples <= max_samples;
          num_samples += new_samples) {
-        struct timeval duration = run_test(num_samples, BAYESIAN, bayesian_history, 1);
+        struct timeval duration = run_test(num_samples, BAYESIAN, bayesian_history, 1, 1);
         fprintf(stderr, "%3d samples %lu.%06lu\n", num_samples, duration.tv_sec, duration.tv_usec);
     }
 
+#if 0
     int num_iterations = 1000;
     num_samples = 50;
-    struct timeval total_duration = run_test(num_samples, CONFIDENCE_BOUNDS, NULL, num_iterations);
+    struct timeval total_duration = run_test(num_samples, CONFIDENCE_BOUNDS, NULL, num_iterations, 1);
     fprintf(stderr, "Confidence bounds, %d samples, %d times:  %lu.%06lu sec\n", 
             num_samples, num_iterations, total_duration.tv_sec, total_duration.tv_usec);
-    
+#endif    
     
 //#define CHECK_VALUES
 #ifdef CHECK_VALUES
@@ -253,7 +271,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < NUM_METHODS; ++i) {
         enum EvalMethod method = methods[i];
         fprintf(stderr, "*** %s ***\n", get_method_name(method));
-        (void) run_test(5, method, NULL, 1);
+        (void) run_test(5, method, NULL, 1, 1);
     }
 #endif
 
