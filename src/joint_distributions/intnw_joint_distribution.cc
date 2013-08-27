@@ -401,7 +401,7 @@ IntNWJointDistribution::singularStrategyExpectedValue(Strategy *strategy, typesa
                         strategy->getName(), get_value_name(strategy, fn).c_str(), 
                         current_strategy_estimators.size());
         const size_t sizes[] = { max_i, max_j, max_k };
-        for (size_t m = 0; m < (wifi ? 3 : 2); ++m) {
+        for (size_t m = 0; m < ((wifi && wifi_uses_sessions) ? 3 : 2); ++m) {
             Estimator *estimator = current_strategy_estimators[m];
             ostringstream s;
             s << "  " << estimator->getName() << ": ";
