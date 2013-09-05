@@ -233,17 +233,6 @@ void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::
 setConditionalBounds()
 {
-    double lower = estimator->getLowerBound();
-    double upper = estimator->getUpperBound();
-    if (lower != DBL_MIN) {
-        dbgprintf(INFO, "Setting lower bound for estimator %s: %f\n", 
-                  estimator->getName().c_str(), lower);
-    }
-    if (upper != DBL_MAX) {
-        dbgprintf(INFO, "Setting upper bound for estimator %s: %f\n", 
-                  estimator->getName().c_str(), upper);
-    }
-
     auto shouldIncludeSample = [=](double log_error) {
         double adjusted_value = adjusted_estimate(estimator->getEstimate(), 
                                                   exp(log_error));

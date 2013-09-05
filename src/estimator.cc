@@ -147,6 +147,9 @@ Estimator::setCondition(enum ConditionType type, double value)
         }
     }
 
+    inst::dbgprintf(inst::INFO, "Setting %s bound for estimator %s: %f\n", 
+                    type == AT_MOST ? "upper" : "lower", name.c_str(), value);
+
     for (StrategyEvaluator *subscriber : subscribers) {
         subscriber->estimatorConditionsChanged(this);
     }
@@ -154,6 +157,8 @@ Estimator::setCondition(enum ConditionType type, double value)
 
 void Estimator::clearConditions()
 {
+    inst::dbgprintf(inst::INFO, "Clearing bounds for estimator %s\n",
+                    name.c_str());
     conditions.clear();
     for (StrategyEvaluator *subscriber : subscribers) {
         subscriber->estimatorConditionsChanged(this);
