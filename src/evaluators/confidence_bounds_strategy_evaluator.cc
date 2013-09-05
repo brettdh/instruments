@@ -3,7 +3,7 @@
 #include "error_calculation.h"
 #include "debug.h"
 namespace inst = instruments;
-using inst::INFO;
+using inst::INFO; using inst::DEBUG;
 
 #include <math.h>
 #include <assert.h>
@@ -260,11 +260,16 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
     double cur_M2 = 0.0;
     size_t cur_num_samples = 0;
 
+    ostringstream s;
+    bool debugging = inst::is_debugging_on(DEBUG);
     vector<double> pruned_samples;
     pruned_samples.reserve(log_error_samples.size());
-    for (double error_sample : log_error_samples) {
-        if (shouldIncludeSample(error_sample)) {
-            pruned_samples.push_back(error_sample);
+    for (double log_error_sample : log_error_samples) {
+        if (shouldIncludeSample(log_error_sample)) {
+            if (debugging) {
+                s << exp(log_error_sample) << " ";
+            }
+            pruned_samples.push_back(log_error_sample);
         }
     }
     if (pruned_samples.empty()) {
@@ -278,13 +283,15 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
         double error = calculate_error(estimator->getEstimate(), value);
         double log_error = log(error);
         pruned_samples.push_back(log_error);
+        if (debugging) {
+            s << error << " ";
+        }
     }
     
-    ostringstream s;
-    for (size_t i = 0; i < log_error_samples.size(); ++i) {
-        double log_error = log_error_samples[i];
-        if (shouldIncludeSample(log_error)) {
-            s << exp(log_error) << " ";
+    dbgprintf(DEBUG, "Estimator %s Using error samples: [ %s]\n", 
+              estimator->getName().c_str(), s.str().c_str());
+    if (pruned_samples.size() < log_error_samples.size()) {
+        for (double log_error : pruned_samples) {
             if (weighted) {
                 update_error_distribution_ewma(cur_num_samples,
                                                cur_log_error_mean,
@@ -298,10 +305,11 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
                                                  log_error);
             }
         }
+        setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
+    } else {
+        dbgprintf(DEBUG, "No samples pruned; bounds still [%f, %f]\n",
+                  error_bounds[LOWER], error_bounds[UPPER]);
     }
-    dbgprintf(INFO, "Estimator %s Using error samples: [ %s]\n", 
-              estimator->getName().c_str(), s.str().c_str());
-    setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
 }
 
 void 
@@ -571,10 +579,20 @@ ConfidenceBoundsStrategyEvaluator::evaluateBounded(BoundType bound_type, typesaf
     // yes, it's a 2^N algorithm, but N is small; e.g. 4 for intnw
     unsigned int finish = 1 << error_bounds.size();
     double val = bound_init_fn(0.0, std::numeric_limits<double>::max());
+    ostringstream s;
+    bool debugging = inst::is_debugging_on(inst::DEBUG);
     for (step = 0; step < finish; ++step) {
-        val = bound_fn(val, fn(this, strategy_arg, chooser_arg));
+        double cur_val = fn(this, strategy_arg, chooser_arg);
+        val = bound_fn(val, cur_val);
+        if (debugging) {
+            s << cur_val << " ";
+        }
     }
     clearConditionalBounds();
+
+    inst::dbgprintf(inst::DEBUG, "%s is %f; values: [ %s]\n",
+                    bound_type == LOWER ? "min" : "max",
+                    val, s.str().c_str());
     return val;
 }
 
