@@ -290,26 +290,21 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
     
     dbgprintf(DEBUG, "Estimator %s Using error samples: [ %s]\n", 
               estimator->getName().c_str(), s.str().c_str());
-    if (pruned_samples.size() < log_error_samples.size()) {
-        for (double log_error : pruned_samples) {
-            if (weighted) {
-                update_error_distribution_ewma(cur_num_samples,
-                                               cur_log_error_mean,
-                                               cur_log_error_variance,
-                                               log_error);
-            } else {
-                update_error_distribution_linear(cur_num_samples,
-                                                 cur_log_error_mean,
-                                                 cur_log_error_variance,
-                                                 cur_M2,
-                                                 log_error);
-            }
+    for (double log_error : pruned_samples) {
+        if (weighted) {
+            update_error_distribution_ewma(cur_num_samples,
+                                           cur_log_error_mean,
+                                           cur_log_error_variance,
+                                           log_error);
+        } else {
+            update_error_distribution_linear(cur_num_samples,
+                                             cur_log_error_mean,
+                                             cur_log_error_variance,
+                                             cur_M2,
+                                             log_error);
         }
-        setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
-    } else {
-        dbgprintf(DEBUG, "No samples pruned; bounds still [%f, %f]\n",
-                  error_bounds[LOWER], error_bounds[UPPER]);
     }
+    setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
 }
 
 void 
