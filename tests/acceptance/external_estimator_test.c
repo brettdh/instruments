@@ -14,6 +14,7 @@ CTEST_DATA(external_estimator) {
 
 CTEST_SETUP(external_estimator)
 {
+    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
     set_fixed_resource_weights(0.0, 1.0);
 
     data->high_estimator = create_external_estimator("high");

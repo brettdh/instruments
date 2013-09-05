@@ -169,6 +169,13 @@ static void run_set_and_clear_condition(CTEST_DATA(estimator_conditions) *data,
     clear_estimator_conditions(data->hilo_estimator);
     check_chosen_strategy(evaluator, method, strategies[0], "Failed to choose mid strategy after clearing conditions");
 
+    // test all-samples-ruled-out condition
+    set_estimator_condition(data->hilo_estimator, INSTRUMENTS_ESTIMATOR_VALUE_AT_LEAST, 200.0);
+    check_chosen_strategy(evaluator, method, strategies[0], "Failed to choose mid strategy with unbelievably high condition");
+
+    clear_estimator_conditions(data->hilo_estimator);
+    check_chosen_strategy(evaluator, method, strategies[0], "Failed to choose mid strategy after clearing conditions");
+
     instruments_scheduled_reevaluation_t eval = 
         schedule_reevaluation(evaluator, NULL, 
                               set_reeval_condition, data, 
@@ -187,6 +194,7 @@ static void run_set_and_clear_condition(CTEST_DATA(estimator_conditions) *data,
 
 CTEST2(estimator_conditions, set_and_clear_condition)
 {
+    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
     run_set_and_clear_condition(data, EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
 }
 
@@ -198,6 +206,6 @@ CTEST2(estimator_conditions, set_and_clear_condition_prob_bounds)
 
 CTEST2(estimator_conditions, set_and_clear_condition_bayesian)
 {
-    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
+    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
     run_set_and_clear_condition(data, BAYESIAN);
 }

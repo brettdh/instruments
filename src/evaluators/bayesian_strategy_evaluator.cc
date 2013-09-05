@@ -237,6 +237,7 @@ class BayesianStrategyEvaluator::Likelihood {
     LikelihoodMap likelihood_distribution;
 
     DistributionKey getCurrentEstimatorKey(const vector<pair<Estimator *, double> >& estimator_values);
+    DistributionKey makeEstimatorKey(const vector<pair<Estimator *, double> >& estimator_values);
     void setEstimatorSamples(DistributionKey& key);
     double jointPriorProbability(DistributionKey& key);
 };
@@ -464,6 +465,18 @@ BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorKey(const vector<pair<
     return key;
 }
 
+DistributionKey
+BayesianStrategyEvaluator::Likelihood::makeEstimatorKey(const vector<pair<Estimator *, double> >& estimator_values)
+{
+    DistributionKey key(evaluator);
+    for (auto& p : estimator_values) {
+        Estimator *estimator = p.first;
+        double obs = p.second;
+        key.addEstimatorValue(estimator, obs);
+    }
+    return key;
+}
+
 double 
 BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorSample(Estimator *estimator)
 {
@@ -558,12 +571,13 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     }
     DecisionsHistogram *dummy_decision = nullptr;
     if (pruned_likelihood_distribution.empty()) {
-        // pretend that I just received a new observation on any estimator
-        //   whose conditional bounds show a difference from its last
-        //   observed value.  Create a temporary, dummy decision histogram
-        //   and estimator key, and use it for the posterior calculation.
+        // I have no history that helps me decide what to do;
+        // all my history is ruled out by the conditional bounds.
+        // Therefore, I just return the function call value with the 
+        // last estimator values, conditional bounds considered
+        // (which is essentially what the other methods are doing in this case too).
         auto dummy_estimator_values = evaluator->simple_evaluator->getEstimatorValues();
-        for (auto p : dummy_estimator_values) {
+        for (auto& p : dummy_estimator_values) {
             Estimator *estimator = p.first;
             double& value = p.second;
             // there may be multiple estimators out of bounds;
@@ -572,12 +586,16 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
                 value = estimator->getConditionalBound();
             }
         }
-        cur_key = getCurrentEstimatorKey(dummy_estimator_values);
-        dummy_decision = new DecisionsHistogram(evaluator);
-        dummy_decision->addDecision(dummy_estimator_values);
-        
-        // make sure the likelihood distribution has at least one value
-        pruned_likelihood_distribution[cur_key] = make_pair(1.0, dummy_decision);
+        tmp_simple_evaluator->setEstimatorValues(dummy_estimator_values);
+        if (inst::is_debugging_on(inst::DEBUG)) {
+            ostringstream s;
+            for (auto& p : dummy_estimator_values) {
+                s << p.second << " ";
+            }
+            inst::dbgprintf(inst::DEBUG, "History all pruned by conditional bounds; Just using estimator values: %s\n", 
+                            s.str().c_str());
+        }
+        return tmp_simple_evaluator->expectedValue(strategy, fn, strategy_arg, chooser_arg);
     }
 
     Stopwatch stopwatch;
@@ -650,7 +668,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     delete dummy_decision;
     
     inst::dbgprintf(INFO, "[bayesian] calculated posterior from %zu samples\n", 
-                    likelihood_distribution.size());
+                    pruned_likelihood_distribution.size());
 #ifndef NDEBUG
     inst::dbgprintf(INFO, "[bayesian] prior sum: %f\n", prior_sum);
 #endif
