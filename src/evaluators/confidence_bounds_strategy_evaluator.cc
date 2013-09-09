@@ -321,7 +321,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(dou
 
     if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
         // PROBLEMATIC.
-        assert(false); // TODO: figure out what to do here.
+        ASSERT(false); // TODO: figure out what to do here.
     }
 }
 
