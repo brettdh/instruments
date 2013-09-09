@@ -6,7 +6,8 @@
 class TrustedOracleStrategyEvaluator : public StrategyEvaluator {
   public:
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                 void *strategy_arg, void *chooser_arg);
+                                 void *strategy_arg, void *chooser_arg,
+                                 ComparisonType comparison_type);
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
 
     // nothing to save/restore.

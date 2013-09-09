@@ -195,7 +195,8 @@ class BayesianStrategyEvaluator::SimpleEvaluator : public StrategyEvaluator {
     
     Strategy *chooseStrategy(void *chooser_arg);
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                 void *strategy_arg, void *chooser_arg);
+                                 void *strategy_arg, void *chooser_arg,
+                                 ComparisonType comparison_type);
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
 
     // nothing to save/restore.
@@ -397,7 +398,8 @@ get_combiner_fn(typesafe_eval_fn_t fn)
 
 double
 BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                         void *strategy_arg, void *chooser_arg)
+                                         void *strategy_arg, void *chooser_arg,
+                                         ComparisonType comparison_type)
 {
     instruments_strategy_t *strategies_array = new instruments_strategy_t[strategies.size()];
     for (size_t i = 0; i < strategies.size(); ++i) {
@@ -595,7 +597,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
             inst::dbgprintf(inst::DEBUG, "History all pruned by conditional bounds; Just using estimator values: %s\n", 
                             s.str().c_str());
         }
-        return tmp_simple_evaluator->expectedValue(strategy, fn, strategy_arg, chooser_arg);
+        return tmp_simple_evaluator->expectedValue(strategy, fn, strategy_arg, chooser_arg, COMPARISON_TYPE_IRRELEVANT);
     }
 
     Stopwatch stopwatch;
@@ -911,7 +913,7 @@ BayesianStrategyEvaluator::SimpleEvaluator::chooseStrategy(void *chooser_arg)
     double min_time = DBL_MAX;
     Strategy *winner = NULL;
     for (Strategy *strategy : strategies) {
-        double time = strategy->calculateTime(this, chooser_arg);
+        double time = strategy->calculateTime(this, chooser_arg, COMPARISON_TYPE_IRRELEVANT);
         if (!winner || time < min_time) {
             winner = strategy;
             min_time = time;
@@ -922,7 +924,8 @@ BayesianStrategyEvaluator::SimpleEvaluator::chooseStrategy(void *chooser_arg)
 
 double 
 BayesianStrategyEvaluator::SimpleEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn,
-                                                          void *strategy_arg, void *chooser_arg)
+                                                          void *strategy_arg, void *chooser_arg,
+                                                          ComparisonType comparison_type)
 {
     return fn(this, strategy_arg, chooser_arg);
 }

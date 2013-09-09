@@ -76,7 +76,8 @@ EmpiricalErrorStrategyEvaluator::processEstimatorConditionsChange(Estimator *est
 
 double
 EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                               void *strategy_arg, void *chooser_arg)
+                                               void *strategy_arg, void *chooser_arg,
+                                               ComparisonType comparison_type)
 {
     jointDistribution->setEvalArgs(strategy_arg, chooser_arg);
     return jointDistribution->expectedValue(strategy, fn);

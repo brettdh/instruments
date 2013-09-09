@@ -482,7 +482,7 @@ ConfidenceBoundsStrategyEvaluator::~ConfidenceBoundsStrategyEvaluator()
 
 ConfidenceBoundsStrategyEvaluator::BoundType
 ConfidenceBoundsStrategyEvaluator::getBoundType(EvalMode eval_mode, Strategy *strategy, 
-                                                typesafe_eval_fn_t fn)
+                                                typesafe_eval_fn_t fn, ComparisonType comparison_type)
 {
     if (eval_mode == AGGRESSIVE) {
         // aggressive = upper bound on benefit of redundancy.
@@ -504,7 +504,12 @@ ConfidenceBoundsStrategyEvaluator::getBoundType(EvalMode eval_mode, Strategy *st
             fn == strategy->getEvalFn(DATA_FN)) {
             return LOWER;
         } else {
-            return strategy->isRedundant() ? LOWER : UPPER;
+            if (strategy->isRedundant() || comparison_type == SINGULAR_TO_SINGULAR) {
+                return LOWER;
+            } else {
+                // singular strategy, comparing to redundant.  return upper bound.
+                return UPPER;
+            }
         }
     } else {
         assert(eval_mode == CONSERVATIVE);
@@ -529,7 +534,8 @@ ConfidenceBoundsStrategyEvaluator::getBoundType(EvalMode eval_mode, Strategy *st
 
 double
 ConfidenceBoundsStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                                 void *strategy_arg, void *chooser_arg)
+                                                 void *strategy_arg, void *chooser_arg,
+                                                 ComparisonType comparison_type)
 {
     if (chooser_arg != last_chooser_arg) {
         clearCache();
@@ -538,7 +544,7 @@ ConfidenceBoundsStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_ev
 
     pair<Strategy*, typesafe_eval_fn_t> key = make_pair(strategy, fn);
     if (cache.count(key) == 0) {
-        BoundType bound_type = getBoundType(eval_mode, strategy, fn);
+        BoundType bound_type = getBoundType(eval_mode, strategy, fn, comparison_type);
         cache[key] = evaluateBounded(bound_type, fn, strategy_arg, chooser_arg);
     }
 

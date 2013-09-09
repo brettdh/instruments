@@ -134,15 +134,15 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
 }
 
 double
-StrategyEvaluator::calculateTime(Strategy *strategy, void *chooser_arg)
+StrategyEvaluator::calculateTime(Strategy *strategy, void *chooser_arg, ComparisonType comparison_type)
 {
-    return strategy->calculateTime(this, chooser_arg);
+    return strategy->calculateTime(this, chooser_arg, comparison_type);
 }
 
 double
-StrategyEvaluator::calculateCost(Strategy *strategy, void *chooser_arg)
+StrategyEvaluator::calculateCost(Strategy *strategy, void *chooser_arg, ComparisonType comparison_type)
 {
-    return strategy->calculateCost(this, chooser_arg);
+    return strategy->calculateCost(this, chooser_arg, comparison_type);
 }
 
 void
@@ -242,7 +242,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
 
-    // not the "best cost," but the cost of the best (min-time) singular strategy.
+    // not the "best cost," but the cost of the best singular strategy.
     double best_singular_cost = 0.0;
     for (vector<Strategy *>::const_iterator it = strategies.begin();
          it != strategies.end(); ++it) {
@@ -251,7 +251,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
             inst::dbgprintf(INFO, "Evaluating singular strategy \"%s\"\n",
                             currentStrategy->getName());
             inst::dbgprintf(INFO, "Calculating time\n");
-            double time = calculateTime(currentStrategy, chooser_arg);
+            double time = calculateTime(currentStrategy, chooser_arg, SINGULAR_TO_SINGULAR);
             ASSERT(!isnan(time));
             strategy_times[currentStrategy] = time;
 
@@ -264,7 +264,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
                 //  later when calculating redundant-strategy costs.
                 // XXX: HACK.  This is a caching decision that belongs inside
                 // XXX:  the class that does the caching.
-                cost = calculateCost(currentStrategy, chooser_arg);
+                cost = calculateCost(currentStrategy, chooser_arg, SINGULAR_TO_SINGULAR);
                 ASSERT(!isnan(cost));
                 inst::dbgprintf(INFO, "Singular strategy \"%s\"  time: %f  cost: %f  sum: %f\n",
                                 currentStrategy->getName(), time, cost, time + cost);
@@ -293,6 +293,12 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
         return best_singular;
     }
 
+    if (singularComparisonIsDifferent()) {
+        // recalculate time and cost
+        best_singular_time = calculateTime(best_singular, chooser_arg, SINGULAR_TO_REDUNDANT);
+        best_singular_cost = calculateCost(best_singular, chooser_arg, SINGULAR_TO_REDUNDANT);
+    }
+
     // then, pick the cheapest redundant strategy that offers net benefit
     //  over the best singular strategy (if any)
     Strategy *best_redundant = NULL;
@@ -303,12 +309,14 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
         if (currentStrategy->isRedundant()) {
             inst::dbgprintf(INFO, "Evaluating redundant strategy \"%s\"\n",
                             currentStrategy->getName());
-            double redundant_time = calculateTime(currentStrategy, chooser_arg);
+            double redundant_time = calculateTime(currentStrategy, chooser_arg,
+                                                  SINGULAR_TO_REDUNDANT);
             ASSERT(!isnan(redundant_time));
             strategy_times[currentStrategy] = redundant_time;
             double benefit = best_singular_time - redundant_time;
 
-            double redundant_cost = calculateCost(currentStrategy, chooser_arg);
+            double redundant_cost = calculateCost(currentStrategy, chooser_arg,
+                                                  SINGULAR_TO_REDUNDANT);
             ASSERT(!isnan(redundant_cost));
             double extra_redundant_cost = redundant_cost - best_singular_cost;
             double net_benefit = benefit - extra_redundant_cost;

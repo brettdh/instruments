@@ -146,7 +146,8 @@ class AssertUnusedEvaluator : public StrategyEvaluationContext {
 };
 
 double 
-Strategy::expectedValue(StrategyEvaluator *evaluator, typesafe_eval_fn_t fn, void *chooser_arg)
+Strategy::expectedValue(StrategyEvaluator *evaluator, typesafe_eval_fn_t fn, void *chooser_arg,
+                        ComparisonType comparison_type)
 {
     if (fn == NULL) {
         return 0.0;
@@ -157,21 +158,24 @@ Strategy::expectedValue(StrategyEvaluator *evaluator, typesafe_eval_fn_t fn, voi
         AssertUnusedEvaluator unused_evaluator;
         return fn(&unused_evaluator, strategy_arg, chooser_arg);
     } else {
-        return evaluator->expectedValue(this, fn, strategy_arg, chooser_arg);
+        return evaluator->expectedValue(this, fn, strategy_arg, chooser_arg,
+                                        comparison_type);
     }
 }
 
 double
-Strategy::calculateTime(StrategyEvaluator *evaluator, void *chooser_arg)
+Strategy::calculateTime(StrategyEvaluator *evaluator, void *chooser_arg,
+                        ComparisonType comparison_type)
 {
-    return expectedValue(evaluator, time_fn, chooser_arg);
+    return expectedValue(evaluator, time_fn, chooser_arg, comparison_type);
 }
 
 double
-Strategy::calculateCost(StrategyEvaluator *evaluator, void *chooser_arg)
+Strategy::calculateCost(StrategyEvaluator *evaluator, void *chooser_arg, 
+                        ComparisonType comparison_type)
 {
-    double energy_cost = expectedValue(evaluator, energy_cost_fn, chooser_arg);
-    double data_cost = expectedValue(evaluator, data_cost_fn, chooser_arg);
+    double energy_cost = expectedValue(evaluator, energy_cost_fn, chooser_arg, comparison_type);
+    double data_cost = expectedValue(evaluator, data_cost_fn, chooser_arg, comparison_type);
 
     double energy_weight = get_energy_cost_weight();
     double data_weight = get_data_cost_weight();

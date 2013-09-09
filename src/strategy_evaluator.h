@@ -54,7 +54,12 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     bool usesEstimator(Estimator *estimator);
 
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                 void *strategy_arg, void *chooser_arg) = 0;
+                                 void *strategy_arg, void *chooser_arg,
+                                 ComparisonType comparison_type=COMPARISON_TYPE_IRRELEVANT) = 0;
+
+    // override if the comparison_type argument to expectedValue actually matters.
+    virtual bool singularComparisonIsDifferent() { return false; }
+
     void observationAdded(Estimator *estimator, double observation, 
                           double old_estimate, double new_estimate);
     void estimatorConditionsChanged(Estimator *estimator);
@@ -82,8 +87,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     const static EvalMethod DEFAULT_EVAL_METHOD = TRUSTED_ORACLE;
 
   private:
-    double calculateTime(Strategy *strategy, void *chooser_arg);
-    double calculateCost(Strategy *strategy, void *chooser_arg);
+    double calculateTime(Strategy *strategy, void *chooser_arg, ComparisonType comparison_type);
+    double calculateCost(Strategy *strategy, void *chooser_arg, ComparisonType comparison_type);
     Strategy *currentStrategy;
     bool silent;
 

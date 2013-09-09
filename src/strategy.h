@@ -25,6 +25,12 @@ enum eval_fn_type_t {
     NUM_FNS
 };
 
+enum ComparisonType {
+    COMPARISON_TYPE_IRRELEVANT,
+    SINGULAR_TO_SINGULAR,
+    SINGULAR_TO_REDUNDANT
+};
+
 class Strategy {
   public:
     Strategy(eval_fn_t time_fn_, 
@@ -39,8 +45,8 @@ class Strategy {
     const char *getName() const;
     
     void addEstimator(typesafe_eval_fn_t fn, Estimator *estimator);
-    double calculateTime(StrategyEvaluator *evaluator, void *chooser_arg);
-    double calculateCost(StrategyEvaluator *evaluator, void *chooser_arg);
+    double calculateTime(StrategyEvaluator *evaluator, void *chooser_arg, ComparisonType comparison_type);
+    double calculateCost(StrategyEvaluator *evaluator, void *chooser_arg, ComparisonType comparison_type);
     bool isRedundant();
 
     void getAllEstimators(StrategyEvaluator *evaluator);
@@ -79,7 +85,8 @@ class Strategy {
 
     void collectEstimators();
 
-    double expectedValue(StrategyEvaluator *evaluator, typesafe_eval_fn_t fn, void *chooser_arg);
+    double expectedValue(StrategyEvaluator *evaluator, typesafe_eval_fn_t fn, void *chooser_arg,
+                         ComparisonType comparison_type);
 
 
     std::map<typesafe_eval_fn_t, small_set<Estimator*> > estimators;

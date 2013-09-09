@@ -33,7 +33,8 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                 void *strategy_arg, void *chooser_arg);
+                                 void *strategy_arg, void *chooser_arg,
+                                 ComparisonType comparison_type);
 
     virtual void saveToFile(const char *filename);
     virtual void restoreFromFileImpl(const char *filename);

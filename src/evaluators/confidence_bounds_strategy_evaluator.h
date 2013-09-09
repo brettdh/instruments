@@ -12,7 +12,10 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     ConfidenceBoundsStrategyEvaluator(bool weighted_);
     virtual ~ConfidenceBoundsStrategyEvaluator();
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                 void *strategy_arg, void *chooser_arg);
+                                 void *strategy_arg, void *chooser_arg, 
+                                 ComparisonType comparison_type);
+    virtual bool singularComparisonIsDifferent() { return true; }
+
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
 
     virtual void saveToFile(const char *filename);
@@ -42,7 +45,7 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     std::map<std::string, ErrorConfidenceBounds *> placeholders;
 
     BoundType getBoundType(EvalMode eval_mode, Strategy *strategy, 
-                           typesafe_eval_fn_t fn);
+                           typesafe_eval_fn_t fn, ComparisonType comparison_type);
     double evaluateBounded(BoundType bound_type, typesafe_eval_fn_t fn,
                            void *strategy_arg, void *chooser_arg);
 

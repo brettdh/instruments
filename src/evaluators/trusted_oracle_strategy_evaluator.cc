@@ -3,7 +3,8 @@
 
 double
 TrustedOracleStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
-                                              void *strategy_arg, void *chooser_arg)
+                                              void *strategy_arg, void *chooser_arg,
+                                              ComparisonType comparison_type)
 {
     // no weighted sum; just trust the estimators and evaluate the function
     return fn(this, strategy_arg, chooser_arg);
