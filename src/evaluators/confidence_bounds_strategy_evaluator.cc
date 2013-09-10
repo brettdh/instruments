@@ -111,6 +111,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getName()
 #define PREDICTION_INTERVAL_BOUNDS
 
 #if defined(CHEBYSHEV_BOUNDS)
+static const size_t MIN_NUM_SAMPLES = 5;
 static double get_chebyshev_bound(double alpha, double variance)
 {
     // Chebyshev interval for error bounds, as described in my proposal.
@@ -119,6 +120,7 @@ static double get_chebyshev_bound(double alpha, double variance)
 #define GET_BOUND_DISTANCE(alpha, variance, num_samples) get_chebyshev_bound(alpha, variance)
 
 #elif defined(CONFIDENCE_INTERVAL_BOUNDS)
+static const size_t MIN_NUM_SAMPLES = 5;
 static double get_confidence_interval_width(double alpha, double variance, size_t num_samples)
 {
     // student's-t-based confidence interval
@@ -132,6 +134,14 @@ static double get_confidence_interval_width(double alpha, double variance, size_
 #define GET_BOUND_DISTANCE(alpha, variance, num_samples) get_confidence_interval_width(alpha, variance, num_samples)
 
 #elif defined(PREDICTION_INTERVAL_BOUNDS)
+// my experiments seem to show that this calculation settles after 
+//  at least this many samples.
+// For IntNW small-transfers, this will mean that only the latency error bounds matter,
+//   which is probably the right thing anyway.
+// For remote-exec and IntNW-streaming, there will be more bandwidth measurements,
+//   since more data is being transferred.
+static const size_t MIN_NUM_SAMPLES = 5;
+
 static double get_prediction_interval_width(double alpha, double variance, size_t num_samples)
 {
     // student's-t-based prediction interval
@@ -309,16 +319,25 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(dou
                                                                              double old_estimate,
                                                                              double new_estimate)
 {
-    inst::dbgprintf(INFO, "Getting error sample from estimator %s\n", estimator->getName().c_str());
+    string name = estimator->getName();
+    inst::dbgprintf(INFO, "Getting error sample from estimator %s\n", name.c_str());
 
     double error = calculate_error(old_estimate, observation);
     double log_error = log(error); // natural logarithm
 
     updateErrorDistribution(log_error);
     inst::dbgprintf(INFO, "Adding error sample to estimator %s: %f\n",
-                    estimator->getName().c_str(), error);
+                    name.c_str(), error);
 
-    setBounds(log_error_mean, log_error_variance, num_samples);
+    // prediction bounds calculations can be HUGE for small sample sizes,
+    //  so don't use them until I have at least a few more samples.
+    //
+    if (num_samples >= MIN_NUM_SAMPLES) {
+        setBounds(log_error_mean, log_error_variance, num_samples);
+    } else {
+        inst::dbgprintf(INFO, "Estimator %s only %zu samples so far; not setting error bounds yet\n",
+                        name.c_str(), num_samples);
+    }
 
     if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
         // PROBLEMATIC.
