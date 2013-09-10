@@ -304,7 +304,15 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
                                              log_error);
         }
     }
-    setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
+    if (pruned_samples.size() < log_error_samples.size() ||
+        cur_num_samples >= MIN_NUM_SAMPLES) {
+        // if I'm using conditional bounds, they will be gone shortly, so
+        //  I want to include the uncertainty they imply in my decision.
+        // if not, make sure I have enough samples as in processObservation.
+        setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
+    } else {
+        setBounds(1.0, 0.0, 1);
+    }
 }
 
 void 
@@ -337,6 +345,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(dou
     } else {
         inst::dbgprintf(INFO, "Estimator %s only %zu samples so far; not setting error bounds yet\n",
                         name.c_str(), num_samples);
+        setBounds(1.0, 0.0, 1);
     }
 
     if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
