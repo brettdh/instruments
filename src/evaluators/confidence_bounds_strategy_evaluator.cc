@@ -20,10 +20,11 @@ using inst::INFO; using inst::DEBUG;
 #include <functional>
 #include <algorithm>
 #include <vector>
+#include <tuple>
 using std::ifstream; using std::ofstream;
 using std::ostringstream; using std::runtime_error;
 using std::string; using std::setprecision; using std::endl;
-using std::pair; using std::make_pair; using std::min;
+using std::tuple; using std::make_tuple; using std::min;
 using std::deque; using std::function; using std::vector;
 using std::copy_if;
 
@@ -542,7 +543,7 @@ ConfidenceBoundsStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_ev
     }
     last_chooser_arg = chooser_arg;
 
-    pair<Strategy*, typesafe_eval_fn_t> key = make_pair(strategy, fn);
+    auto key = make_tuple(strategy, fn, comparison_type);
     if (cache.count(key) == 0) {
         BoundType bound_type = getBoundType(eval_mode, strategy, fn, comparison_type);
         cache[key] = evaluateBounded(bound_type, fn, strategy_arg, chooser_arg);
@@ -685,4 +686,10 @@ void
 ConfidenceBoundsStrategyEvaluator::clearCache()
 {
     cache.clear();
+}
+
+bool 
+ConfidenceBoundsStrategyEvaluator::singularComparisonIsDifferent()
+{
+    return true;
 }

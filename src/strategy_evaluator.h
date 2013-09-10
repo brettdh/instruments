@@ -58,7 +58,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
                                  ComparisonType comparison_type=COMPARISON_TYPE_IRRELEVANT) = 0;
 
     // override if the comparison_type argument to expectedValue actually matters.
-    virtual bool singularComparisonIsDifferent() { return false; }
+    virtual bool singularComparisonIsDifferent();
 
     void observationAdded(Estimator *estimator, double observation, 
                           double old_estimate, double new_estimate);

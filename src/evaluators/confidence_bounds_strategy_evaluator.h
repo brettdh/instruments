@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <tuple>
 
 class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
   public:
@@ -14,7 +15,7 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
                                  void *strategy_arg, void *chooser_arg, 
                                  ComparisonType comparison_type);
-    virtual bool singularComparisonIsDifferent() { return true; }
+    virtual bool singularComparisonIsDifferent();
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
 
@@ -53,7 +54,7 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     void clearConditionalBounds();
 
     void *last_chooser_arg;
-    std::map<std::pair<Strategy*, typesafe_eval_fn_t>, double> cache;
+    std::map<std::tuple<Strategy*, typesafe_eval_fn_t, ComparisonType>, double> cache;
     void clearCache();
 
     bool weighted;

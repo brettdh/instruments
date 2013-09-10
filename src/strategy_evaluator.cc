@@ -426,3 +426,10 @@ ScheduledReevaluationHandle::cancel()
 {
     task->cancel();
 }
+
+bool
+StrategyEvaluator::singularComparisonIsDifferent()
+{
+    // by default.  override in subclass if it actually matters.
+    return false;
+}
