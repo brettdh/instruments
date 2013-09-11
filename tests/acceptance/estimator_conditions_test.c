@@ -146,7 +146,7 @@ static void run_set_and_clear_condition(CTEST_DATA(estimator_conditions) *data,
     int num_iterations = 21;
     for (i = 0; i < num_iterations; ++i) {
         double mid_value = frandom_in(5.0, 6.0);
-        double hilo_value = (i % 2 == 1) ? frandom_in(20.0, 21.0) : frandom_in(1.0, 2.0);
+        double hilo_value = (i % 2 == 0) ? frandom_in(20.0, 21.0) : frandom_in(1.0, 2.0);
         //CTEST_LOG("Adding observations: mid %f hilo %f", mid_value, hilo_value);
         add_observation(data->mid_estimator, mid_value, mid_value);
         add_observation(data->hilo_estimator, hilo_value, hilo_value);

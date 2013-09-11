@@ -1,4 +1,5 @@
 #include "error_calculation.h"
+#include  <math.h>
 
 double calculate_error(double prev_estimate, double cur_observation)
 {
@@ -30,5 +31,17 @@ double no_error_value()
     return 1.0;
 #else
     return 0.0;
+#endif
+}
+
+double error_midpoint(double lower, double upper)
+{
+#ifdef RELATIVE_ERROR
+    // geometric mean.  for errors symmetric about 1.0, this returns 1.0.
+    // for equal errors, this returns the error.
+    return sqrt(lower * upper);
+#else
+    // arithmetic mean.
+    return (lower + upper) / 2.0;
 #endif
 }

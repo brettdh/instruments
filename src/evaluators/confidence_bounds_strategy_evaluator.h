@@ -27,7 +27,7 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     virtual void processEstimatorConditionsChange(Estimator *estimator);
   private:
     enum BoundType {
-        LOWER=0, UPPER
+        LOWER=0, UPPER, CENTER
     };
 
     enum EvalMode {
@@ -38,7 +38,7 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     EvalMode eval_mode;
     static EvalMode DEFAULT_EVAL_MODE;
 
-    unsigned int step;
+    int step;
     class ErrorConfidenceBounds;
     std::vector<ErrorConfidenceBounds *> error_bounds;
     std::map<Estimator *, ErrorConfidenceBounds *> bounds_by_estimator;
