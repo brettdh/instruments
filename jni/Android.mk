@@ -17,6 +17,7 @@ MOCKTIME_ROOT := $(ANDROID_LIBS_ROOT)/mocktime
 MOCKTIME_INCLUDES := $(MOCKTIME_ROOT)
 LIBPT_ROOT := $(ANDROID_LIBS_ROOT)/libpowertutor/cpp_source
 LIBPT_INCLUDES := $(LIBPT_ROOT)
+INTNW_ROOT := $(ANDROID_LIBS_ROOT)/libcmm
 
 include $(CLEAR_VARS)
 
@@ -29,6 +30,14 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := mocktime
 LOCAL_SRC_FILES := ../$(MOCKTIME_ROOT)/obj/local/armeabi/libmocktime.so
 include $(PREBUILT_SHARED_LIBRARY)
+
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := flipflop
+LOCAL_SRC_FILES := ../$(INTNW_ROOT)/obj/local/armeabi-v7a/libflipflop.a
+include $(PREBUILT_STATIC_LIBRARY)
+
 
 
 include $(CLEAR_VARS)
@@ -65,11 +74,12 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	timeops.cc)
 #	r_singleton.cc \
 
-LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(MOCKTIME_INCLUDES) $(LIBPT_INCLUDES)
+LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(MOCKTIME_INCLUDES) $(LIBPT_INCLUDES) $(INTNW_ROOT)
 LOCAL_CXXFLAGS := $(common_CXXFLAGS)
+LOCAL_STATIC_LIBRARIES += flipflop
 ifneq ($(my_PROFILING_BUILD),)
 LOCAL_CXXFLAGS += $(my_PROFILING_CFLAGS)
-LOCAL_STATIC_LIBRARIES += android-ndk-profiler
+LOCAL_STATIC_LIBRARIES += android-ndk-profiler 
 LOCAL_LDLIBS += -llog
 endif
 LOCAL_SHARED_LIBRARIES := mocktime powertutor
