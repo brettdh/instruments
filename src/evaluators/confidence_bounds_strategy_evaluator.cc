@@ -1,5 +1,5 @@
 #include "confidence_bounds_strategy_evaluator.h"
-#include "flipflop_estimate.h"
+//#include "flipflop_estimate.h"
 
 #include "estimator.h"
 #include "error_calculation.h"
@@ -58,7 +58,7 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
 
     // only used for conditional probability calculations.
     deque<double> log_error_samples;
-    deque<double> smoothed_log_error_samples;
+    //deque<double> smoothed_log_error_samples;
     
     // these are not log-transformed; they are inverse-transformed
     //  before being stored.
@@ -77,14 +77,14 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
 
     bool weighted;
     
-    FlipFlopEstimate flipflop_log_error;
+    //FlipFlopEstimate flipflop_log_error;
 };
 
 
 const double ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::CONFIDENCE_ALPHA = 0.05;
 
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::ErrorConfidenceBounds(bool weighted_, Estimator *estimator_)
-    : estimator(estimator_), weighted(weighted_), flipflop_log_error(estimator ? estimator->getName() : "(no name)")
+    : estimator(estimator_), weighted(weighted_) //, flipflop_log_error(estimator ? estimator->getName() : "(no name)")
 {
     log_error_mean = 0.0;
     log_error_variance = 0.0;
@@ -195,15 +195,17 @@ update_error_distribution_linear(size_t& num_samples,
 void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionLinear(double log_error)
 {
+    /*
     flipflop_log_error.add_observation(log_error);
     double smoothed_log_error;
     if (!flipflop_log_error.get_estimate(smoothed_log_error)) {
         ASSERT(false); // I just added a value, so the estimate must be valid.
     }
-
     update_error_distribution_linear(num_samples, log_error_mean, log_error_variance, M2, smoothed_log_error);
+    */
+    update_error_distribution_linear(num_samples, log_error_mean, log_error_variance, M2, log_error);
     log_error_samples.push_back(log_error);
-    smoothed_log_error_samples.push_back(smoothed_log_error);
+    //smoothed_log_error_samples.push_back(smoothed_log_error);
 }
 
 #include "error_weight_params.h"
@@ -234,6 +236,7 @@ update_error_distribution_ewma(size_t& num_samples,
 void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionEWMA(double log_error)
 {
+    /*
     flipflop_log_error.add_observation(log_error);
     double smoothed_log_error;
     if (!flipflop_log_error.get_estimate(smoothed_log_error)) {
@@ -241,16 +244,18 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributio
     }
     
     update_error_distribution_ewma(num_samples, log_error_mean, log_error_variance, smoothed_log_error);
+    */
+    update_error_distribution_ewma(num_samples, log_error_mean, log_error_variance, log_error);
     
     // keep the original unsmoothed sample so I can reconstruct the flipflop value later
     //  (e.g. for save/restore)
     log_error_samples.push_back(log_error);
-    smoothed_log_error_samples.push_back(smoothed_log_error);
-    ASSERT(log_error_samples.size() == smoothed_log_error_samples.size());
+    //smoothed_log_error_samples.push_back(smoothed_log_error);
+    //ASSERT(log_error_samples.size() == smoothed_log_error_samples.size());
     if (log_error_samples.size() > num_samples) {
         assert(num_samples + 1 == log_error_samples.size());
         log_error_samples.pop_front();
-        smoothed_log_error_samples.pop_front();
+        //smoothed_log_error_samples.pop_front();
     }
 }
 
@@ -277,8 +282,9 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
     ostringstream s;
     bool debugging = inst::is_debugging_on(DEBUG);
     vector<double> pruned_samples;
-    pruned_samples.reserve(smoothed_log_error_samples.size());
-    for (double log_error_sample : smoothed_log_error_samples) {
+    //pruned_samples.reserve(smoothed_log_error_samples.size());
+    pruned_samples.reserve(log_error_samples.size());
+    for (double log_error_sample : log_error_samples) {
         if (shouldIncludeSample(log_error_sample)) {
             if (debugging) {
                 s << exp(log_error_sample) << " ";
@@ -433,7 +439,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
     in >> error_bounds[UPPER];
     check(in, "Failed to read bounds from file");
 
-    flipflop_log_error.reset(0.0);
+    //flipflop_log_error.reset(0.0);
 
     in >> tag;
     check(tag == "samples", "Failed to read 'samples' tag from file");
@@ -442,13 +448,15 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
         in >> sample;
         check(in, "Failed to read sample from file");
         log_error_samples.push_back(sample);
-        flipflop_log_error.add_observation(sample);
 
+        //flipflop_log_error.add_observation(sample);
+        /*
         double smoothed_sample;
         if (!flipflop_log_error.get_estimate(smoothed_sample)) {
             ASSERT(false);
         }
         smoothed_log_error_samples.push_back(smoothed_sample);
+        */
     }
     // if weighted, only the max number of samples will have been saved
     return name;
