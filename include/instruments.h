@@ -140,6 +140,23 @@ CDECL double
 get_last_strategy_time(instruments_strategy_evaluator_t evaluator, 
                        instruments_strategy_t strategy);
 
+/* Functions for use in composing one strategy from another. */
+
+/** Given an eval context and a strategy, returns the strategy's completion time. */
+CDECL double
+calculate_strategy_time(instruments_context_t ctx, instruments_strategy_t strategy, 
+                        void *chooser_arg);
+
+/** Given an eval context and a strategy, returns the strategy's energy cost. */
+CDECL double
+calculate_strategy_energy(instruments_context_t ctx, instruments_strategy_t strategy, 
+                          void *chooser_arg);
+
+/** Given an eval context and a strategy, returns the strategy's cellular data cost. */
+CDECL double
+calculate_strategy_data(instruments_context_t ctx, instruments_strategy_t strategy, 
+                        void *chooser_arg);
+
 typedef void (*instruments_strategy_chosen_callback_t)(instruments_strategy_t, void *);
 
 /** Start an asynchronous call to choose_strategy that will yield

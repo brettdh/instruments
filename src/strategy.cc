@@ -290,6 +290,17 @@ Strategy::getEvalFn(eval_fn_type_t type)
     return fns[type];
 }
 
+double
+Strategy::calculateStrategyValue(eval_fn_type_t type, 
+                                 StrategyEvaluationContext *ctx, void *chooser_arg)
+{
+    if (fns[type]) {
+        return fns[type](ctx, strategy_arg, chooser_arg);
+    }
+    ASSERT(false);
+    return 0.0;
+}
+
 std::set<Estimator *>
 Strategy::getEstimatorsSet()
 {

@@ -49,6 +49,9 @@ class Strategy {
     double calculateCost(StrategyEvaluator *evaluator, void *chooser_arg, ComparisonType comparison_type);
     bool isRedundant();
 
+    double calculateStrategyValue(eval_fn_type_t type, 
+                                  StrategyEvaluationContext *ctx, void *chooser_arg);
+
     void getAllEstimators(StrategyEvaluator *evaluator);
     bool usesEstimator(Estimator *estimator);
     bool usesEstimator(typesafe_eval_fn_t fn, Estimator *estimator);

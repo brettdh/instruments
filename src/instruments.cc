@@ -131,6 +131,39 @@ get_last_strategy_time(instruments_strategy_evaluator_t evaluator_handle,
     return evaluator->getLastStrategyTime(strategy);
 }
 
+/* Functions for use in composing one strategy from another. */
+
+/** Given an eval context and a strategy, returns the strategy's completion time. */
+double
+calculate_strategy_time(instruments_context_t ctx, instruments_strategy_t strategy_handle, 
+                        void *chooser_arg)
+{
+    Strategy *strategy = (Strategy *) strategy_handle;
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext *>(ctx);
+    return strategy->calculateStrategyValue(TIME_FN, context, chooser_arg);
+}
+
+/** Given an eval context and a strategy, returns the strategy's energy cost. */
+double
+calculate_strategy_energy(instruments_context_t ctx, instruments_strategy_t strategy_handle, 
+                          void *chooser_arg)
+{
+    Strategy *strategy = (Strategy *) strategy_handle;
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext *>(ctx);
+    return strategy->calculateStrategyValue(ENERGY_FN, context, chooser_arg);
+}
+
+/** Given an eval context and a strategy, returns the strategy's cellular data cost. */
+double
+calculate_strategy_data(instruments_context_t ctx, instruments_strategy_t strategy_handle, 
+                        void *chooser_arg)
+{
+    Strategy *strategy = (Strategy *) strategy_handle;
+    StrategyEvaluationContext *context = static_cast<StrategyEvaluationContext *>(ctx);
+    return strategy->calculateStrategyValue(DATA_FN, context, chooser_arg);
+}
+
+
 void
 choose_strategy_async(instruments_strategy_evaluator_t evaluator_handle,
                       void *chooser_arg,
