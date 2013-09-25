@@ -34,6 +34,7 @@ include $(PREBUILT_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_CPP_EXTENSION:=.cc
 LOCAL_MODULE := instruments
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include $(LOCAL_PATH)/src
 LOCAL_SRC_FILES := $(addprefix ../src/, \
 	abstract_joint_distribution.cc \
 	continuous_distribution.cc \

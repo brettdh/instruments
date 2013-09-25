@@ -42,9 +42,10 @@ class ThreadPool {
     
   private:
     std::mutex lock;
-    std::condition_variable cv;
+    std::condition_variable available_workers_cv;
     std::queue<Worker *> workers;
     std::queue<Worker *> available_workers;
+    std::queue<std::function<void()> > waiting_tasks;
     TimerThread *timerThread;
     bool shutting_down;
 };

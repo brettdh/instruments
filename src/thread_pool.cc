@@ -36,7 +36,6 @@ class ThreadPool::Worker {
     ThreadPool *pool;
     
     thread *my_thread;
-    mutex lock;
     condition_variable cv;
     queue<std::function<void()> > q;
     bool running;
@@ -98,7 +97,7 @@ ThreadPool::~ThreadPool()
     shutting_down = true;
     // no more tasks allowed while we're waiting for workers to finish
     while (workers.size() != available_workers.size()) {
-        cv.wait(guard);
+        available_workers_cv.wait(guard);
     }
     
     delete timerThread;
@@ -120,12 +119,14 @@ ThreadPool::startTask(std::function<void()> fn)
     if (shutting_down) {
         return false;
     }
-    while (available_workers.empty()) {
-        cv.wait(guard);
+    
+    if (available_workers.empty()) {
+        waiting_tasks.push(fn);
+    } else {
+        Worker *worker = available_workers.front();
+        available_workers.pop();
+        worker->startTask(fn);
     }
-    Worker *worker = available_workers.front();
-    available_workers.pop();
-    worker->startTask(fn);
     return true;
 }
 
@@ -138,9 +139,14 @@ ThreadPool::scheduleTask(double seconds_in_future, std::function<void()> fn)
 void 
 ThreadPool::idle(Worker *worker)
 {
-    unique_lock<mutex> guard(lock);
-    available_workers.push(worker);
-    cv.notify_all();
+    if (!waiting_tasks.empty()) {
+        auto task = waiting_tasks.front();
+        waiting_tasks.pop();
+        worker->startTask(task);
+    } else {
+        available_workers.push(worker);
+        available_workers_cv.notify_all();
+    }
 }
 
 ThreadPool::Worker::Worker(ThreadPool *pool_)
@@ -159,9 +165,9 @@ ThreadPool::Worker::~Worker()
 void 
 ThreadPool::Worker::run()
 {
+    unique_lock<mutex> guard(pool->lock);
     pool->idle(this);
     
-    unique_lock<mutex> guard(lock);
     while (running) {
         while (q.empty()) {
             cv.wait(guard);
@@ -178,7 +184,7 @@ ThreadPool::Worker::run()
 void 
 ThreadPool::Worker::startTask(std::function<void()> fn)
 {
-    unique_lock<mutex> guard(lock);
+    // holding pool->lock
     q.push(fn);
     cv.notify_one();
 }
