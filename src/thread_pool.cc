@@ -175,7 +175,9 @@ ThreadPool::Worker::run()
         auto task = q.front();
         q.pop();
         
+        guard.unlock();
         task();
+        guard.lock();
         
         pool->idle(this);
     }
