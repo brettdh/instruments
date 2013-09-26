@@ -1,4 +1,6 @@
 #include "confidence_bounds_strategy_evaluator.h"
+//#include "flipflop_estimate.h"
+
 #include "estimator.h"
 #include "error_calculation.h"
 #include "debug.h"
@@ -56,6 +58,7 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
 
     // only used for conditional probability calculations.
     deque<double> log_error_samples;
+    //deque<double> smoothed_log_error_samples;
     
     // these are not log-transformed; they are inverse-transformed
     //  before being stored.
@@ -73,13 +76,15 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
     void setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample);
 
     bool weighted;
+    
+    //FlipFlopEstimate flipflop_log_error;
 };
 
 
 const double ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::CONFIDENCE_ALPHA = 0.05;
 
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::ErrorConfidenceBounds(bool weighted_, Estimator *estimator_)
-    : estimator(estimator_), weighted(weighted_)
+    : estimator(estimator_), weighted(weighted_) //, flipflop_log_error(estimator ? estimator->getName() : "(no name)")
 {
     log_error_mean = 0.0;
     log_error_variance = 0.0;
@@ -111,7 +116,6 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getName()
 #define PREDICTION_INTERVAL_BOUNDS
 
 #if defined(CHEBYSHEV_BOUNDS)
-static const size_t MIN_NUM_SAMPLES = 5;
 static double get_chebyshev_bound(double alpha, double variance)
 {
     // Chebyshev interval for error bounds, as described in my proposal.
@@ -120,7 +124,6 @@ static double get_chebyshev_bound(double alpha, double variance)
 #define GET_BOUND_DISTANCE(alpha, variance, num_samples) get_chebyshev_bound(alpha, variance)
 
 #elif defined(CONFIDENCE_INTERVAL_BOUNDS)
-static const size_t MIN_NUM_SAMPLES = 5;
 static double get_confidence_interval_width(double alpha, double variance, size_t num_samples)
 {
     // student's-t-based confidence interval
@@ -134,13 +137,6 @@ static double get_confidence_interval_width(double alpha, double variance, size_
 #define GET_BOUND_DISTANCE(alpha, variance, num_samples) get_confidence_interval_width(alpha, variance, num_samples)
 
 #elif defined(PREDICTION_INTERVAL_BOUNDS)
-// my experiments seem to show that this calculation settles after 
-//  at least this many samples.
-// For IntNW small-transfers, this will mean that only the latency error bounds matter,
-//   which is probably the right thing anyway.
-// For remote-exec and IntNW-streaming, there will be more bandwidth measurements,
-//   since more data is being transferred.
-static const size_t MIN_NUM_SAMPLES = 5;
 
 static double get_prediction_interval_width(double alpha, double variance, size_t num_samples)
 {
@@ -199,8 +195,17 @@ update_error_distribution_linear(size_t& num_samples,
 void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionLinear(double log_error)
 {
+    /*
+    flipflop_log_error.add_observation(log_error);
+    double smoothed_log_error;
+    if (!flipflop_log_error.get_estimate(smoothed_log_error)) {
+        ASSERT(false); // I just added a value, so the estimate must be valid.
+    }
+    update_error_distribution_linear(num_samples, log_error_mean, log_error_variance, M2, smoothed_log_error);
+    */
     update_error_distribution_linear(num_samples, log_error_mean, log_error_variance, M2, log_error);
     log_error_samples.push_back(log_error);
+    //smoothed_log_error_samples.push_back(smoothed_log_error);
 }
 
 #include "error_weight_params.h"
@@ -221,7 +226,7 @@ update_error_distribution_ewma(size_t& num_samples,
         log_error_variance = 0.0;
     } else {
         double deviation = log_error_mean - log_error;
-        
+
         update_ewma(log_error_mean, log_error, EWMA_GAIN);
         update_ewma(log_error_variance, deviation * deviation, EWMA_GAIN);
     }
@@ -231,12 +236,26 @@ update_error_distribution_ewma(size_t& num_samples,
 void
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::updateErrorDistributionEWMA(double log_error)
 {
+    /*
+    flipflop_log_error.add_observation(log_error);
+    double smoothed_log_error;
+    if (!flipflop_log_error.get_estimate(smoothed_log_error)) {
+        ASSERT(false); // I just added a value, so the estimate must be valid.
+    }
+    
+    update_error_distribution_ewma(num_samples, log_error_mean, log_error_variance, smoothed_log_error);
+    */
     update_error_distribution_ewma(num_samples, log_error_mean, log_error_variance, log_error);
     
+    // keep the original unsmoothed sample so I can reconstruct the flipflop value later
+    //  (e.g. for save/restore)
     log_error_samples.push_back(log_error);
+    //smoothed_log_error_samples.push_back(smoothed_log_error);
+    //ASSERT(log_error_samples.size() == smoothed_log_error_samples.size());
     if (log_error_samples.size() > num_samples) {
         assert(num_samples + 1 == log_error_samples.size());
         log_error_samples.pop_front();
+        //smoothed_log_error_samples.pop_front();
     }
 }
 
@@ -263,6 +282,7 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
     ostringstream s;
     bool debugging = inst::is_debugging_on(DEBUG);
     vector<double> pruned_samples;
+    //pruned_samples.reserve(smoothed_log_error_samples.size());
     pruned_samples.reserve(log_error_samples.size());
     for (double log_error_sample : log_error_samples) {
         if (shouldIncludeSample(log_error_sample)) {
@@ -304,15 +324,7 @@ setConditionalBoundsWhere(function<bool(double)> shouldIncludeSample)
                                              log_error);
         }
     }
-    if (pruned_samples.size() < log_error_samples.size() ||
-        cur_num_samples >= MIN_NUM_SAMPLES) {
-        // if I'm using conditional bounds, they will be gone shortly, so
-        //  I want to include the uncertainty they imply in my decision.
-        // if not, make sure I have enough samples as in processObservation.
-        setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
-    } else {
-        setBounds(0.0, 0.0, 1);
-    }
+    setBounds(cur_log_error_mean, cur_log_error_variance, cur_num_samples);
 }
 
 void 
@@ -337,17 +349,8 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::processObservation(dou
     inst::dbgprintf(INFO, "Adding error sample to estimator %s: %f\n",
                     name.c_str(), error);
 
-    // prediction bounds calculations can be HUGE for small sample sizes,
-    //  so don't use them until I have at least a few more samples.
-    //
-    if (num_samples >= MIN_NUM_SAMPLES) {
-        setBounds(log_error_mean, log_error_variance, num_samples);
-    } else {
-        inst::dbgprintf(INFO, "Estimator %s only %zu samples so far; not setting error bounds yet\n",
-                        name.c_str(), num_samples);
-        setBounds(0.0, 0.0, 1);
-    }
-
+    setBounds(log_error_mean, log_error_variance, num_samples);
+    
     if (adjusted_estimate(old_estimate, error_bounds[LOWER]) < 0.0) {
         // PROBLEMATIC.
         ASSERT(false); // TODO: figure out what to do here.
@@ -384,7 +387,12 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::setBounds(double cur_l
 double
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::getBound(BoundType type)
 {
-    double error = num_samples > 0 ? error_bounds[type] : no_error_value();
+    double error;
+    if (type == CENTER) {
+        error = error_midpoint(error_bounds[LOWER], error_bounds[UPPER]);
+    } else {
+        error = num_samples > 0 ? error_bounds[type] : no_error_value();
+    }
     return adjusted_estimate(estimator->getEstimate(), error);
 }
 
@@ -431,6 +439,8 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
     in >> error_bounds[UPPER];
     check(in, "Failed to read bounds from file");
 
+    //flipflop_log_error.reset(0.0);
+
     in >> tag;
     check(tag == "samples", "Failed to read 'samples' tag from file");
     for (size_t i = 0; i < num_samples; ++i) {
@@ -438,8 +448,17 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
         in >> sample;
         check(in, "Failed to read sample from file");
         log_error_samples.push_back(sample);
-        // if weighted, only the max number of samples will have been saved
+
+        //flipflop_log_error.add_observation(sample);
+        /*
+        double smoothed_sample;
+        if (!flipflop_log_error.get_estimate(smoothed_sample)) {
+            ASSERT(false);
+        }
+        smoothed_log_error_samples.push_back(smoothed_sample);
+        */
     }
+    // if weighted, only the max number of samples will have been saved
     return name;
 }
 
@@ -492,9 +511,11 @@ ConfidenceBoundsStrategyEvaluator::processEstimatorConditionsChange(Estimator *e
 ConfidenceBoundsStrategyEvaluator::EvalMode
 ConfidenceBoundsStrategyEvaluator::DEFAULT_EVAL_MODE = AGGRESSIVE;
 
+static int CENTER_OF_BOUNDS = -1;
+
 ConfidenceBoundsStrategyEvaluator::ConfidenceBoundsStrategyEvaluator(bool weighted_)
     : eval_mode(DEFAULT_EVAL_MODE), // TODO: set as option?
-      step(0), last_chooser_arg(NULL), weighted(weighted_)
+      step(CENTER_OF_BOUNDS), last_chooser_arg(NULL), weighted(weighted_)
 {
 }
 
@@ -533,8 +554,10 @@ ConfidenceBoundsStrategyEvaluator::getBoundType(EvalMode eval_mode, Strategy *st
             fn == strategy->getEvalFn(DATA_FN)) {
             return LOWER;
         } else {
-            if (strategy->isRedundant() || comparison_type == SINGULAR_TO_SINGULAR) {
+            if (strategy->isRedundant()) {
                 return LOWER;
+            } else if (comparison_type == SINGULAR_TO_SINGULAR) {
+                return CENTER;
             } else {
                 // singular strategy, comparing to redundant.  return upper bound.
                 return UPPER;
@@ -586,32 +609,39 @@ double
 ConfidenceBoundsStrategyEvaluator::evaluateBounded(BoundType bound_type, typesafe_eval_fn_t fn,
                                                    void *strategy_arg, void *chooser_arg)
 {
-    bound_fn_t bound_fns[UPPER + 1] = { &std::min<double>, &std::max<double> };
-    bound_fn_t bound_fn = bound_fns[bound_type];
-
-    // opposite fn, for calculating initial value that will
-    //  always be replaced
-    bound_fn_t bound_init_fn = bound_fns[(bound_type + 1) % (UPPER + 1)];
-
+    double val;
     setConditionalBounds();
 
-    // yes, it's a 2^N algorithm, but N is small; e.g. 4 for intnw
-    unsigned int finish = 1 << error_bounds.size();
-    double val = bound_init_fn(0.0, std::numeric_limits<double>::max());
-    ostringstream s;
-    bool debugging = inst::is_debugging_on(inst::DEBUG);
-    for (step = 0; step < finish; ++step) {
-        double cur_val = fn(this, strategy_arg, chooser_arg);
-        val = bound_fn(val, cur_val);
-        if (debugging) {
-            s << cur_val << " ";
+    if (bound_type == CENTER) {
+        step = CENTER_OF_BOUNDS;
+        val = fn(this, strategy_arg, chooser_arg);
+        inst::dbgprintf(inst::DEBUG, "Used center of bounds; value is %f\n", val);
+    } else {
+        bound_fn_t bound_fns[UPPER + 1] = { &std::min<double>, &std::max<double> };
+        bound_fn_t bound_fn = bound_fns[bound_type];
+
+        // opposite fn, for calculating initial value that will
+        //  always be replaced
+        bound_fn_t bound_init_fn = bound_fns[(bound_type + 1) % (UPPER + 1)];
+
+        // yes, it's a 2^N algorithm, but N is small; e.g. 4 for intnw
+        int finish = 1 << error_bounds.size();
+        val = bound_init_fn(0.0, std::numeric_limits<double>::max());
+        ostringstream s;
+        bool debugging = inst::is_debugging_on(inst::DEBUG);
+        for (step = 0; step < finish; ++step) {
+            double cur_val = fn(this, strategy_arg, chooser_arg);
+            val = bound_fn(val, cur_val);
+            if (debugging) {
+                s << cur_val << " ";
+            }
         }
+        inst::dbgprintf(inst::DEBUG, "%s is %f; values: [ %s]\n",
+                        bound_type == LOWER ? "min" : "max",
+                        val, s.str().c_str());
     }
     clearConditionalBounds();
 
-    inst::dbgprintf(inst::DEBUG, "%s is %f; values: [ %s]\n",
-                    bound_type == LOWER ? "min" : "max",
-                    val, s.str().c_str());
     return val;
 }
 
@@ -642,12 +672,16 @@ ConfidenceBoundsStrategyEvaluator::getAdjustedEstimatorValue(Estimator *estimato
     if (bounds_by_estimator.count(estimator) == 0) {
         return estimator->getEstimate();
     }
-    
+
     ErrorConfidenceBounds *est_error = bounds_by_estimator[estimator];
     for (size_t i = 0; i < error_bounds.size(); ++i) {
         if (est_error == error_bounds[i]) {
-            char bit = (step >> i) & 0x1;
-            return est_error->getBound(BoundType(bit));
+            if (step == CENTER_OF_BOUNDS) {
+                return est_error->getBound(CENTER);
+            } else {
+                char bit = (step >> i) & 0x1;
+                return est_error->getBound(BoundType(bit));
+            }
         }
     }
     __builtin_unreachable();

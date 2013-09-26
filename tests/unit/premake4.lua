@@ -57,9 +57,10 @@ project "InstrumentsTests"
   includedirs { "." }
   includedirs(_.map({"", "evaluators", "joint_distributions"},
                     function(dir) return "../../src/"..dir; end))
+  includedirs { "../../../libcmm" }
 
   flags { "Symbols", "FatalWarnings" }
-  links { "pthread", "mocktime", "cppunit" }
+  links { "pthread", "mocktime", "cppunit", "flipflop" }
 
   buildoptions { R_buildoptions(), "-Wall", "-std=gnu++0x" }
   linkoptions { R_linkoptions() }

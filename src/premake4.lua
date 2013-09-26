@@ -5,10 +5,10 @@ project "InstrumentsLibrary"
   language "C++"
   files { "**.cc" }
 
-  includedirs { ".", "./evaluators", "./joint_distributions" }
+  includedirs { ".", "./evaluators", "./joint_distributions", "../../libcmm" }
 
   flags { "Symbols", "FatalWarnings" }
-  links { "pthread", "mocktime" }
+  links { "pthread", "mocktime", "flipflop" }
 
   buildoptions { R_buildoptions(), "-Wall", "-std=c++11" }
   linkoptions { R_linkoptions() }
