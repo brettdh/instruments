@@ -59,7 +59,7 @@ typedef void * instruments_strategy_evaluator_t;
  *  1) time_fn
  *     Returns the estimated completion time in seconds.
  *  2) energy_cost_fn
- *     Returns the estimated energy expenditure in Joules.
+ *     Returns the estimated energy expenditure in milliJoules.
  *  3) data_cost_fn
  *     Returns the number of bytes to be sent on a cellular network.
  *  
@@ -77,7 +77,7 @@ typedef void * instruments_strategy_evaluator_t;
  */
 CDECL instruments_strategy_t
 make_strategy(eval_fn_t time_fn, /* return seconds */
-              eval_fn_t energy_cost_fn, /* return Joules */
+              eval_fn_t energy_cost_fn, /* return milliJoules */
               eval_fn_t data_cost_fn, /* return bytes */
               void *strategy_arg,
               void *default_chooser_arg);
