@@ -22,20 +22,20 @@ INTNW_ROOT := $(ANDROID_LIBS_ROOT)/libcmm
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := powertutor
-LOCAL_SRC_FILES := ../$(LIBPT_ROOT)/obj/local/armeabi/libpowertutor.so
+LOCAL_SRC_FILES := ../$(LIBPT_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libpowertutor.so
 include $(PREBUILT_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := mocktime
-LOCAL_SRC_FILES := ../$(MOCKTIME_ROOT)/obj/local/armeabi/libmocktime.so
+LOCAL_SRC_FILES := ../$(MOCKTIME_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libmocktime.so
 include $(PREBUILT_SHARED_LIBRARY)
 
 
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := flipflop
-LOCAL_SRC_FILES := ../$(INTNW_ROOT)/obj/local/armeabi-v7a/libflipflop.a
+LOCAL_SRC_FILES := ../$(INTNW_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libflipflop.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 
