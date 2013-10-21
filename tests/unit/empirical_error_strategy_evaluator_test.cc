@@ -71,7 +71,7 @@ EmpiricalErrorStrategyEvaluatorTest::testSimpleExpectedValue()
     Strategy *strategy = new Strategy(get_time, get_energy_cost, get_data_cost, estimator, NULL);
     strategy->addEstimator((typesafe_eval_fn_t) get_time, estimator);
 
-    StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1, 
+    StrategyEvaluator *evaluator = StrategyEvaluator::create("", (instruments_strategy_t *)&strategy, 1, 
                                                              EMPIRICAL_ERROR);
     // TODO: set it to the 'all samples' method
 
@@ -138,7 +138,7 @@ EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
         create_estimators_and_strategies(estimators, NUM_INTNW_ESTIMATORS,
                                          strategies, NUM_STRATEGIES);
 
-        StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *) strategies, 
+        StrategyEvaluator *evaluator = StrategyEvaluator::create("", (instruments_strategy_t *) strategies, 
                                                                  NUM_STRATEGIES, 
                                                                  EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
 
@@ -161,7 +161,7 @@ EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
         evaluator->saveToFile(FILENAME);
 
         StrategyEvaluator *restored_evaluator = 
-            StrategyEvaluator::create((instruments_strategy_t *) strategies, 
+            StrategyEvaluator::create("", (instruments_strategy_t *) strategies, 
                                       NUM_STRATEGIES, 
                                       EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
         restored_evaluator->restoreFromFile(FILENAME);
@@ -176,7 +176,7 @@ EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
         Strategy *new_strategies[NUM_STRATEGIES];
         create_estimators_and_strategies(new_estimators, NUM_INTNW_ESTIMATORS,
                                          new_strategies, NUM_STRATEGIES);
-        StrategyEvaluator *new_evaluator = StrategyEvaluator::create((instruments_strategy_t *) new_strategies, 
+        StrategyEvaluator *new_evaluator = StrategyEvaluator::create("", (instruments_strategy_t *) new_strategies, 
                                                                      NUM_STRATEGIES, 
                                                                      EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
         new_evaluator->restoreFromFile(FILENAME);
@@ -201,7 +201,7 @@ EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimators()
     Strategy *strategy = new Strategy(get_time_all_estimators, 
                                       get_energy_cost, get_data_cost, estimators, (void *) NUM_ESTIMATORS);
 
-    StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1, 
+    StrategyEvaluator *evaluator = StrategyEvaluator::create("", (instruments_strategy_t *)&strategy, 1, 
                                                              EMPIRICAL_ERROR);
     // TODO: set it to the 'all samples' method
 
@@ -271,7 +271,7 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     CPPUNIT_ASSERT_EQUAL(2, estimator1->getCount());
     CPPUNIT_ASSERT_EQUAL(2, estimator2->getCount());
 
-    StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)strategies, 3,
+    StrategyEvaluator *evaluator = StrategyEvaluator::create("", (instruments_strategy_t *)strategies, 3,
                                                              EMPIRICAL_ERROR);
     estimator1->addObservation(0.0);
     estimator2->addObservation(0.0);
@@ -337,7 +337,7 @@ EmpiricalErrorStrategyEvaluatorTest::testEstimatorConditions()
                                      strategies, NUM_STRATEGIES,
                                      LAST_OBSERVATION);
     
-    StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *) strategies, 
+    StrategyEvaluator *evaluator = StrategyEvaluator::create("", (instruments_strategy_t *) strategies, 
                                                              NUM_STRATEGIES, 
                                                              EMPIRICAL_ERROR_ALL_SAMPLES_INTNW);
     

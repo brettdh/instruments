@@ -67,7 +67,7 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredAtRegistration()
                                       eval_fn_no_estimators,
                                       estimators, NULL);
 
-    StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1,
+    StrategyEvaluator *evaluator = StrategyEvaluator::create("", (instruments_strategy_t *)&strategy, 1,
                                                              TRUSTED_ORACLE);
     for (size_t i = 0; i < NUM_ESTIMATORS; ++i) {
         CPPUNIT_ASSERT(strategy->usesEstimator(estimators[i]));
@@ -89,7 +89,7 @@ void StrategyEstimatorsDiscoveryTest::testEstimatorsDiscoveredUponLaterUse()
                                       eval_fn_no_estimators,
                                       estimators, NULL);
 
-    StrategyEvaluator *evaluator = StrategyEvaluator::create((instruments_strategy_t *)&strategy, 1,
+    StrategyEvaluator *evaluator = StrategyEvaluator::create("", (instruments_strategy_t *)&strategy, 1,
                                                              TRUSTED_ORACLE);
     char msg[64];
     for (size_t i = 0; i <= NUM_ESTIMATORS / 2; ++i) {
