@@ -89,10 +89,11 @@ StrategyEvaluator::usesEstimator(Estimator *estimator)
 }
 
 StrategyEvaluator *
-StrategyEvaluator::create(const instruments_strategy_t *strategies,
+StrategyEvaluator::create(const char *name_, 
+                          const instruments_strategy_t *strategies,
                           size_t num_strategies)
 {
-    return create(strategies, num_strategies, DEFAULT_EVAL_METHOD);
+    return create(name_, strategies, num_strategies, DEFAULT_EVAL_METHOD);
 }
 
 void wait_for_debugger()
@@ -106,7 +107,8 @@ void wait_for_debugger()
 }
 
 StrategyEvaluator *
-StrategyEvaluator::create(const instruments_strategy_t *strategies,
+StrategyEvaluator::create(const char *name_, 
+                          const instruments_strategy_t *strategies,
                           size_t num_strategies, EvalMethod type)
 {
     //wait_for_debugger();
@@ -129,6 +131,7 @@ StrategyEvaluator::create(const instruments_strategy_t *strategies,
         ASSERT(false);
         __builtin_unreachable();
     }
+    evaluator->setName(name_);
     evaluator->setStrategies(strategies, num_strategies);
     return evaluator;
 }
@@ -432,4 +435,16 @@ StrategyEvaluator::singularComparisonIsDifferent()
 {
     // by default.  override in subclass if it actually matters.
     return false;
+}
+
+void
+StrategyEvaluator::setName(const char *name_)
+{
+    name = name_;
+}
+
+const char *
+StrategyEvaluator::getName() const
+{
+    return name.c_str();
 }

@@ -89,7 +89,7 @@ create_estimators_and_strategies(instruments_external_estimator_t *estimators,
     strategies[2] = make_redundant_strategy(strategies, 2);
     
     *evaluator = 
-        register_strategy_set_with_method(strategies, NUM_STRATEGIES, method);
+        register_strategy_set_with_method("", strategies, NUM_STRATEGIES, method);
 }
 
 static void setup_common(struct common_test_data *cdata, enum EvalMethod method)

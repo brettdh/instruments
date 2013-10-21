@@ -43,7 +43,7 @@ CTEST(coinflip, one_strategy)
         make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1, NULL);
     ASSERT_NOT_NULL(strategy);
     
-    instruments_strategy_evaluator_t evaluator = register_strategy_set(&strategy, 1);
+    instruments_strategy_evaluator_t evaluator = register_strategy_set("", &strategy, 1);
     instruments_strategy_t chosen = choose_strategy(evaluator, NULL);
     ASSERT_NOT_NULL(chosen);
     ASSERT_EQUAL((int)strategy, (int)chosen);
@@ -69,7 +69,7 @@ CTEST(coinflip, two_strategies)
         ASSERT_NOT_NULL(strategies[i]);
     }
 
-    instruments_strategy_evaluator_t evaluator = register_strategy_set(strategies, 2);
+    instruments_strategy_evaluator_t evaluator = register_strategy_set("", strategies, 2);
     
     instruments_strategy_t chosen_strategy = choose_strategy(evaluator, NULL);
     ASSERT_EQUAL((int)strategies[1], (int)chosen_strategy);
@@ -102,7 +102,7 @@ CTEST_SETUP(coinflip)
     }
 
     data->evaluator = 
-        register_strategy_set_with_method(data->strategies, NUM_STRATEGIES, EMPIRICAL_ERROR);
+        register_strategy_set_with_method("", data->strategies, NUM_STRATEGIES, EMPIRICAL_ERROR);
 }
 
 CTEST_TEARDOWN(coinflip)

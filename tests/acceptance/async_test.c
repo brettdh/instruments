@@ -55,7 +55,7 @@ CTEST(async_test, arg_is_passed)
 
     /* two strategies; which one wins depends entirely on the argument to choose_strategy. */
     
-    instruments_strategy_evaluator_t evaluator = register_strategy_set(strategies, 2);
+    instruments_strategy_evaluator_t evaluator = register_strategy_set("", strategies, 2);
     instruments_strategy_t chosen;
     
     /* strategy 0 takes 5 seconds; strategy 1 takes 10 seconds */

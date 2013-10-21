@@ -105,12 +105,16 @@ CDECL void free_strategy(instruments_strategy_t strategy);
  *  (see make_strategy and make_redundant_strategy above)
  */
 CDECL instruments_strategy_evaluator_t
-register_strategy_set(const instruments_strategy_t *strategies, size_t num_strategies);
+register_strategy_set(const char *name, const instruments_strategy_t *strategies, size_t num_strategies);
 
 /** Destroy a strategy evaluator previously created with 
  *  register_strategy_set.
  */
 CDECL void free_strategy_evaluator(instruments_strategy_evaluator_t evaluator);
+
+
+CDECL void set_strategy_evaluator_name(instruments_strategy_evaluator_t evaluator, const char * name);
+CDECL const char *get_strategy_evaluator_name(instruments_strategy_evaluator_t evaluator);
 
 /** Choose and return the best strategy.
  */

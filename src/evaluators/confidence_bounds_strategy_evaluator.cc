@@ -466,8 +466,8 @@ void
 ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, double observation, 
                                                       double old_estimate, double new_estimate)
 {
-    inst::dbgprintf(INFO, "Adding observation %f to estimator %s\n", 
-                    observation, estimator->getName().c_str());
+    inst::dbgprintf(INFO, "%s evaluator: Adding observation %f to estimator %s\n", 
+                    getName(), observation, estimator->getName().c_str());
     
     assert(estimator);
     string name = estimator->getName();

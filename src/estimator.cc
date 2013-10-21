@@ -97,12 +97,16 @@ Estimator::hasEstimate()
 void
 Estimator::subscribe(StrategyEvaluator *subscriber)
 {
+    dbgprintf(inst::INFO, "Evaluator %s subscribed to estimator %s\n",
+              subscriber->getName(), name.c_str());
     subscribers.insert(subscriber);
 }
 
 void
 Estimator::unsubscribe(StrategyEvaluator *unsubscriber)
 {
+    dbgprintf(inst::INFO, "Evaluator %s unsubscribed from estimator %s\n",
+              unsubscriber->getName(), name.c_str());
     subscribers.erase(unsubscriber);
 }
 

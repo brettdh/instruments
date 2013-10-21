@@ -88,16 +88,16 @@ get_network_rtt_estimator(const char *iface)
 }
 
 instruments_strategy_evaluator_t
-register_strategy_set(const instruments_strategy_t *strategies, size_t num_strategies)
+register_strategy_set(const char *name, const instruments_strategy_t *strategies, size_t num_strategies)
 {
-    return StrategyEvaluator::create(strategies, num_strategies);
+    return StrategyEvaluator::create(name, strategies, num_strategies);
 }
 
 instruments_strategy_evaluator_t
-register_strategy_set_with_method(const instruments_strategy_t *strategies, size_t num_strategies,
+register_strategy_set_with_method(const char *name, const instruments_strategy_t *strategies, size_t num_strategies,
                                   EvalMethod method)
 {
-    return StrategyEvaluator::create(strategies, num_strategies, method);
+    return StrategyEvaluator::create(name, strategies, num_strategies, method);
 }
 
 void
@@ -105,6 +105,19 @@ free_strategy_evaluator(instruments_strategy_evaluator_t e)
 {
     StrategyEvaluator *evaluator = static_cast<StrategyEvaluator*>(e);
     delete evaluator;
+}
+
+void set_strategy_evaluator_name(instruments_strategy_evaluator_t e, const char *name)
+{
+    StrategyEvaluator *evaluator = static_cast<StrategyEvaluator*>(e);
+    evaluator->setName(name);
+}
+
+const char *
+get_strategy_evaluator_name(instruments_strategy_evaluator_t e)
+{
+    StrategyEvaluator *evaluator = static_cast<StrategyEvaluator*>(e);
+    return evaluator->getName();
 }
 
 instruments_strategy_t

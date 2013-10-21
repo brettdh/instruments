@@ -17,7 +17,7 @@ CDECL void add_coin_flip_observation(int heads);
 #include "eval_method.h"
 /* for testing, allows the caller to specify the method of estimator evaluation. */
 CDECL instruments_strategy_evaluator_t
-register_strategy_set_with_method(const instruments_strategy_t *strategies, size_t num_strategies,
+register_strategy_set_with_method(const char *name, const instruments_strategy_t *strategies, size_t num_strategies,
                                   enum EvalMethod type);
 
 #include "estimator_range_hints.h"

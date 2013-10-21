@@ -158,7 +158,7 @@ static struct timeval run_test(int num_samples, enum EvalMethod method,
     strategies[2] = make_redundant_strategy(strategies, 2);
     
     instruments_strategy_evaluator_t evaluator = 
-        register_strategy_set_with_method(strategies, 3, method);
+        register_strategy_set_with_method("", strategies, 3, method);
 
     if (restore_file) {
         restore_evaluator(evaluator, restore_file);

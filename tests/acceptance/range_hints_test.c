@@ -88,7 +88,7 @@ CTEST2(range_hints, value_observed)
     strategies[1] = make_strategy(estimator_value, NULL, data_cost, (void*) data->low_estimator, NULL);
     ASSERT_NOT_NULL(strategies[1]);
     
-    instruments_strategy_evaluator_t evaluator = register_strategy_set_with_method(strategies, 2,
+    instruments_strategy_evaluator_t evaluator = register_strategy_set_with_method("", strategies, 2,
                                                                                    EMPIRICAL_ERROR_BINNED);
     instruments_strategy_t chosen = choose_strategy(evaluator, NULL);
     ASSERT_NOT_NULL(chosen);
@@ -112,7 +112,7 @@ CTEST2(range_hints, tail_values_are_okay)
     strategies[2] = make_redundant_strategy(strategies, 2);
     ASSERT_NOT_NULL(strategies[2]);
     
-    instruments_strategy_evaluator_t evaluator = register_strategy_set_with_method(strategies, 3, BAYESIAN);
+    instruments_strategy_evaluator_t evaluator = register_strategy_set_with_method("", strategies, 3, BAYESIAN);
     
     int i;
     for (i = 1; i < 9; ++i) {

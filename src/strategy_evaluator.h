@@ -8,6 +8,7 @@
 #include "thread_pool.h"
 
 #include <vector>
+#include <string>
 
 #include <pthread.h>
 
@@ -25,13 +26,18 @@ class Strategy;
 // TODO:   so I can add estimators to the strategy as they are being requested.
 class StrategyEvaluator : public StrategyEvaluationContext {
   public:
-    static StrategyEvaluator *create(const instruments_strategy_t *strategies,
+    static StrategyEvaluator *create(const char *name_, 
+                                     const instruments_strategy_t *strategies,
                                      size_t num_strategies);
-    static StrategyEvaluator *create(const instruments_strategy_t *strategies,
+    static StrategyEvaluator *create(const char *name_, 
+                                     const instruments_strategy_t *strategies,
                                      size_t num_strategies, EvalMethod type);
 
     void setSilent(bool silent_);
     bool isSilent();
+
+    void setName(const char *name_);
+    const char *getName() const;
 
     // TODO: declare this not-thread-safe?  that seems reasonable.
     instruments_strategy_t chooseStrategy(void *chooser_arg, bool redundancy=true);
@@ -91,6 +97,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     double calculateCost(Strategy *strategy, void *chooser_arg, ComparisonType comparison_type);
     Strategy *currentStrategy;
     bool silent;
+
+    std::string name;
 
     small_set<Estimator *> subscribed_estimators;
 

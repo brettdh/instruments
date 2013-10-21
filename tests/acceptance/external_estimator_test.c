@@ -52,7 +52,7 @@ CTEST2(external_estimator, value_observed)
     strategies[1] = make_strategy(estimator_value, NULL, data_cost, (void*) data->low_estimator, NULL);
     ASSERT_NOT_NULL(strategies[1]);
     
-    instruments_strategy_evaluator_t evaluator = register_strategy_set(strategies, 2);
+    instruments_strategy_evaluator_t evaluator = register_strategy_set("", strategies, 2);
     instruments_strategy_t chosen = choose_strategy(evaluator, NULL);
     ASSERT_NOT_NULL(chosen);
     ASSERT_EQUAL((int)strategies[1], (int)chosen);
@@ -79,7 +79,7 @@ run_test_with_oscillating_estimator(struct external_estimator_data *data,
     };
     
     instruments_strategy_evaluator_t evaluator = 
-        register_strategy_set_with_method(strategies, 3, 
+        register_strategy_set_with_method("", strategies, 3, 
                                           EMPIRICAL_ERROR_ALL_SAMPLES);
 
     add_observation(data->high_estimator, value2, value2);

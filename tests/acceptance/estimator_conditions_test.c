@@ -137,7 +137,7 @@ static void run_set_and_clear_condition(CTEST_DATA(estimator_conditions) *data,
     }
 
     instruments_strategy_evaluator_t evaluator = 
-        register_strategy_set_with_method(strategies, 3, method);
+        register_strategy_set_with_method("", strategies, 3, method);
 
     for (i = 0; i < 3; ++i) {
         add_observation(data->dummy[i], 1.0, 1.0);
