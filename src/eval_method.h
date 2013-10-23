@@ -18,8 +18,13 @@ CDECL enum JointDistributionType {
     INTNW_JOINT_DISTRIBUTION = 0x10
 };
 
+#ifdef __cplusplus
 CDECL const int STATS_DISTRIBUTION_TYPE_MASK;
 CDECL const int JOINT_DISTRIBUTION_TYPE_MASK;
+#else
+extern const int STATS_DISTRIBUTION_TYPE_MASK;
+extern const int JOINT_DISTRIBUTION_TYPE_MASK;
+#endif
 
 CDECL enum EvalMethod {
     TRUSTED_ORACLE,    // No error evaluation; estimators assumed perfect
