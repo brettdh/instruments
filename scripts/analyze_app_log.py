@@ -66,7 +66,7 @@ class LogParsingError(Exception):
         return "LogParsingError: " + str(self)
 
     def __str__(self):
-        return ("IntNW log parse error at line %s: %s%s"
+        return ("App log parse error at line %s: %s%s"
                 % (self.linenum and str(self.linenum) or "<unknown>",
                    self.msg,
                    self.line != None and ('\n' + self.line) or ""))
@@ -196,81 +196,81 @@ def network_metric_pairs():
 
 class IROB(object):
     def __init__(self, plot, network_type, direction, start, irob_id):
-        self.__plot = plot
+        self._plot = plot
         self.network_type = network_type
         self.direction = direction
         self.irob_id = irob_id
         
-        self.__start = start
-        self.__datalen = None
-        self.__expected_bytes = None
-        self.__completion_time = None
-        self.__drop_time = None
-        self.__last_activity = None
-        self.__acked = False
+        self._start = start
+        self._datalen = None
+        self._expected_bytes = None
+        self._completion_time = None
+        self._drop_time = None
+        self._last_activity = None
+        self._acked = False
 
         # if true, mark as strange on plot
-        self.__abnormal_end = False
+        self._abnormal_end = False
 
-        self.__checkIfComplete(start)
+        self._checkIfComplete(start)
 
     def addBytes(self, timestamp, bytes):
-        if self.__datalen == None:
-            self.__datalen = 0
-        self.__datalen += bytes
-        self.__checkIfComplete(timestamp)
+        if self._datalen == None:
+            self._datalen = 0
+        self._datalen += bytes
+        self._checkIfComplete(timestamp)
 
     def finish(self, timestamp, expected_bytes):
-        self.__expected_bytes = expected_bytes
-        self.__checkIfComplete(timestamp)
+        self._expected_bytes = expected_bytes
+        self._checkIfComplete(timestamp)
 
     def ack(self, timestamp):
-        self.__acked = True
-        self.__checkIfComplete(timestamp)
+        self._acked = True
+        self._checkIfComplete(timestamp)
 
     def complete(self):
         # XXX: HACK.  Can be double-counting sent/received app data.
         # TODO: fix it.  maybe still keep track of duplicate data.
-        return (self.__acked and
-                (self.__datalen != None and
+        return (self._acked and
+                (self._datalen != None and
                  (self.direction == "up" or
-                  self.__datalen >= self.__expected_bytes)))
+                  self._datalen >= self._expected_bytes)))
 
     def getSize(self):
-        if not self.__datalen:
+        if not self._datalen:
             raise IROBError("expected to find IROB size")
-        return self.__datalen
+        return self._datalen
      
-    def __checkIfComplete(self, timestamp):
-        self.__last_activity = timestamp
+    def _checkIfComplete(self, timestamp):
+        self._last_activity = timestamp
         if self.complete():
-            self.__completion_time = timestamp
+            self._completion_time = timestamp
 
     def markDropped(self, timestamp):
-        if self.__drop_time == None:
+        if self._drop_time == None:
             dprint("Dropped %s at %f" % (self, timestamp))
-            self.__drop_time = timestamp
+            self._drop_time = timestamp
 
     def wasDropped(self):
-        return bool(self.__drop_time)
+        return bool(self._drop_time)
 
     def getStart(self):
-        return self.__start
+        return self._start
 
     def getTimeInterval(self):
         if self.complete():
-            return (self.__start, self.__completion_time)
+            return (self._start, self._completion_time)
         else:
-            if self.__acked:
-                end = self.__last_activity
+            if self._acked:
+                end = self._last_activity
             else:
-                if self.__drop_time != None:
-                    end = self.__drop_time
+                if self._drop_time != None:
+                    end = self._drop_time
                 else:
-                    end = self.__last_activity
-                    self.__abnormal_end = True
+                    end = self._last_activity
+                    self._abnormal_end = True
                     
-            return (self.__start, end)
+            return (self._start, end)
 
     def getDuration(self):
         interval = self.getTimeInterval()
@@ -281,17 +281,17 @@ class IROB(object):
                 % (self.irob_id, self.direction, self.network_type))
 
     def draw(self, axes):
-        ypos = self.__plot.getIROBPosition(self)
-        yheight = self.__plot.getIROBHeight(self)
-        start, finish = [self.__plot.getAdjustedTime(ts) for ts in self.getTimeInterval()]
+        ypos = self._plot.getIROBPosition(self)
+        yheight = self._plot.getIROBHeight(self)
+        start, finish = [self._plot.getAdjustedTime(ts) for ts in self.getTimeInterval()]
         dprint("%s %f--%f" % (self, start, finish))
         axes.broken_barh([[start, finish-start]],
                          [ypos - yheight / 2.0, yheight],
-                         color=self.__plot.getIROBColor(self))
+                         color=self._plot.getIROBColor(self))
 
-        if self.__drop_time != None:
+        if self._drop_time != None:
             axes.plot([finish], [ypos], marker='x', color='black', markeredgewidth=2.0)
-        elif self.__abnormal_end:
+        elif self._abnormal_end:
             axes.plot([finish], [ypos], marker='*', color='black')
 
 timestamp_regex = re.compile("^\[([0-9]+\.[0-9]+)\]")
@@ -301,7 +301,7 @@ def getTimestamp(line):
     return float(re.search(timestamp_regex, line).group(1))
             
 
-class IntNWBehaviorPlot(QDialog):
+class AppBehaviorPlot(QDialog):
     CONFIDENCE_ALPHA = 0.10
     
     def __init__(self, run, start, measurements_only, network_trace_file,
@@ -309,137 +309,137 @@ class IntNWBehaviorPlot(QDialog):
                  is_server, parent=None):
         QDialog.__init__(self, parent)
 
-        self.__initRegexps()
-        self.__run = run
-        self.__networks = {} # {network_type => {direction => {id => IROB} } }
-        self.__network_periods = {}
-        self.__network_type_by_ip = {}
-        self.__network_type_by_sock = {}
-        self.__placeholder_sockets = {} # for when connection begins before scout msg
-        self.__error_history = error_history
-        self.__is_server = is_server
+        self._initRegexps()
+        self._run = run
+        self._networks = {} # {network_type => {direction => {id => IROB} } }
+        self._network_periods = {}
+        self._network_type_by_ip = {}
+        self._network_type_by_sock = {}
+        self._placeholder_sockets = {} # for when connection begins before scout msg
+        self._error_history = error_history
+        self._is_server = is_server
 
-        self.__measurements_only = measurements_only
-        self.__network_trace_file = network_trace_file
-        self.__bandwidth_measurements_file = bandwidth_measurements_file
-        self.__cross_country_latency = cross_country_latency
-        self.__trace = None
+        self._measurements_only = measurements_only
+        self._network_trace_file = network_trace_file
+        self._bandwidth_measurements_file = bandwidth_measurements_file
+        self._cross_country_latency = cross_country_latency
+        self._trace = None
 
         # estimates[network_type][bandwidth_up|latency] -> [values]
-        self.__estimates = {'wifi': {'bandwidth_up': [], 'latency': []},
+        self._estimates = {'wifi': {'bandwidth_up': [], 'latency': []},
                             '3G': {'bandwidth_up': [], 'latency': []}}
 
         # second axes to plot times on
-        self.__session_axes = None
-        self.__user_set_max_trace_duration = None
-        self.__user_set_max_time = None
+        self._session_axes = None
+        self._user_set_max_trace_duration = None
+        self._user_set_max_time = None
 
-        self.__alpha = IntNWBehaviorPlot.CONFIDENCE_ALPHA
+        self._alpha = AppBehaviorPlot.CONFIDENCE_ALPHA
 
         # app-level sessions from the trace_replayer.log file
-        self.__sessions = []
-        self.__debug_sessions = [] # sessions to highlight on the plot for debugging
+        self._sessions = []
+        self._debug_sessions = [] # sessions to highlight on the plot for debugging
 
         # redundancy decision calculations from instruments.log
-        self.__redundancy_decisions = []
+        self._redundancy_decisions = []
 
-        self.__radio_switches = []
+        self._radio_switches = []
 
-        self.__irob_height = 0.25
-        self.__network_pos_offsets = {'wifi': 1.0, '3G': -1.0}
-        self.__direction_pos_offsets = {'down': self.__irob_height / 2.0,
-                                        'up': -self.__irob_height / 2.0}
+        self._irob_height = 0.25
+        self._network_pos_offsets = {'wifi': 1.0, '3G': -1.0}
+        self._direction_pos_offsets = {'down': self._irob_height / 2.0,
+                                        'up': -self._irob_height / 2.0}
 
-        self.__irob_colors = {'wifi': 'blue', '3G': 'red'}
+        self._irob_colors = {'wifi': 'blue', '3G': 'red'}
 
-        self.__choose_network_calls = []
+        self._choose_network_calls = []
 
-        self.__start = start
-        self.__xlim_max = 1200.0
+        self._start = start
+        self._xlim_max = 1200.0
 
         # TODO: infer plot title from file path
-        client_or_server = "server-side" if self.__is_server else "client-side"
-        self.__title = ("IntNW %s - Run %d" % 
-                        (client_or_server, self.__run))
+        client_or_server = "server-side" if self._is_server else "client-side"
+        self._title = ("IntNW %s - Run %d" % 
+                        (client_or_server, self._run))
 
         self.create_main_frame()
 
     def setXlimMax(self, xlim_max):
-        self.__xlim_max = xlim_max
+        self._xlim_max = xlim_max
 
     def setSessions(self, sessions):
-        self.__sessions = sessions
+        self._sessions = sessions
 
     def setRedundancyDecisions(self, redundancy_decisions):
-        self.__redundancy_decisions = redundancy_decisions
+        self._redundancy_decisions = redundancy_decisions
         
     def setRadioSwitches(self, radio_switches):
-        self.__radio_switches = []
+        self._radio_switches = []
         for switch in radio_switches:
             timestamp, prev_type, new_type = switch
             rel_timestamp = self.getAdjustedTime(timestamp)
-            if timestamp >= self.__start:
-                self.__radio_switches.append([rel_timestamp, prev_type, new_type])
+            if timestamp >= self._start:
+                self._radio_switches.append([rel_timestamp, prev_type, new_type])
         
     def create_main_frame(self):
-        self.__frame = QWidget()
-        self.__dpi = 100
-        self.__figure = Figure((5,4), self.__dpi) # 5" x 4"
-        self.__canvas = FigureCanvas(self.__figure)
-        self.__canvas.setParent(self.__frame)
+        self._frame = QWidget()
+        self._dpi = 100
+        self._figure = Figure((5,4), self._dpi) # 5" x 4"
+        self._canvas = FigureCanvas(self._figure)
+        self._canvas.setParent(self._frame)
 
-        self.__mpl_toolbar = NavigationToolbar(self.__canvas, self.__frame)
+        self._mpl_toolbar = NavigationToolbar(self._canvas, self._frame)
 
         #
         # Layout with box sizers
         # 
         hbox = QHBoxLayout()
 
-        if self.__measurements_only:
-            self.__setupMeasurementWidgets(hbox)
+        if self._measurements_only:
+            self._setupMeasurementWidgets(hbox)
         else:
-            self.__setupActivityWidgets(hbox)
+            self._setupActivityWidgets(hbox)
             
         vbox = QVBoxLayout(self)
-        vbox.addWidget(self.__canvas, stretch=100)
-        vbox.addWidget(self.__mpl_toolbar, stretch=1)
+        vbox.addWidget(self._canvas, stretch=100)
+        vbox.addWidget(self._mpl_toolbar, stretch=1)
         vbox.addLayout(hbox, stretch=1)
 
-    def __setupActivityWidgets(self, hbox):
-        self.__show_sessions = QCheckBox("Session times")
-        self.__show_decisions = QCheckBox("Redundancy decisions")
-        self.__show_debugging = QCheckBox("Debugging")
-        checks = [self.__show_sessions, self.__show_decisions,
-                  self.__show_debugging]
+    def _setupActivityWidgets(self, hbox):
+        self._show_sessions = QCheckBox("Session times")
+        self._show_decisions = QCheckBox("Redundancy decisions")
+        self._show_debugging = QCheckBox("Debugging")
+        checks = [self._show_sessions, self._show_decisions,
+                  self._show_debugging]
 
         left_box = QVBoxLayout()
         for check in checks:
-            if check is not self.__show_debugging:
+            if check is not self._show_debugging:
                 check.setChecked(True)
             left_box.addWidget(check)
             self.connect(check, SIGNAL("stateChanged(int)"), self.on_draw)
 
         hbox.addLayout(left_box, stretch=1)
 
-        self.__max_trace_duration = QLineEdit("")
-        self.connect(self.__max_trace_duration, SIGNAL("returnPressed()"), 
+        self._max_trace_duration = QLineEdit("")
+        self.connect(self._max_trace_duration, SIGNAL("returnPressed()"), 
                      self.updateMaxTraceDuration)
 
         labeled_input = QVBoxLayout()
         labeled_input.addWidget(QLabel("Max trace duration"))
-        labeled_input.addWidget(self.__max_trace_duration)
+        labeled_input.addWidget(self._max_trace_duration)
         hbox.addLayout(labeled_input, stretch=1)
 
-        self.__max_time = QLineEdit("")
-        self.connect(self.__max_time, SIGNAL("returnPressed()"), self.updateMaxTime)
+        self._max_time = QLineEdit("")
+        self.connect(self._max_time, SIGNAL("returnPressed()"), self.updateMaxTime)
 
         labeled_input = QVBoxLayout()
         labeled_input.addWidget(QLabel("Max time"))
-        labeled_input.addWidget(self.__max_time)
+        labeled_input.addWidget(self._max_time)
         hbox.addLayout(labeled_input, stretch=1)
 
 
-    def __updateUserSetField(self, field, attrname):
+    def _updateUserSetField(self, field, attrname):
         try:
             value = float(field.text())
             print "Setting %s to %f" % (attrname, value)
@@ -449,44 +449,43 @@ class IntNWBehaviorPlot(QDialog):
             pass
 
     def updateMaxTraceDuration(self):
-        self.__updateUserSetField(self.__max_trace_duration,
-                                  "_IntNWBehaviorPlot__user_set_max_trace_duration")
+        self._updateUserSetField(self._max_trace_duration, "_user_set_max_trace_duration")
 
     def updateMaxTime(self):
-        self.__updateUserSetField(self.__max_time, "_IntNWBehaviorPlot__user_set_max_time")
+        self._updateUserSetField(self._max_time, "_user_set_max_time")
 
     def updateAlpha(self):
         try:
-            alpha = percent_to_alpha(float(self.__ci_percent.text()))
-            self.__alpha = alpha
+            alpha = percent_to_alpha(float(self._ci_percent.text()))
+            self._alpha = alpha
             self.on_draw()
         except ValueError:
             pass
 
-    def __setupMeasurementWidgets(self, hbox):
-        self.__show_wifi = QCheckBox("wifi")
-        self.__show_threeg = QCheckBox("3G")
-        self.__show_measurements = QCheckBox("Measurements")
-        self.__show_trace = QCheckBox("Trace display")
-        self.__show_trace_variance = QCheckBox("Trace variance (std-dev)")
-        self.__show_legend = QCheckBox("Legend")
-        self.__show_decisions = QCheckBox("Redundancy decisions")
-        checks = [self.__show_wifi, self.__show_threeg,
-                  self.__show_measurements,
-                  self.__show_trace, self.__show_trace_variance,
-                  self.__show_legend, self.__show_decisions]
+    def _setupMeasurementWidgets(self, hbox):
+        self._show_wifi = QCheckBox("wifi")
+        self._show_threeg = QCheckBox("3G")
+        self._show_measurements = QCheckBox("Measurements")
+        self._show_trace = QCheckBox("Trace display")
+        self._show_trace_variance = QCheckBox("Trace variance (std-dev)")
+        self._show_legend = QCheckBox("Legend")
+        self._show_decisions = QCheckBox("Redundancy decisions")
+        checks = [self._show_wifi, self._show_threeg,
+                  self._show_measurements,
+                  self._show_trace, self._show_trace_variance,
+                  self._show_legend, self._show_decisions]
 
         networks = QVBoxLayout()
-        networks.addWidget(self.__show_wifi)
-        networks.addWidget(self.__show_threeg)
+        networks.addWidget(self._show_wifi)
+        networks.addWidget(self._show_threeg)
         hbox.addLayout(networks)
 
         options = QVBoxLayout()
-        options.addWidget(self.__show_measurements)
-        options.addWidget(self.__show_trace)
-        options.addWidget(self.__show_trace_variance)
-        options.addWidget(self.__show_legend)
-        options.addWidget(self.__show_decisions)
+        options.addWidget(self._show_measurements)
+        options.addWidget(self._show_trace)
+        options.addWidget(self._show_trace_variance)
+        options.addWidget(self._show_legend)
+        options.addWidget(self._show_decisions)
         hbox.addLayout(options)
 
         for check in checks:
@@ -494,135 +493,135 @@ class IntNWBehaviorPlot(QDialog):
             self.connect(check, SIGNAL("stateChanged(int)"), self.on_draw)
 
         error_plot_method_label = QLabel("Error plotting")
-        self.__plot_error_bars = QRadioButton("Mean error bars")
-        self.__plot_colored_error_regions = QRadioButton("Colored regions")
+        self._plot_error_bars = QRadioButton("Mean error bars")
+        self._plot_colored_error_regions = QRadioButton("Colored regions")
         
-        self.__error_error_ci = \
-            QRadioButton("%d%% CI" % alpha_to_percent(IntNWBehaviorPlot.CONFIDENCE_ALPHA))
-        self.__error_error_stddev = QRadioButton("std-dev")
+        self._error_error_ci = \
+            QRadioButton("%d%% CI" % alpha_to_percent(AppBehaviorPlot.CONFIDENCE_ALPHA))
+        self._error_error_stddev = QRadioButton("std-dev")
 
-        self.__plot_colored_error_regions.setChecked(True)
-        self.__error_error_ci.setChecked(True)
+        self._plot_colored_error_regions.setChecked(True)
+        self._error_error_ci.setChecked(True)
         
-        self.connect(self.__plot_error_bars, SIGNAL("toggled(bool)"), self.on_draw)
-        self.connect(self.__plot_colored_error_regions, SIGNAL("toggled(bool)"), self.on_draw)
-        self.connect(self.__error_error_ci, SIGNAL("toggled(bool)"), self.on_draw)
-        self.connect(self.__error_error_stddev, SIGNAL("toggled(bool)"), self.on_draw)
+        self.connect(self._plot_error_bars, SIGNAL("toggled(bool)"), self.on_draw)
+        self.connect(self._plot_colored_error_regions, SIGNAL("toggled(bool)"), self.on_draw)
+        self.connect(self._error_error_ci, SIGNAL("toggled(bool)"), self.on_draw)
+        self.connect(self._error_error_stddev, SIGNAL("toggled(bool)"), self.on_draw)
 
-        percent = alpha_to_percent(IntNWBehaviorPlot.CONFIDENCE_ALPHA)
-        self.__ci_percent = QLineEdit("%d" % percent)
-        self.__ci_percent.setFixedWidth(80)
-        self.connect(self.__ci_percent, SIGNAL("returnPressed()"), self.updateAlpha)
+        percent = alpha_to_percent(AppBehaviorPlot.CONFIDENCE_ALPHA)
+        self._ci_percent = QLineEdit("%d" % percent)
+        self._ci_percent.setFixedWidth(80)
+        self.connect(self._ci_percent, SIGNAL("returnPressed()"), self.updateAlpha)
 
         error_toggles = QVBoxLayout()
-        error_toggles.addWidget(self.__plot_error_bars)
-        error_toggles.addWidget(self.__plot_colored_error_regions)
+        error_toggles.addWidget(self._plot_error_bars)
+        error_toggles.addWidget(self._plot_colored_error_regions)
 
         error_box = QGroupBox()
         error_box.setLayout(error_toggles)
 
         error_interval_toggles = QVBoxLayout()
         ci_toggle = QHBoxLayout()
-        ci_toggle.addWidget(self.__error_error_ci)
-        ci_toggle.addWidget(self.__ci_percent)
+        ci_toggle.addWidget(self._error_error_ci)
+        ci_toggle.addWidget(self._ci_percent)
         ci_toggle.addWidget(QLabel("%"))
         error_interval_toggles.addLayout(ci_toggle)
-        error_interval_toggles.addWidget(self.__error_error_stddev)
+        error_interval_toggles.addWidget(self._error_error_stddev)
 
-        self.__error_interval_box = QGroupBox()
-        self.__error_interval_box.setLayout(error_interval_toggles)
+        self._error_interval_box = QGroupBox()
+        self._error_interval_box.setLayout(error_interval_toggles)
 
         all_error_toggles = QHBoxLayout()
         all_error_toggles.addWidget(error_box)
-        all_error_toggles.addWidget(self.__error_interval_box)
+        all_error_toggles.addWidget(self._error_interval_box)
 
         hbox.addLayout(all_error_toggles)
 
-        self.__bandwidth_up_toggle = QRadioButton("Bandwidth (up)")
-        self.__latency_toggle = QRadioButton("Latency")
-        self.__tx_time_toggle = QRadioButton("Predicted transfer time (up)")
+        self._bandwidth_up_toggle = QRadioButton("Bandwidth (up)")
+        self._latency_toggle = QRadioButton("Latency")
+        self._tx_time_toggle = QRadioButton("Predicted transfer time (up)")
         
-        self.__latency_toggle.setChecked(True)
-        self.connect(self.__bandwidth_up_toggle, SIGNAL("toggled(bool)"), self.on_draw)
-        self.connect(self.__latency_toggle, SIGNAL("toggled(bool)"), self.on_draw)
-        self.connect(self.__tx_time_toggle, SIGNAL("toggled(bool)"), self.on_draw)
+        self._latency_toggle.setChecked(True)
+        self.connect(self._bandwidth_up_toggle, SIGNAL("toggled(bool)"), self.on_draw)
+        self.connect(self._latency_toggle, SIGNAL("toggled(bool)"), self.on_draw)
+        self.connect(self._tx_time_toggle, SIGNAL("toggled(bool)"), self.on_draw)
 
         toggles = QVBoxLayout()
-        toggles.addWidget(self.__bandwidth_up_toggle)
-        toggles.addWidget(self.__latency_toggle)
-        toggles.addWidget(self.__tx_time_toggle)
+        toggles.addWidget(self._bandwidth_up_toggle)
+        toggles.addWidget(self._latency_toggle)
+        toggles.addWidget(self._tx_time_toggle)
 
         toggle_box = QGroupBox()
         toggle_box.setLayout(toggles)
         hbox.addWidget(toggle_box)
         
     def on_draw(self):
-        self.setWindowTitle(self.__title)
+        self.setWindowTitle(self._title)
 
-        self.__figure.clear()
-        self.__axes = self.__figure.add_subplot(111)
-        self.__axes.set_title(self.__title)
-        self.__session_axes = None
+        self._figure.clear()
+        self._axes = self._figure.add_subplot(111)
+        self._axes.set_title(self._title)
+        self._session_axes = None
         
-        if self.__measurements_only:
-            self.__plotTrace()
-            if self.__bandwidth_measurements_file:
-                self.__plotActiveMeasurements()
+        if self._measurements_only:
+            self._plotTrace()
+            if self._bandwidth_measurements_file:
+                self._plotActiveMeasurements()
             else:
-                self.__plotMeasurements()
+                self._plotMeasurements()
 
-            self.__axes.set_xlabel("Time (seconds)")
-            self.__axes.set_ylabel(self.__getYAxisLabel())
-            if self.__show_legend.isChecked():
-                self.__axes.legend()
+            self._axes.set_xlabel("Time (seconds)")
+            self._axes.set_ylabel(self._getYAxisLabel())
+            if self._show_legend.isChecked():
+                self._axes.legend()
 
-            self.__drawRedundancyDecisions()
+            self._drawRedundancyDecisions()
 
-            self.__axes.set_ylim(0.0, self.__axes.get_ylim()[1])
-            self.__drawWifi()
+            self._axes.set_ylim(0.0, self._axes.get_ylim()[1])
+            self._drawWifi()
         else:
-            self.__setupAxes()
-            self.__setTraceEnd()
-            self.__drawIROBs()
-            self.__drawSessions()
-            self.__drawRedundancyDecisions()
-            self.__drawRadioSwitches()
+            self._setupAxes()
+            self._setTraceEnd()
+            self._drawIROBs()
+            self._drawSessions()
+            self._drawRedundancyDecisions()
+            self._drawRadioSwitches()
 
-            max_time = self.__session_axes.get_ylim()[1]
-            if self.__user_set_max_time:
-                max_time = self.__user_set_max_time
-            self.__session_axes.set_ylim(0.0, max_time)
+            max_time = self._session_axes.get_ylim()[1]
+            if self._user_set_max_time:
+                max_time = self._user_set_max_time
+            self._session_axes.set_ylim(0.0, max_time)
 
-            if self.__show_debugging.isChecked():
-                self.__drawDebugging()
+            if self._show_debugging.isChecked():
+                self._drawDebugging()
 
-            self.__drawWifi()
+            self._drawWifi()
 
-        #max_trace_duration = self.__session_axes.get_xlim()[1]
-        if self.__user_set_max_trace_duration:
-            max_trace_duration = self.__user_set_max_trace_duration
+        #max_trace_duration = self._session_axes.get_xlim()[1]
+        if self._user_set_max_trace_duration:
+            max_trace_duration = self._user_set_max_trace_duration
         else:
-            max_trace_duration = self.__xlim_max
+            max_trace_duration = self._xlim_max
 
         buffer_perc = 0.05
         buffer = buffer_perc * max_trace_duration
         xlims = [-buffer, max_trace_duration + buffer]
-        self.__axes.set_xlim(*xlims)
-        if not self.__measurements_only:
-            self.__session_axes.set_xlim(*xlims)
+        self._axes.set_xlim(*xlims)
+        if not self._measurements_only:
+            self._session_axes.set_xlim(*xlims)
 
-        self.__canvas.draw()
+        self._canvas.draw()
 
     def saveErrorTable(self):
         for network_type, metric in network_metric_pairs():
             filename = ("/tmp/%s_%s_%s_error_table_%d.txt"
-                        % ("server" if self.__is_server else "client",
-                           network_type, metric, self.__run))
+                        % ("server" if self._is_server else "client",
+                           network_type, metric, self._run))
             f = open(filename, "w")
             f.write("Time,Observation,Prev estimate,New estimate,Error\n")
             
             cur_times, observations, estimated_values = \
-                self.__getAllEstimates(network_type, metric)
+                self._getAllEstimates(network_type, metric)
             shifted_estimates = shift_right_by_one(estimated_values)
             error_values = get_error_values(observations, estimated_values)
 
@@ -633,25 +632,25 @@ class IntNWBehaviorPlot(QDialog):
             f.close()
             
 
-    def __whatToPlot(self):
-        if self.__bandwidth_up_toggle.isChecked():
+    def _whatToPlot(self):
+        if self._bandwidth_up_toggle.isChecked():
             return 'bandwidth_up'
-        elif self.__latency_toggle.isChecked():
+        elif self._latency_toggle.isChecked():
             return 'latency'
-        elif self.__tx_time_toggle.isChecked():
+        elif self._tx_time_toggle.isChecked():
             return 'tx_time'
         else: assert False
 
-    def __getYAxisLabel(self):
+    def _getYAxisLabel(self):
         labels = {'bandwidth_up': 'Bandwidth (up) (bytes/sec)',
                   'latency': 'RTT (seconds)',
                   'tx_time': 'Transfer time (up) (seconds)'}
-        return labels[self.__whatToPlot()]
+        return labels[self._whatToPlot()]
 
     class NetworkTrace(object):
         def __init__(self, trace_file, window, estimates, is_server):
-            self.__window = window
-            self.__priv_trace = mobility_trace.NetworkTrace(trace_file)
+            self._window = window
+            self._priv_trace = mobility_trace.NetworkTrace(trace_file)
             
             value_names = ['bandwidth_up', 'latency']
             
@@ -660,11 +659,11 @@ class IntNWBehaviorPlot(QDialog):
             # XXX: assuming bandwidth-up.  not the case on the server side.
             field_offsets = {'bandwidth_up': 1, 'latency': 2}
 
-            self.__start = None
+            self._start = None
 
-            self.__timestamps = {'wifi': {'bandwidth_up': [], 'latency': []},
+            self._timestamps = {'wifi': {'bandwidth_up': [], 'latency': []},
                                  '3G': {'bandwidth_up': [], 'latency': []},}
-            self.__values = {'wifi': {'bandwidth_up': [], 'latency': []},
+            self._values = {'wifi': {'bandwidth_up': [], 'latency': []},
                              '3G': {'bandwidth_up': [], 'latency': []},}
 
             conversions = {'bandwidth_up': 1.0, 'latency': 1.0 / 1000.0}
@@ -692,44 +691,44 @@ class IntNWBehaviorPlot(QDialog):
                 else:
                     last_estimate_time = 1200.0 # XXX: hardcoding hack.
 
-                times = self.__priv_trace.getData('start', 0, last_estimate_time)
-                values = self.__priv_trace.getData(key, 0, last_estimate_time)
+                times = self._priv_trace.getData('start', 0, last_estimate_time)
+                values = self._priv_trace.getData(key, 0, last_estimate_time)
 
                 def convert(value):
                     value = conversions[what_to_plot] * value
                     if what_to_plot == "latency":
-                        value = self.__window.getAdjustedTraceLatency(value)
+                        value = self._window.getAdjustedTraceLatency(value)
                     return value
                 
-                self.__start = times[0]
-                self.__timestamps[network_type][what_to_plot] = \
-                    map(lambda x: x-self.__start, times)
-                self.__values[network_type][what_to_plot] = map(convert, values)
+                self._start = times[0]
+                self._timestamps[network_type][what_to_plot] = \
+                    map(lambda x: x-self._start, times)
+                self._values[network_type][what_to_plot] = map(convert, values)
 
-            self.__computeVariance()
+            self._computeVariance()
 
             
-        def __computeVariance(self):
+        def _computeVariance(self):
             # values dictionary is populated in __init__
-            self.__upper_variance_values = {}
-            self.__lower_variance_values = {}
-            self.__variance_values = {}
+            self._upper_variance_values = {}
+            self._lower_variance_values = {}
+            self._variance_values = {}
             
             for network_type, what_to_plot in network_metric_pairs():
-                values = self.__values[network_type][what_to_plot]
+                values = self._values[network_type][what_to_plot]
                 variances = stepwise_variance(values)
                 std_devs = [v ** .5 for v in variances]
 
                 uppers = [v + stddev for v, stddev in zip(values, std_devs)]
                 lowers = [v - stddev for v, stddev in zip(values, std_devs)]
 
-                if network_type not in self.__upper_variance_values:
-                    self.__upper_variance_values[network_type] = {}
-                    self.__lower_variance_values[network_type] = {}
-                    self.__variance_values[network_type] = {}
-                self.__upper_variance_values[network_type][what_to_plot] = uppers
-                self.__lower_variance_values[network_type][what_to_plot] = lowers
-                self.__variance_values[network_type][what_to_plot] = std_devs
+                if network_type not in self._upper_variance_values:
+                    self._upper_variance_values[network_type] = {}
+                    self._lower_variance_values[network_type] = {}
+                    self._variance_values[network_type] = {}
+                self._upper_variance_values[network_type][what_to_plot] = uppers
+                self._lower_variance_values[network_type][what_to_plot] = lowers
+                self._variance_values[network_type][what_to_plot] = std_devs
 
         def addTransfers(self, transfers):
             '''Add transfers to the trace for the purpose of
@@ -738,7 +737,7 @@ class IntNWBehaviorPlot(QDialog):
             transfers -- [(start_time, size),...]   (upstream transmissions only).
             '''
             
-            self.__transfers = transfers
+            self._transfers = transfers
 
             class SingleNetwork(NetworkChooser):
                 def __init__(self, network_type):
@@ -749,12 +748,12 @@ class IntNWBehaviorPlot(QDialog):
                     return self.network_type
 
             network_choosers = dict([(type_name, SingleNetwork(type_name)) 
-                                     for type_name in self.__values.keys()])
+                                     for type_name in self._values.keys()])
 
-            for network_type in self.__values:
+            for network_type in self._values:
                 network_chooser = network_choosers[network_type]
-                tx_results = [self.__priv_trace.timeToUpload(network_chooser, *txfer)
-                              for txfer in self.__transfers]
+                tx_results = [self._priv_trace.timeToUpload(network_chooser, *txfer)
+                              for txfer in self._transfers]
 
                 def get_time(tx_result):
                     if (tx_result.getNetworkUsed() == network_chooser.network_type and
@@ -765,102 +764,102 @@ class IntNWBehaviorPlot(QDialog):
                         return 0.0
                     
                 times = map(get_time, tx_results)
-                self.__timestamps[network_type]['tx_time'] = [t[0] for t in self.__transfers]
-                self.__values[network_type]['tx_time'] = times
+                self._timestamps[network_type]['tx_time'] = [t[0] for t in self._transfers]
+                self._values[network_type]['tx_time'] = times
 
             # redo these calculations.  XXX: is this stdev calculation
             #  still appropriate?  probably not.
-            self.__computeVariance()
+            self._computeVariance()
 
         plot_colors = {'wifi': (.7, .7, 1.0), '3G': (1.0, .7, .7)}
 
         # whiten up the colors for the variance plotting
         variance_colors = dict([(name, color + (0.25,)) for name, color in plot_colors.items()])
 
-        def __ploteach(self, plotter, checks):
-            for network_type in self.__timestamps:
+        def _ploteach(self, plotter, checks):
+            for network_type in self._timestamps:
                 if (checks[network_type].isChecked()):
                     plotter(network_type)
                 
-        def __plot(self, axes, what_to_plot, checks, values, colors, labeler):
+        def _plot(self, axes, what_to_plot, checks, values, colors, labeler):
             def plotter(network_type):
-                axes.plot(self.__timestamps[network_type][what_to_plot], 
-                          self.__values[network_type][what_to_plot],
+                axes.plot(self._timestamps[network_type][what_to_plot], 
+                          self._values[network_type][what_to_plot],
                           color=colors[network_type],
                           label=labeler(network_type))
             
-            self.__ploteach(plotter, checks)
+            self._ploteach(plotter, checks)
 
         def plot(self, axes, what_to_plot, checks):
-            self.__plot(axes, what_to_plot, checks, self.__values,
+            self._plot(axes, what_to_plot, checks, self._values,
                         type(self).plot_colors,
                         lambda network_type: network_type + " trace")
 
         def plotVariance(self, axes, what_to_plot, checks):
             def plotter(network_type):
-                if (what_to_plot in self.__values[network_type] and
-                    what_to_plot in self.__variance_values[network_type]):
-                    cur_values = self.__values[network_type][what_to_plot]
-                    cur_errors = self.__variance_values[network_type][what_to_plot]
+                if (what_to_plot in self._values[network_type] and
+                    what_to_plot in self._variance_values[network_type]):
+                    cur_values = self._values[network_type][what_to_plot]
+                    cur_errors = self._variance_values[network_type][what_to_plot]
                     
-                    axes.errorbar(self.__timestamps[network_type][what_to_plot],
+                    axes.errorbar(self._timestamps[network_type][what_to_plot],
                                   cur_values, yerr=cur_errors,
                                   color=type(self).variance_colors[network_type])
             
-            self.__ploteach(plotter, checks)
+            self._ploteach(plotter, checks)
 
 
-    def __plotTrace(self):
-        if self.__network_trace_file and not self.__trace:
-            self.__trace = IntNWBehaviorPlot.NetworkTrace(self.__network_trace_file,
-                                                          self, self.__estimates, 
-                                                          self.__is_server)
-            transfers = self.__getAllUploads()
-            self.__trace.addTransfers(transfers)
+    def _plotTrace(self):
+        if self._network_trace_file and not self._trace:
+            self._trace = AppBehaviorPlot.NetworkTrace(self._network_trace_file,
+                                                          self, self._estimates, 
+                                                          self._is_server)
+            transfers = self._getAllUploads()
+            self._trace.addTransfers(transfers)
             
-        checks = {'wifi': self.__show_wifi, '3G': self.__show_threeg}
-        if self.__show_trace.isChecked():
-            self.__trace.plot(self.__axes, self.__whatToPlot(), checks)
-            if self.__show_trace_variance.isChecked():
-                self.__trace.plotVariance(self.__axes, self.__whatToPlot(), checks)
+        checks = {'wifi': self._show_wifi, '3G': self._show_threeg}
+        if self._show_trace.isChecked():
+            self._trace.plot(self._axes, self._whatToPlot(), checks)
+            if self._show_trace_variance.isChecked():
+                self._trace.plotVariance(self._axes, self._whatToPlot(), checks)
 
-    def __plotMeasurements(self):
-        what_to_plot = self.__whatToPlot()
+    def _plotMeasurements(self):
+        what_to_plot = self._whatToPlot()
         if what_to_plot == "tx_time":
-            self.__plotEstimatedTransferTimes()
+            self._plotEstimatedTransferTimes()
         else:
-            self.__plotMeasurementsSimple()
+            self._plotMeasurementsSimple()
             
 
     class ActiveMeasurements(object):
         def __init__(self, infile):
             rx = re.compile("^\[([0-9]+\.[0-9]+)\] total .+ new .+ bandwidth ([0-9.]+) bytes/sec")
-            self.__start = None
-            self.__times = []
-            self.__values = []
+            self._start = None
+            self._times = []
+            self._values = []
             for line in open(infile).readlines():
                 m = rx.search(line)
                 if m:
                     ts, bandwidth = [float(v) for v in m.groups()]
-                    if self.__start is None:
-                        self.__start = ts
-                    self.__times.append(ts - self.__start)
-                    self.__values.append(bandwidth)
+                    if self._start is None:
+                        self._start = ts
+                    self._times.append(ts - self._start)
+                    self._values.append(bandwidth)
 
         def plot(self, axes):
-            axes.plot(self.__times, self.__values, label="active bandwidth measurements",
+            axes.plot(self._times, self._values, label="active bandwidth measurements",
                       linestyle="-", linewidth=0.5)
         
-    def __plotActiveMeasurements(self):
+    def _plotActiveMeasurements(self):
         measurements = \
-            IntNWBehaviorPlot.ActiveMeasurements(self.__bandwidth_measurements_file)
-        measurements.plot(self.__axes)
+            AppBehaviorPlot.ActiveMeasurements(self._bandwidth_measurements_file)
+        measurements.plot(self._axes)
 
-    def __plotEstimatedTransferTimes(self):
-        checks = {'wifi': self.__show_wifi, '3G': self.__show_threeg}
+    def _plotEstimatedTransferTimes(self):
+        checks = {'wifi': self._show_wifi, '3G': self._show_threeg}
 
         rel_times = {}
-        network_errors = self.__error_history.getAllErrors()
+        network_errors = self._error_history.getAllErrors()
 
         for network_type, metric in network_metric_pairs():
             init_dict(rel_times, network_type, {})
@@ -868,7 +867,7 @@ class IntNWBehaviorPlot(QDialog):
             init_dict(network_errors[network_type], metric, [])
 
             cur_times, observations, estimated_values = \
-                self.__getAllEstimates(network_type, metric)
+                self._getAllEstimates(network_type, metric)
             rel_times[network_type][metric] = cur_times
             network_errors[network_type][metric].extend(
                 get_error_values(observations, estimated_values))
@@ -890,7 +889,7 @@ class IntNWBehaviorPlot(QDialog):
             estimates = {}
             for metric in rel_times[network_type]:
                 cur_times = rel_times[network_type][metric]
-                cur_estimates = self.__getAllEstimates(network_type, metric)[2]
+                cur_estimates = self._getAllEstimates(network_type, metric)[2]
                 
                 pos = bisect_right(cur_times, tx_start)
                 assert pos > 0
@@ -901,7 +900,7 @@ class IntNWBehaviorPlot(QDialog):
         def transfer_time(bw, latency, size):
             return (size / bw) + latency
 
-        transfers = self.__getAllUploads()
+        transfers = self._getAllUploads()
         
         predicted_transfer_durations = {'wifi': [], '3G': []}
         transfer_error_bounds = {'wifi': ([],[]), '3G': ([],[])}
@@ -937,7 +936,7 @@ class IntNWBehaviorPlot(QDialog):
                 transfer_time_errors = [error_value(est_tx_time, tx_time) for tx_time in 
                                         transfer_times_with_error]
                 transfer_time_error_means = stepwise_mean(transfer_time_errors)
-                error_calculator = self.__getErrorCalculator()
+                error_calculator = self._getErrorCalculator()
                 lower_errors, upper_errors = \
                     error_calculator([est_tx_time] * len(transfer_time_errors),
                                      transfer_time_errors, transfer_time_error_means)
@@ -947,7 +946,7 @@ class IntNWBehaviorPlot(QDialog):
                 transfer_error_bounds[network_type][1].append(upper_errors[-1])
                 transfer_error_means[network_type].append(transfer_time_error_means[-1])
         
-            plotter = self.__getErrorPlotter()
+            plotter = self._getErrorPlotter()
             times = [tx_start for tx_start, tx_size in transfers]
             estimates_array = np.array(predicted_transfer_durations[network_type])
             error_adjusted_estimates = error_adjusted_estimate(
@@ -956,17 +955,17 @@ class IntNWBehaviorPlot(QDialog):
                     error_adjusted_estimates,
                     transfer_error_bounds[network_type], network_type)
             
-            self.__plotEstimates(times, predicted_transfer_durations[network_type], network_type)
+            self._plotEstimates(times, predicted_transfer_durations[network_type], network_type)
             
 
-    def __getAllUploads(self):
+    def _getAllUploads(self):
         all_irobs = {}
         
         def get_transfer(irob):
             return (self.getAdjustedTime(irob.getStart()), irob.getSize())
                 
-        for network_type in self.__networks:
-            irobs = self.__networks[network_type]['up']
+        for network_type in self._networks:
+            irobs = self._networks[network_type]['up']
             for irob_id in irobs:
                 new_irob = irobs[irob_id]
                 if irob_id in all_irobs:
@@ -983,8 +982,8 @@ class IntNWBehaviorPlot(QDialog):
         transfers = [get_transfer(irob) for irob in irob_list if within_bounds(irob)]
         return transfers
 
-    def __getAllEstimates(self, network_type, what_to_plot):
-        estimates = self.__estimates[network_type][what_to_plot]
+    def _getAllEstimates(self, network_type, what_to_plot):
+        estimates = self._estimates[network_type][what_to_plot]
         times = [self.getAdjustedTime(e['timestamp']) for e in estimates]
         
         txform = 1.0
@@ -997,26 +996,26 @@ class IntNWBehaviorPlot(QDialog):
 
         return times, observations, estimated_values
 
-    def __plotMeasurementsSimple(self):
-        checks = {'wifi': self.__show_wifi, '3G': self.__show_threeg}
-        what_to_plot = self.__whatToPlot()
+    def _plotMeasurementsSimple(self):
+        checks = {'wifi': self._show_wifi, '3G': self._show_threeg}
+        what_to_plot = self._whatToPlot()
         
-        for network_type in self.__estimates:
+        for network_type in self._estimates:
             if not checks[network_type].isChecked():
                 continue
 
             times, observations, estimated_values = \
-                self.__getAllEstimates(network_type, what_to_plot)
+                self._getAllEstimates(network_type, what_to_plot)
 
-            if self.__show_measurements.isChecked() and len(observations) > 0:
+            if self._show_measurements.isChecked() and len(observations) > 0:
                 error_history = \
-                    self.__error_history.getErrors(network_type, what_to_plot)
+                    self._error_history.getErrors(network_type, what_to_plot)
                 error_values = error_history + get_error_values(observations, estimated_values)
                 
                 error_means = stepwise_mean(error_values)
 
-                error_calculator = self.__getErrorCalculator()
-                plotter = self.__getErrorPlotter()
+                error_calculator = self._getErrorCalculator()
+                plotter = self._getErrorPlotter()
 
                 error_bounds = error_calculator(estimated_values, error_values, error_means)
                 estimates_array = np.array(estimated_values)
@@ -1027,10 +1026,10 @@ class IntNWBehaviorPlot(QDialog):
                 plotter(times, estimated_values, error_adjusted_estimates, 
                         error_bounds, network_type)
                 
-                self.__plotEstimates(times, estimated_values, network_type)
-                self.__plotObservations(times, observations, network_type)
+                self._plotEstimates(times, estimated_values, network_type)
+                self._plotObservations(times, observations, network_type)
 
-    def __getErrorCalculator(self):
+    def _getErrorCalculator(self):
         '''Return a function that calculates upper and lower error bounds
         based on three arrays: estimates, error_values, and error_means.
         
@@ -1044,35 +1043,35 @@ class IntNWBehaviorPlot(QDialog):
         if (M = len(estimates)) < (N = len(error_values)), the first (N-M) elements 
         of estimates are treated as *history* - not plotted, but used in the
         error interval calculations.'''
-        if self.__error_error_ci.isChecked():
-            return self.__getConfidenceInterval
-        elif self.__error_error_stddev.isChecked():
-            return self.__getErrorStddev
+        if self._error_error_ci.isChecked():
+            return self._getConfidenceInterval
+        elif self._error_error_stddev.isChecked():
+            return self._getErrorStddev
         else:
             assert False
 
-    def __getErrorPlotter(self):
-        if self.__plot_error_bars.isChecked():
-            return self.__plotMeasurementErrorBars
-        elif self.__plot_colored_error_regions.isChecked():
-            return self.__plotColoredErrorRegions
+    def _getErrorPlotter(self):
+        if self._plot_error_bars.isChecked():
+            return self._plotMeasurementErrorBars
+        elif self._plot_colored_error_regions.isChecked():
+            return self._plotColoredErrorRegions
         else:
             assert False
 
-    def __getConfidenceInterval(self, estimated_values, error_values, error_means):
+    def _getConfidenceInterval(self, estimated_values, error_values, error_means):
         error_variances = stepwise_variance(error_values)
         error_stddevs = [v ** 0.5 for v in error_variances]
 
         error_confidence_intervals = [0.0]
         error_confidence_intervals += \
-            [confidence_interval(self.__alpha, stddev, max(n+1, 2)) 
+            [confidence_interval(self._alpha, stddev, max(n+1, 2)) 
              for n, stddev in enumerate(error_stddevs)][1:]
 
-        return self.__error_range(estimated_values, error_means, 
+        return self._error_range(estimated_values, error_means, 
                                   error_confidence_intervals, 
                                   error_confidence_intervals)
 
-    def __error_range(self, estimates, error_means, 
+    def _error_range(self, estimates, error_means, 
                       lower_error_intervals, upper_error_intervals):
         num_estimates = len(estimates)
         estimates = np.array(estimates)
@@ -1094,42 +1093,42 @@ class IntNWBehaviorPlot(QDialog):
         uppers = error_adjusted_estimate(estimates, upper_errors)
         return lowers, uppers
 
-    def __getErrorStddev(self, estimated_values, error_values, error_means):
+    def _getErrorStddev(self, estimated_values, error_values, error_means):
         error_variances = stepwise_variance(error_values)
         error_stddevs = [v ** 0.5 for v in error_variances]
 
-        return self.__error_range(estimated_values, error_means, 
+        return self._error_range(estimated_values, error_means, 
                                   error_stddevs, error_stddevs)
 
-    def __plotEstimates(self, times, estimated_values, network_type):
-        self.__axes.plot(times, estimated_values,
+    def _plotEstimates(self, times, estimated_values, network_type):
+        self._axes.plot(times, estimated_values,
                          label=network_type + " estimates",
-                         color=self.__irob_colors[network_type])
+                         color=self._irob_colors[network_type])
 
-    def __plotObservations(self, times, observations, network_type):
+    def _plotObservations(self, times, observations, network_type):
         markers = {'wifi': 's', '3G': 'o'}
-        self.__axes.plot(times, observations, label=network_type + " observations",
+        self._axes.plot(times, observations, label=network_type + " observations",
                          linestyle='none', marker=markers[network_type],
-                         markersize=3, color=self.__irob_colors[network_type])
+                         markersize=3, color=self._irob_colors[network_type])
 
 
 
-    def __plotMeasurementErrorBars(self, times, estimated_values,
+    def _plotMeasurementErrorBars(self, times, estimated_values,
                                    error_adjusted_estimates, error_bounds, network_type):
         estimates = np.array(estimated_values)
         yerr = [estimates - error_bounds[0],  error_bounds[1] - estimates]
         
-        self.__axes.errorbar(times, estimated_values, yerr=yerr,
-                             color=self.__irob_colors[network_type])
+        self._axes.errorbar(times, estimated_values, yerr=yerr,
+                             color=self._irob_colors[network_type])
 
 
-    def __plotColoredErrorRegions(self, times, estimated_values, 
+    def _plotColoredErrorRegions(self, times, estimated_values, 
                                   error_adjusted_estimates, error_bounds, network_type):
         where = [True] * len(times)
 
         #if network_type == "wifi":
         if False: # this doesn't work too well yet, so I'm leaving it out until I fix it.
-            wifi_periods = self.__getWifiPeriods()
+            wifi_periods = self._getWifiPeriods()
 
             def get_mid(mid, left, right, left_val, right_val):
                 slope = (right_val - left_val) / (right - left)
@@ -1192,58 +1191,58 @@ class IntNWBehaviorPlot(QDialog):
         where = np.array(where)
 
         for the_where, alpha in [(where, 0.5), (~where, 0.1)]:
-            self.__axes.fill_between(times, error_bounds[1], error_bounds[0], where=the_where,
-                                     facecolor=self.__irob_colors[network_type],
+            self._axes.fill_between(times, error_bounds[1], error_bounds[0], where=the_where,
+                                     facecolor=self._irob_colors[network_type],
                                      alpha=alpha)
 
-        self.__axes.plot(times, error_adjusted_estimates,
-                         color=self.__irob_colors[network_type],
+        self._axes.plot(times, error_adjusted_estimates,
+                         color=self._irob_colors[network_type],
                          linestyle='--', linewidth=0.5)
                                  
-    def __setupAxes(self):
+    def _setupAxes(self):
         yticks = {}
-        for network, pos in self.__network_pos_offsets.items():
-            for direction, offset in self.__direction_pos_offsets.items():
+        for network, pos in self._network_pos_offsets.items():
+            for direction, offset in self._direction_pos_offsets.items():
                 label = "%s %s" % (network, direction)
                 yticks[pos + offset] = label
 
         min_tick = min(yticks.keys())
         max_tick = max(yticks.keys())
-        self.__axes.set_ylim(min_tick - self.__irob_height,
-                             max_tick + self.__irob_height)
-        self.__axes.set_yticks(yticks.keys())
-        self.__axes.set_yticklabels(yticks.values())
+        self._axes.set_ylim(min_tick - self._irob_height,
+                             max_tick + self._irob_height)
+        self._axes.set_yticks(yticks.keys())
+        self._axes.set_yticklabels(yticks.values())
 
-    def __setTraceEnd(self):
-        for network_type in self.__network_periods:
-            periods = self.__network_periods[network_type]
+    def _setTraceEnd(self):
+        for network_type in self._network_periods:
+            periods = self._network_periods[network_type]
             if periods:
-                periods[-1]['end'] = self.__end
+                periods[-1]['end'] = self._end
 
-    def __drawIROBs(self):
-        for network_type in self.__networks:
-            network = self.__networks[network_type]
+    def _drawIROBs(self):
+        for network_type in self._networks:
+            network = self._networks[network_type]
             for direction in network:
                 irobs = network[direction]
                 for irob_id in irobs:
                     irob = irobs[irob_id]
-                    irob.draw(self.__axes)
+                    irob.draw(self._axes)
 
-    def __getSessionAxes(self, reset=False):
-        if self.__session_axes == None or reset:
-            self.__session_axes = self.__axes.twinx()
-        return self.__session_axes
+    def _getSessionAxes(self, reset=False):
+        if self._session_axes == None or reset:
+            self._session_axes = self._axes.twinx()
+        return self._session_axes
 
-    def __drawSessions(self, **kwargs):
-        if self.__sessions and self.__show_sessions.isChecked():
-            self.__drawSomeSessions(self.__sessions, **kwargs)
+    def _drawSessions(self, **kwargs):
+        if self._sessions and self._show_sessions.isChecked():
+            self._drawSomeSessions(self._sessions, **kwargs)
 
-        if self.__choose_network_calls:
-            timestamps, calls = zip(*self.__choose_network_calls)
+        if self._choose_network_calls:
+            timestamps, calls = zip(*self._choose_network_calls)
             timestamps = [self.getAdjustedTime(t) for t in timestamps]
-            self.__getSessionAxes().plot(timestamps, calls, label="choose_network")
+            self._getSessionAxes().plot(timestamps, calls, label="choose_network")
 
-    def __drawSomeSessions(self, sessions, **kwargs):
+    def _drawSomeSessions(self, sessions, **kwargs):
         timestamps = [self.getAdjustedTime(s['start']) for s in sessions]
         session_times = [s['end'] - s['start'] for s in sessions]
         
@@ -1254,22 +1253,22 @@ class IntNWBehaviorPlot(QDialog):
         if 'color' not in kwargs:
             kwargs['color'] = 'black'
             
-        ax = self.__getSessionAxes()
+        ax = self._getSessionAxes()
         ax.plot(timestamps, session_times, **kwargs)
 
-    def __drawRedundancyDecisions(self):
-        if self.__redundancy_decisions and self.__show_decisions.isChecked():
+    def _drawRedundancyDecisions(self):
+        if self._redundancy_decisions and self._show_decisions.isChecked():
             timestamps = [self.getAdjustedTime(d.timestamp)
-                          for d in self.__redundancy_decisions]
-            redundancy_benefits = [d.benefit for d in self.__redundancy_decisions]
-            redundancy_costs = [d.cost for d in self.__redundancy_decisions]
+                          for d in self._redundancy_decisions]
+            redundancy_benefits = [d.benefit for d in self._redundancy_decisions]
+            redundancy_costs = [d.cost for d in self._redundancy_decisions]
 
-            ax = self.__getSessionAxes()
+            ax = self._getSessionAxes()
             ax.plot(timestamps, redundancy_benefits, marker='o',
                     markersize=3, color='green')
             ax.plot(timestamps, redundancy_costs, marker='o', markersize=3, color='orange')
 
-    def __drawRadioSwitches(self):
+    def _drawRadioSwitches(self):
         positions = {
             "HSDPA": -0.15,
             "UMTS": -0.20,
@@ -1281,56 +1280,56 @@ class IntNWBehaviorPlot(QDialog):
             "UMTS": "yellow",
             "unknown": "red"
         }
-        print self.__radio_switches
-        if self.__radio_switches:
+        print self._radio_switches
+        if self._radio_switches:
             bars = {
                 "HSDPA": [],
                 "UMTS": [],
                 "unknown": []
             }
-            last_timestamp = self.__radio_switches[0][0]
-            for timestamp, prev_type, new_type in self.__radio_switches:
+            last_timestamp = self._radio_switches[0][0]
+            for timestamp, prev_type, new_type in self._radio_switches:
                 bars[prev_type].append([last_timestamp, timestamp-last_timestamp])
 
             for type in bars:
                 print bars[type]
-                self.__axes.broken_barh(bars[type], [positions[type] - height/2.0, height],
+                self._axes.broken_barh(bars[type], [positions[type] - height/2.0, height],
                                         colors[type])
 
-    def __getWifiPeriods(self):
+    def _getWifiPeriods(self):
         wifi_periods = filter(lambda p: p['end'] is not None,
-                              self.__network_periods['wifi'])
+                              self._network_periods['wifi'])
         return [(self.getAdjustedTime(period['start']),
                  period['end'] - period['start'])
                 for period in wifi_periods]
 
-    def __drawWifi(self):
-        if "wifi" not in self.__network_periods:
+    def _drawWifi(self):
+        if "wifi" not in self._network_periods:
             # not done parsing yet
             return
 
-        bars = self.__getWifiPeriods()
-        vertical_bounds = self.__axes.get_ylim()
-        height = [vertical_bounds[0] - self.__irob_height / 2.0,
-                  vertical_bounds[1] - vertical_bounds[0] + self.__irob_height]
-        self.__axes.broken_barh(bars, height, color="green", alpha=0.2)
+        bars = self._getWifiPeriods()
+        vertical_bounds = self._axes.get_ylim()
+        height = [vertical_bounds[0] - self._irob_height / 2.0,
+                  vertical_bounds[1] - vertical_bounds[0] + self._irob_height]
+        self._axes.broken_barh(bars, height, color="green", alpha=0.2)
 
     def printStats(self):
-        if self.__choose_network_calls:
-            choose_network_times = [c[1] for c in self.__choose_network_calls]
+        if self._choose_network_calls:
+            choose_network_times = [c[1] for c in self._choose_network_calls]
             print ("%f seconds in chooseNetwork (%d calls)" %
                    (sum(choose_network_times), len(choose_network_times)))
 
-        self.__printRedundancyBenefitAnalysis()
-        self.__printIROBTimesByNetwork()
+        self._printRedundancyBenefitAnalysis()
+        self._printIROBTimesByNetwork()
 
-    def __printRedundancyBenefitAnalysis(self):
-        if "wifi" not in self.__network_periods:
+    def _printRedundancyBenefitAnalysis(self):
+        if "wifi" not in self._network_periods:
             # not done parsing yet
             return
 
-        wifi_periods = self.__getWifiPeriods()
-        num_sessions = len(self.__sessions)
+        wifi_periods = self._getWifiPeriods()
+        num_sessions = len(self._sessions)
 
         def one_network_only(session):
             session_start = self.getAdjustedTime(session['start'])
@@ -1344,7 +1343,7 @@ class IntNWBehaviorPlot(QDialog):
 
         # XXX: could do this more efficiently by marking it
         # XXX: when we first read the log.
-        single_network_sessions = filter(one_network_only, self.__sessions)
+        single_network_sessions = filter(one_network_only, self._sessions)
         print ("Single network sessions: %d/%d (%.2f%%), total time %f seconds" %
                (len(single_network_sessions), num_sessions,
                 len(single_network_sessions)/float(num_sessions) * 100,
@@ -1363,7 +1362,7 @@ class IntNWBehaviorPlot(QDialog):
                     session_end > (start + length)):
                         return True
 
-            matching_irobs = self.__getIROBs(session_start, session_end)
+            matching_irobs = self._getIROBs(session_start, session_end)
             # irobs['wifi']['down'] => [IROB(),...]
             
             # get just the irobs without the dictionary keys
@@ -1380,7 +1379,7 @@ class IntNWBehaviorPlot(QDialog):
                 dprint("  IROBs: " % irobs)
             return fail
 
-        failover_sessions = filter(failed_over, self.__sessions)
+        failover_sessions = filter(failed_over, self._sessions)
         print ("Failover sessions: %d/%d (%.2f%%), total %f seconds" %
                (len(failover_sessions), num_sessions,
                 len(failover_sessions)/float(num_sessions) * 100,
@@ -1401,18 +1400,18 @@ class IntNWBehaviorPlot(QDialog):
                     return True
             return False
 
-        reevaluation_sessions = filter(needed_reevaluation, self.__sessions)
+        reevaluation_sessions = filter(needed_reevaluation, self._sessions)
         print ("Needed-reevaluation sessions: %d/%d (%.2f%%)" %
                (len(reevaluation_sessions), num_sessions,
                 len(reevaluation_sessions)/float(num_sessions) * 100))
 
         # TODO: print average wifi, 3G session times
 
-        self.__debug_sessions = failover_sessions
-        #self.__debug_sessions = reevaluation_sessions
+        self._debug_sessions = failover_sessions
+        #self._debug_sessions = reevaluation_sessions
 
-    def __printIROBTimesByNetwork(self):
-        irobs = self.__getIROBs()
+    def _printIROBTimesByNetwork(self):
+        irobs = self._getIROBs()
         print "Average IROB durations:"
         for network_type, direction in product(['wifi', '3G'], ['down', 'up']):
             dprint("%s sessions:" % network_type)
@@ -1425,7 +1424,7 @@ class IntNWBehaviorPlot(QDialog):
                 print "  %5s, %4s: (no IROBs)" % (network_type, direction)
 
 
-    def __getIROBs(self, start=-1.0, end=None):
+    def _getIROBs(self, start=-1.0, end=None):
         """Get all IROBs that start in the specified time range.
 
         Returns a dictionary: d[network_type][direction] => [IROB(),...]
@@ -1435,7 +1434,7 @@ class IntNWBehaviorPlot(QDialog):
 
         """
         if end is None:
-            end = self.__end + 1.0
+            end = self._end + 1.0
 
         matching_irobs = {'wifi': {}, '3G': {}}
         def time_matches(irob):
@@ -1443,12 +1442,12 @@ class IntNWBehaviorPlot(QDialog):
             return (irob_start >= start and irob_end <= end)
             
         for network_type, direction in product(['wifi', '3G'], ['down', 'up']):
-            irobs = self.__networks[network_type][direction].values()
+            irobs = self._networks[network_type][direction].values()
             matching_irobs[network_type][direction] = filter(time_matches, irobs)
         return matching_irobs
 
-    def __drawDebugging(self):
-        self.__drawSomeSessions(self.__debug_sessions,
+    def _drawDebugging(self):
+        self._drawSomeSessions(self._debug_sessions,
                                 marker='s', color='red', markersize=10,
                                 markerfacecolor='none', linestyle='none')
 
@@ -1456,21 +1455,21 @@ class IntNWBehaviorPlot(QDialog):
     def getIROBPosition(self, irob):
         # TODO: allow for simultaneous (stacked) IROB plotting.
         
-        return (self.__network_pos_offsets[irob.network_type] +
-                self.__direction_pos_offsets[irob.direction])
+        return (self._network_pos_offsets[irob.network_type] +
+                self._direction_pos_offsets[irob.direction])
         
     def getIROBHeight(self, irob):
         # TODO: adjust based on the number of stacked IROBs.
-        return self.__irob_height
+        return self._irob_height
 
     def getIROBColor(self, irob):
-        return self.__irob_colors[irob.network_type]
+        return self._irob_colors[irob.network_type]
 
     def getAdjustedTime(self, timestamp):
-        return timestamp - self.__start
+        return timestamp - self._start
 
     def getAdjustedTraceLatency(self, latency):
-        if not self.__cross_country_latency or latency < 0.0001:
+        if not self._cross_country_latency or latency < 0.0001:
             return latency
         
         LATENCY_ADJUSTMENT = 0.100 # 100ms cross-country
@@ -1479,166 +1478,166 @@ class IntNWBehaviorPlot(QDialog):
     def setStart(self, start):
         # for resetting the experiment start, to avoid including the
         #  setup transfers and waiting time at the server.
-        self.__start = start
+        self._start = start
 
     def parseLine(self, line):
         timestamp = getTimestamp(line)
-        if self.__start == None:
-            self.__start = timestamp
+        if self._start == None:
+            self._start = timestamp
             
-        self.__end = timestamp
+        self._end = timestamp
 
         if "Got update from scout" in line:
             #[time][pid][tid] Got update from scout: 192.168.1.2 is up,
             #                 bandwidth_down 43226 bandwidth_up 12739 bytes/sec RTT 97 ms
             #                 type wifi
-            ip, status, network_type = re.search(self.__network_regex, line).groups()
-            if not self.__is_server:
-                self.__modifyNetwork(timestamp, ip, status, network_type)
+            ip, status, network_type = re.search(self._network_regex, line).groups()
+            if not self._is_server:
+                self._modifyNetwork(timestamp, ip, status, network_type)
         elif "Successfully bound" in line:
             # [time][pid][CSockSender 57] Successfully bound osfd 57 to 192.168.1.2:0
-            self.__addConnection(line)
+            self._addConnection(line)
         elif "Adding connection" in line:
             # [time][pid][Listener 13] Adding connection 14 from 192.168.1.2
             #                          bw_down 43226 bw_up 12739 RTT 97
             #                          type wifi(peername 141.212.110.115)
-            self.__addIncomingConnection(line, timestamp)
-        elif re.search(self.__csocket_destroyed_regex, line) != None:
+            self._addIncomingConnection(line, timestamp)
+        elif re.search(self._csocket_destroyed_regex, line) != None:
             # [time][pid][CSockSender 57] CSocket 57 is being destroyed
-            self.__removeConnection(line)
+            self._removeConnection(line)
         elif "Getting bytes to send from IROB" in line:
             # [time][pid][CSockSender 57] Getting bytes to send from IROB 6
             irob = int(line.strip().split()[-1])
-            network = self.__getNetworkType(line)
+            network = self._getNetworkType(line)
             
-            self.__currentSendingIROB = irob
-            self.__addIROB(timestamp, network, irob, 'up')
+            self._currentSendingIROB = irob
+            self._addIROB(timestamp, network, irob, 'up')
         elif "...returning " in line:
             # [time][pid][CSockSender 57] ...returning 1216 bytes, seqno 0
-            assert self.__currentSendingIROB != None
+            assert self._currentSendingIROB != None
             datalen = int(line.strip().split()[3])
-            network = self.__getNetworkType(line)
-            self.__addIROBBytes(timestamp, network, self.__currentSendingIROB,
+            network = self._getNetworkType(line)
+            self._addIROBBytes(timestamp, network, self._currentSendingIROB,
                                 datalen, 'up')
         elif "About to send message" in line:
             # [time][pid][CSockSender 57] About to send message:  Type: Begin_IROB(1)
             #                             Send labels: FG,SMALL IROB: 0 numdeps: 0
-            self.__addTransfer(line, 'up')
+            self._addTransfer(line, 'up')
         elif "Received message" in line:
             # [time][pid][CSockReceiver 57] Received message:  Type: Begin_IROB(1)
             #                               Send labels: FG,SMALL IROB: 0 numdeps: 0
-            self.__addTransfer(line, 'down')
+            self._addTransfer(line, 'down')
         elif "network estimator" in line:
-            network_type = re.search(self.__network_estimator_regex, line).group(1)
+            network_type = re.search(self._network_estimator_regex, line).group(1)
             dprint("got observation: %s" % line)
-            bw_match = re.search(self.__network_bandwidth_regex, line)
-            lat_match = re.search(self.__network_latency_regex, line)
+            bw_match = re.search(self._network_bandwidth_regex, line)
+            lat_match = re.search(self._network_latency_regex, line)
             bw, latency = None, None
             if bw_match and float(bw_match.groups()[0]) > 0.0:
                 bw = bw_match.groups()
             if lat_match and float(lat_match.groups()[0]) > 0.0:
                 latency = lat_match.groups()
             
-            self.__addEstimates(network_type, timestamp, bw=bw, latency=latency)
+            self._addEstimates(network_type, timestamp, bw=bw, latency=latency)
         elif "New spot values" in line:
-            # TODO: parse values, call self.__addNetworkObservation
-            network_type = self.__getNetworkType(line)
+            # TODO: parse values, call self._addNetworkObservation
+            network_type = self._getNetworkType(line)
             pass
         elif "New estimates" in line:
-            # TODO: parse values, call self.__addNetworkEstimate
-            network_type = self.__getNetworkType(line)
+            # TODO: parse values, call self._addNetworkEstimate
+            network_type = self._getNetworkType(line)
             pass
         elif "chooseNetwork" in line:
-            duration = timestamp - getTimestamp(self.__last_line)
+            duration = timestamp - getTimestamp(self._last_line)
             time_match = re.search(choose_network_time_regex, line)
             if time_match:
                 duration = float(time_match.group(1))
-            self.__choose_network_calls.append((timestamp, duration))
+            self._choose_network_calls.append((timestamp, duration))
         elif "redundancy_strategy_type" in line:
             # [timestamp][pid][Bootstrapper 49] Sending hello:  Type: Hello(0)
             #                                   Send labels:  listen port: 42424
             #                                   num_ifaces: 2 
             #                                   redundancy_strategy_type: intnw_redundant
             redundancy_strategy = \
-                re.search(self.__redundancy_strategy_regex, line).group(1)
-            if redundancy_strategy not in self.__title:
-                self.__title += " - " + redundancy_strategy
+                re.search(self._redundancy_strategy_regex, line).group(1)
+            if redundancy_strategy not in self._title:
+                self._title += " - " + redundancy_strategy
         else:
             pass # ignore it
             
-        self.__last_line = line
+        self._last_line = line
 
-    def __initRegexps(self):
-        self.__irob_regex = re.compile("IROB: ([0-9]+)")
-        self.__datalen_regex = re.compile("datalen: ([0-9]+)")
-        self.__expected_bytes_regex = re.compile("expected_bytes: ([0-9]+)")
-        self.__network_regex = re.compile("scout: (.+) is (down|up).+ type ([A-Za-z0-9]+)")
+    def _initRegexps(self):
+        self._irob_regex = re.compile("IROB: ([0-9]+)")
+        self._datalen_regex = re.compile("datalen: ([0-9]+)")
+        self._expected_bytes_regex = re.compile("expected_bytes: ([0-9]+)")
+        self._network_regex = re.compile("scout: (.+) is (down|up).+ type ([A-Za-z0-9]+)")
 
         ip_regex_string = "([0-9]+(?:\.[0-9]+){3})"
-        self.__ip_regex = re.compile(ip_regex_string)
+        self._ip_regex = re.compile(ip_regex_string)
         
-        self.__socket_regex = re.compile("\[CSock(?:Sender|Receiver) ([0-9]+)\]")
-        self.__intnw_message_type_regex = \
+        self._socket_regex = re.compile("\[CSock(?:Sender|Receiver) ([0-9]+)\]")
+        self._intnw_message_type_regex = \
             re.compile("(?:About to send|Received) message:  Type: ([A-Za-z_]+)")
-        self.__csocket_destroyed_regex = re.compile("CSocket ([0-9]+) is being destroyed")
-        self.__network_estimator_regex = \
+        self._csocket_destroyed_regex = re.compile("CSocket ([0-9]+) is being destroyed")
+        self._network_estimator_regex = \
             re.compile("Adding new stats to (.+) network estimator")
 
         float_regex = "([0-9]+" + "(?:\.[0-9]+)?)"
         stats_regex = "obs %s est %s" % (float_regex, float_regex)
-        self.__network_bandwidth_regex = re.compile("bandwidth: " + stats_regex)
-        self.__network_latency_regex = re.compile("latency: " + stats_regex)
+        self._network_bandwidth_regex = re.compile("bandwidth: " + stats_regex)
+        self._network_latency_regex = re.compile("latency: " + stats_regex)
 
-        self.__redundancy_strategy_regex = \
+        self._redundancy_strategy_regex = \
             re.compile("redundancy_strategy_type: ([a-z_]+)\s*")
 
-        self.__incoming_connection_regex = \
+        self._incoming_connection_regex = \
             re.compile("Adding connection ([0-9]+) from " + ip_regex_string +
                        ".+type ([A-Za-z0-9]+)")
         
-    def __getIROBId(self, line):
-        return int(re.search(self.__irob_regex, line).group(1))
+    def _getIROBId(self, line):
+        return int(re.search(self._irob_regex, line).group(1))
 
-    def __getSocket(self, line):
-        return int(re.search(self.__socket_regex, line).group(1))
+    def _getSocket(self, line):
+        return int(re.search(self._socket_regex, line).group(1))
 
-    def __getIP(self, line):
-        return re.search(self.__ip_regex, line).group(1)
+    def _getIP(self, line):
+        return re.search(self._ip_regex, line).group(1)
 
-    def __addNetworkType(self, network_type):
-        if network_type not in self.__networks:
-            self.__networks[network_type] = {
+    def _addNetworkType(self, network_type):
+        if network_type not in self._networks:
+            self._networks[network_type] = {
                 'down': {}, # download IROBs
                 'up': {}    # upload IROBs
                 }
-            self.__network_periods[network_type] = []
+            self._network_periods[network_type] = []
 
-    def __modifyNetwork(self, timestamp, ip, status, network_type):
-        self.__addNetworkType(network_type)
+    def _modifyNetwork(self, timestamp, ip, status, network_type):
+        self._addNetworkType(network_type)
         
         if status == 'down':
-            period = self.__network_periods[network_type][-1]
+            period = self._network_periods[network_type][-1]
             if period['end'] is not None:
                 print "Warning: double-ending %s period at %f" % (network_type, timestamp)
             period['end'] = timestamp
             
-            if ip in self.__network_type_by_ip:
-                del self.__network_type_by_ip[ip]
+            if ip in self._network_type_by_ip:
+                del self._network_type_by_ip[ip]
         elif status == 'up':
-            self.__startNetworkPeriod(network_type, ip,
+            self._startNetworkPeriod(network_type, ip,
                                       start=timestamp, end=None, sock=None)
             
-            placeholder = (ip in self.__network_type_by_ip and
-                           self.__network_type_by_ip[ip] == "placeholder")
-            self.__network_type_by_ip[ip] = network_type
+            placeholder = (ip in self._network_type_by_ip and
+                           self._network_type_by_ip[ip] == "placeholder")
+            self._network_type_by_ip[ip] = network_type
             if placeholder:
-                sock = self.__placeholder_sockets[ip]
-                del self.__placeholder_sockets[ip]
-                self.__addNetworkPeriodSocket(sock, ip)
+                sock = self._placeholder_sockets[ip]
+                del self._placeholder_sockets[ip]
+                self._addNetworkPeriodSocket(sock, ip)
         else: assert False
 
-    def __startNetworkPeriod(self, network_type, ip, start, end=None, sock=None):
-        periods = self.__network_periods[network_type]
+    def _startNetworkPeriod(self, network_type, ip, start, end=None, sock=None):
+        periods = self._network_periods[network_type]
         if len(periods) > 0 and periods[-1]['end'] == None:
             # two perfectly adjacent periods with no 'down' in between.  whatevs.
             periods[-1]['end'] = start
@@ -1648,100 +1647,100 @@ class IntNWBehaviorPlot(QDialog):
             'ip': ip, 'sock': sock
             })
         
-    def __addConnection(self, line):
-        sock = self.__getSocket(line)
-        ip = self.__getIP(line)
-        if ip not in self.__network_type_by_ip:
-            self.__network_type_by_ip[ip] = "placeholder"
-            assert ip not in self.__placeholder_sockets
-            self.__placeholder_sockets[ip] = sock
+    def _addConnection(self, line):
+        sock = self._getSocket(line)
+        ip = self._getIP(line)
+        if ip not in self._network_type_by_ip:
+            self._network_type_by_ip[ip] = "placeholder"
+            assert ip not in self._placeholder_sockets
+            self._placeholder_sockets[ip] = sock
         else:
-            self.__addNetworkPeriodSocket(sock, ip)
+            self._addNetworkPeriodSocket(sock, ip)
 
-    def __addEstimates(self, network_type, timestamp, bw=None, latency=None):
-        if network_type not in self.__estimates:
-            self.__estimates[network_type] = {}
+    def _addEstimates(self, network_type, timestamp, bw=None, latency=None):
+        if network_type not in self._estimates:
+            self._estimates[network_type] = {}
                 
         for values, name in zip((bw, latency), ("bandwidth_up", "latency")):
             if values:
                 obs, est = values
-                self.__addNetworkObservation(network_type, name,
+                self._addNetworkObservation(network_type, name,
                                              float(timestamp), float(obs))
-                self.__addNetworkEstimate(network_type, name, float(est))
+                self._addNetworkEstimate(network_type, name, float(est))
 
-    def __getEstimates(self, network_type, name):
-        all_estimates = self.__estimates[network_type]
+    def _getEstimates(self, network_type, name):
+        all_estimates = self._estimates[network_type]
         if name not in all_estimates:
             all_estimates[name] = []
         return all_estimates[name]
                 
-    def __addNetworkObservation(self, network_type, name, timestamp, obs):
+    def _addNetworkObservation(self, network_type, name, timestamp, obs):
         if obs == 0.0:
             debug_trace()
             
-        estimates = self.__getEstimates(network_type, name)
+        estimates = self._getEstimates(network_type, name)
         estimates.append({'timestamp': float(timestamp),
                           'observation': float(obs),
                           'estimate': None})
 
-    def __addNetworkEstimate(self, network_type, name, est):
-        estimates = self.__getEstimates(network_type, name)
+    def _addNetworkEstimate(self, network_type, name, est):
+        estimates = self._getEstimates(network_type, name)
         assert estimates[-1]['estimate'] is None
         estimates[-1]['estimate'] = est
 
-    def __addNetworkPeriodSocket(self, sock, ip):
-        network_type = self.__network_type_by_ip[ip]
-        network_period = self.__network_periods[network_type][-1]
+    def _addNetworkPeriodSocket(self, sock, ip):
+        network_type = self._network_type_by_ip[ip]
+        network_period = self._network_periods[network_type][-1]
 
         assert network_period['start'] != None
         assert network_period['ip'] == ip
         assert network_period['sock'] == None
         network_period['sock'] = sock
 
-        assert sock not in self.__network_type_by_sock
-        self.__network_type_by_sock[sock] = network_type
+        assert sock not in self._network_type_by_sock
+        self._network_type_by_sock[sock] = network_type
 
-    def __addIncomingConnection(self, line, timestamp):
-        match = re.search(self.__incoming_connection_regex, line)
+    def _addIncomingConnection(self, line, timestamp):
+        match = re.search(self._incoming_connection_regex, line)
         sock, ip, network_type = match.groups()
         sock = int(sock)
 
-        self.__addNetworkType(network_type)
-        self.__startNetworkPeriod(network_type, ip, start=timestamp, end=None, sock=None)
+        self._addNetworkType(network_type)
+        self._startNetworkPeriod(network_type, ip, start=timestamp, end=None, sock=None)
         
-        self.__network_type_by_ip[ip] = network_type
-        self.__addNetworkPeriodSocket(sock, ip)
+        self._network_type_by_ip[ip] = network_type
+        self._addNetworkPeriodSocket(sock, ip)
         
-    def __removeConnection(self, line):
+    def _removeConnection(self, line):
         timestamp = getTimestamp(line)
-        sock = int(re.search(self.__csocket_destroyed_regex, line).group(1))
-        if sock in self.__network_type_by_sock:
-            network_type = self.__network_type_by_sock[sock]
-            network_period = self.__network_periods[network_type][-1]
+        sock = int(re.search(self._csocket_destroyed_regex, line).group(1))
+        if sock in self._network_type_by_sock:
+            network_type = self._network_type_by_sock[sock]
+            network_period = self._network_periods[network_type][-1]
             
             network_period['sock'] = None
-            del self.__network_type_by_sock[sock]
+            del self._network_type_by_sock[sock]
 
-            self.__markDroppedIROBs(timestamp, network_type)
+            self._markDroppedIROBs(timestamp, network_type)
 
-            if self.__is_server:
+            if self._is_server:
                 # client will get update from scout; server won't
-                self.__modifyNetwork(timestamp, network_period['ip'], 'down', network_type)
+                self._modifyNetwork(timestamp, network_period['ip'], 'down', network_type)
 
-    def __getNetworkType(self, line):
-        sock = self.__getSocket(line)
-        return self.__network_type_by_sock[sock]
+    def _getNetworkType(self, line):
+        sock = self._getSocket(line)
+        return self._network_type_by_sock[sock]
 
-    def __getDatalen(self, line):
-        return int(re.search(self.__datalen_regex, line).group(1))
+    def _getDatalen(self, line):
+        return int(re.search(self._datalen_regex, line).group(1))
 
-    def __getExpectedBytes(self, line):
-        return int(re.search(self.__expected_bytes_regex, line).group(1))
+    def _getExpectedBytes(self, line):
+        return int(re.search(self._expected_bytes_regex, line).group(1))
 
-    def __getIntNWMessageType(self, line):
-        return re.search(self.__intnw_message_type_regex, line).group(1)
+    def _getIntNWMessageType(self, line):
+        return re.search(self._intnw_message_type_regex, line).group(1)
 
-    def __addTransfer(self, line, direction):
+    def _addTransfer(self, line, direction):
         # [time][pid][CSockSender 57] About to send message:  Type: Begin_IROB(1)
         #                             Send labels: FG,SMALL IROB: 0 numdeps: 0
         # [time][pid][CSockReceiver 57] Received message:  Type: IROB_chunk(3)
@@ -1754,33 +1753,33 @@ class IntNWBehaviorPlot(QDialog):
         #                               Send labels:  num_acks: 0 IROB: 0
         #                               srv_time: 0.000997 qdelay: 0.000000
         timestamp = getTimestamp(line)
-        network_type = self.__getNetworkType(line)
-        intnw_message_type = self.__getIntNWMessageType(line)
+        network_type = self._getNetworkType(line)
+        intnw_message_type = self._getIntNWMessageType(line)
 
         if (intnw_message_type == "Begin_IROB" or
             intnw_message_type == "Data_Check"):
-            irob_id = self.__getIROBId(line)
+            irob_id = self._getIROBId(line)
             if direction == "up":
-                self.__currentSendingIROB = None
-            self.__addIROB(timestamp, network_type, irob_id, direction)
+                self._currentSendingIROB = None
+            self._addIROB(timestamp, network_type, irob_id, direction)
         elif intnw_message_type == "IROB_chunk":
-            irob_id = self.__getIROBId(line)
-            datalen = self.__getDatalen(line)
-            self.__addIROBBytes(timestamp, network_type, irob_id, datalen, direction)
+            irob_id = self._getIROBId(line)
+            datalen = self._getDatalen(line)
+            self._addIROBBytes(timestamp, network_type, irob_id, datalen, direction)
         elif intnw_message_type == "End_IROB" and direction == 'down':
-            irob_id = self.__getIROBId(line)
-            expected_bytes = self.__getExpectedBytes(line)
-            self.__finishReceivedIROB(timestamp, network_type, irob_id, expected_bytes)
+            irob_id = self._getIROBId(line)
+            expected_bytes = self._getExpectedBytes(line)
+            self._finishReceivedIROB(timestamp, network_type, irob_id, expected_bytes)
         elif intnw_message_type == "Ack" and direction == 'down':
-            irob_id = self.__getIROBId(line)
-            self.__ackIROB(timestamp, network_type, irob_id, 'up')
+            irob_id = self._getIROBId(line)
+            self._ackIROB(timestamp, network_type, irob_id, 'up')
         else:
             pass # ignore other types of messages
 
-    def __getIROB(self, network_type, irob_id, direction, start=None):
-        if network_type not in self.__networks:
+    def _getIROB(self, network_type, irob_id, direction, start=None):
+        if network_type not in self._networks:
             raise LogParsingError("saw data on unknown network '%s'" % network_type)
-        irobs = self.__networks[network_type][direction]
+        irobs = self._networks[network_type][direction]
         if irob_id not in irobs:
             if start != None:
                 irobs[irob_id] = IROB(self, network_type, direction, start, irob_id)
@@ -1789,27 +1788,27 @@ class IntNWBehaviorPlot(QDialog):
             
         return irobs[irob_id]
 
-    def __getIROBOrThrow(self, network_type, irob_id, direction, start=None):
-        irob = self.__getIROB(network_type, irob_id, direction, start)
+    def _getIROBOrThrow(self, network_type, irob_id, direction, start=None):
+        irob = self._getIROB(network_type, irob_id, direction, start)
         if irob == None:
             raise LogParsingError("Unknown IROB %d" % irob_id)
         return irob
     
-    def __addIROB(self, timestamp, network_type, irob_id, direction):
+    def _addIROB(self, timestamp, network_type, irob_id, direction):
         # TODO: deal with the case where the IROB announcement arrives after the data
-        irob = self.__getIROBOrThrow(network_type, irob_id, direction, start=timestamp)
+        irob = self._getIROBOrThrow(network_type, irob_id, direction, start=timestamp)
         dprint("Adding %s at %f" % (irob, timestamp))
 
 
-    def __addIROBBytes(self, timestamp, network_type, irob_id, datalen, direction):
+    def _addIROBBytes(self, timestamp, network_type, irob_id, datalen, direction):
         # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         # XXX: this is double-counting when chunk messages do appear.  fix it.
         # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-        irob = self.__getIROBOrThrow(network_type, irob_id, direction)
+        irob = self._getIROBOrThrow(network_type, irob_id, direction)
         irob.addBytes(timestamp, datalen)
 
-    def __finishReceivedIROB(self, timestamp, network_type, irob_id, expected_bytes):
-        irob = self.__getIROBOrThrow(network_type, irob_id, 'down')
+    def _finishReceivedIROB(self, timestamp, network_type, irob_id, expected_bytes):
+        irob = self._getIROBOrThrow(network_type, irob_id, 'down')
         irob.finish(timestamp, expected_bytes)
 
         # "finish" the IROB by marking it ACK'd.
@@ -1820,14 +1819,14 @@ class IntNWBehaviorPlot(QDialog):
         dprint("Finished %s at %f" % (irob, timestamp))
         irob.ack(timestamp)
 
-    def __markDroppedIROBs(self, timestamp, network_type):
+    def _markDroppedIROBs(self, timestamp, network_type):
         for direction in ['down', 'up']:
-            for irob in self.__networks[network_type][direction].values():
+            for irob in self._networks[network_type][direction].values():
                 if not irob.complete():
                     irob.markDropped(timestamp)
 
-    def __ackIROB(self, timestamp, network_type, irob_id, direction):
-        irob = self.__getIROBOrThrow(network_type, irob_id, direction)
+    def _ackIROB(self, timestamp, network_type, irob_id, direction):
+        irob = self._getIROBOrThrow(network_type, irob_id, direction)
         irob.ack(timestamp)
         dprint("Acked %s at %f" % (irob, timestamp))
 
@@ -1839,7 +1838,7 @@ class RedundancyDecision(object):
 
 class ErrorHistory(object):
     def __init__(self):
-        self.__history = {}
+        self._history = {}
 
     def read(self, filename):
         with open(filename) as f:
@@ -1853,82 +1852,82 @@ class ErrorHistory(object):
                 network_type = network_type.replace("cellular", "3G")
                 what_to_plot = what_to_plot.replace("bandwidth", "bandwidth_up")
                 what_to_plot = what_to_plot.replace("RTT", "latency")
-                if network_type not in self.__history:
-                    self.__history[network_type] = {}
-                if what_to_plot not in self.__history[network_type]:
-                    self.__history[network_type][what_to_plot] = []
+                if network_type not in self._history:
+                    self._history[network_type] = {}
+                if what_to_plot not in self._history[network_type]:
+                    self._history[network_type][what_to_plot] = []
                     
-                errors = self.__history[network_type][what_to_plot]
+                errors = self._history[network_type][what_to_plot]
                 while len(errors) < num_samples:
                     line = f.readline().strip()
                     new_errors = [float(x) for x in line.split()]
                     errors.extend(new_errors)
         
     def getErrors(self, network_type, what_to_plot):
-        if network_type in self.__history and what_to_plot in self.__history[network_type]:
-            return self.__history[network_type][what_to_plot]
+        if network_type in self._history and what_to_plot in self._history[network_type]:
+            return self._history[network_type][what_to_plot]
         
         return []
 
     def getAllErrors(self):
-        return dict(self.__history)
+        return dict(self._history)
 
-class IntNWPlotter(object):
+class AppPlotter(object):
     def __init__(self, args):
-        self.__windows = []
-        self.__currentPid = None
-        self.__pid_regex = re.compile("^\[[0-9]+\.[0-9]+\]\[([0-9]+)\]")
-        self.__session_regex = re.compile("start ([0-9]+\.[0-9]+)" + 
+        self._windows = []
+        self._currentPid = None
+        self._pid_regex = re.compile("^\[[0-9]+\.[0-9]+\]\[([0-9]+)\]")
+        self._session_regex = re.compile("start ([0-9]+\.[0-9]+)" + 
                                           ".+duration ([0-9]+\.[0-9]+)")
 
         intnw_log = "intnw.log"
         timing_log = "timing.log"
         trace_replayer_log = "trace_replayer.log"
         instruments_log = "instruments.log"
-        self.__is_server = args.server
+        self._is_server = args.server
         if args.server:
             intnw_log = trace_replayer_log = instruments_log = "replayer_server.log"
 
-        self.__measurements_only = args.measurements
-        self.__network_trace_file = args.network_trace_file
-        self.__bandwidth_measurements_file = args.bandwidth_measurements_file
-        self.__intnw_log = args.basedir + "/" + intnw_log
-        self.__timing_log = args.basedir + "/" + timing_log
-        self.__trace_replayer_log = args.basedir + "/" + trace_replayer_log
-        self.__redundancy_eval_log = args.basedir + "/" + instruments_log
-        self.__radio_logs = args.radio_log
-        self.__cross_country_latency = args.cross_country_latency
-        self.__history_dir = args.history
+        self._measurements_only = args.measurements
+        self._network_trace_file = args.network_trace_file
+        self._bandwidth_measurements_file = args.bandwidth_measurements_file
+        self._intnw_log = args.basedir + "/" + intnw_log
+        self._timing_log = args.basedir + "/" + timing_log
+        self._trace_replayer_log = args.basedir + "/" + trace_replayer_log
+        self._redundancy_eval_log = args.basedir + "/" + instruments_log
+        self._radio_logs = args.radio_log
+        self._cross_country_latency = args.cross_country_latency
+        self._history_dir = args.history
         
-        self.__readFile(self.__intnw_log)
+        self._readFile(self._intnw_log)
         self.draw()
         self.printStats()
 
     def draw(self):
-        for window in self.__windows:
+        for window in self._windows:
             window.on_draw()
             window.saveErrorTable()
 
     def printStats(self):
-        for window in self.__windows:
+        for window in self._windows:
             window.printStats()
         
-    def __getPid(self, line):
-        match = re.search(self.__pid_regex, line)
+    def _getPid(self, line):
+        match = re.search(self._pid_regex, line)
         if match:
             return int(match.group(1))
 
         return None
 
-    def __getSession(self, line):
-        match = re.search(self.__session_regex, line)
+    def _getSession(self, line):
+        match = re.search(self._session_regex, line)
         if not match:
             raise LogParsingError("expected timestamp and duration")
 
         return [float(s) for s in match.groups()]
 
-    def __readDurations(self):
-        filename = self.__timing_log
+    def _readDurations(self):
+        filename = self._timing_log
         duration_regex = re.compile("([0-9]+)-minute runs")
         durations = []
         for line in open(filename).readlines():
@@ -1938,8 +1937,8 @@ class IntNWPlotter(object):
                 durations.append(minutes)
         return durations
 
-    def __readSessions(self):
-        filename = self.__trace_replayer_log
+    def _readSessions(self):
+        filename = self._trace_replayer_log
         runs = []
         new_run = True
         for linenum, line in enumerate(open(filename).readlines()):
@@ -1950,7 +1949,7 @@ class IntNWPlotter(object):
                     runs = runs[:-1]
                 runs[-1] = []
             elif "  Session" in line:
-                timestamp, duration = self.__getSession(line)
+                timestamp, duration = self._getSession(line)
                 transfer = {'start': timestamp, 'end': timestamp + duration}
 
                 sessions = runs[-1]
@@ -1981,15 +1980,15 @@ class IntNWPlotter(object):
             runs = runs[:-1]
         return runs
 
-    def __lineStartsNewRun(self, line, current_pid):
-        if self.__is_server:
+    def _lineStartsNewRun(self, line, current_pid):
+        if self._is_server:
             return ("Accepting connection from" in line)
         else:
-            pid = self.__getPid(line)
+            pid = self._getPid(line)
             return pid != current_pid
 
-    def __readRedundancyDecisions(self):
-        filename = self.__redundancy_eval_log
+    def _readRedundancyDecisions(self):
+        filename = self._redundancy_eval_log
         if not os.path.exists(filename):
             return
         
@@ -1999,8 +1998,8 @@ class IntNWPlotter(object):
         runs = []
         last_pid = 0
         for linenum, line in enumerate(open(filename).readlines()):
-            pid = self.__getPid(line)
-            if self.__lineStartsNewRun(line, last_pid):
+            pid = self._getPid(line)
+            if self._lineStartsNewRun(line, last_pid):
                 runs.append([])
                 
             last_pid = pid
@@ -2023,10 +2022,10 @@ class IntNWPlotter(object):
                 dprint("Redundancy cost: %f" % decision.cost)
         return runs
 
-    def __readRadioLogs(self):
+    def _readRadioLogs(self):
         switches = []
         rx = re.compile("(.+) D/GSM.+RAT switched (.+) -> (.+) at cell")
-        with open(self.__radio_logs) as f:
+        with open(self._radio_logs) as f:
             for line in f.readlines():
                 match = rx.search(line)
                 if match:
@@ -2038,49 +2037,49 @@ class IntNWPlotter(object):
                     switches.append((timestamp_secs, prev_type, new_type))
         return switches
 
-    def __readFile(self, filename):
+    def _readFile(self, filename):
         session_runs = None
         redundancy_decisions = None
         radio_switches = None
-        if self.__trace_replayer_log:
-            session_runs = self.__readSessions()
-        if self.__radio_logs:
-            radio_switches = self.__readRadioLogs()
-        if self.__redundancy_eval_log:
-            redundancy_decisions_runs = self.__readRedundancyDecisions()
+        if self._trace_replayer_log:
+            session_runs = self._readSessions()
+        if self._radio_logs:
+            radio_switches = self._readRadioLogs()
+        if self._redundancy_eval_log:
+            redundancy_decisions_runs = self._readRedundancyDecisions()
         
         error_history = ErrorHistory()
-        if self.__history_dir:
-            side = "server" if self.__is_server else "client"
-            history_filename = "%s/%s_error_distributions.txt" % (self.__history_dir, side)
+        if self._history_dir:
+            side = "server" if self._is_server else "client"
+            history_filename = "%s/%s_error_distributions.txt" % (self._history_dir, side)
             
             error_history.read(history_filename)
 
-        durations = self.__readDurations()
+        durations = self._readDurations()
         
         print "Parsing log file..."
         progress = ProgressBar()
         for linenum, line in enumerate(progress(open(filename).readlines())):
             try:
-                pid = self.__getPid(line)
+                pid = self._getPid(line)
                 if pid == None:
                     continue
 
-                if self.__lineStartsNewRun(line, self.__currentPid):
-                    if len(self.__windows) > 0:
+                if self._lineStartsNewRun(line, self._currentPid):
+                    if len(self._windows) > 0:
                         if radio_switches:
-                            self.__windows[-1].setRadioSwitches(radio_switches)
+                            self._windows[-1].setRadioSwitches(radio_switches)
 
 
-                    start = session_runs[len(self.__windows)][0]['start']
-                    window = IntNWBehaviorPlot(len(self.__windows) + 1, start, 
-                                               self.__measurements_only,
-                                               self.__network_trace_file,
-                                               self.__bandwidth_measurements_file,
-                                               self.__cross_country_latency,
-                                               error_history, self.__is_server)
-                    self.__windows.append(window)
-                    window_num = len(self.__windows) - 1
+                    start = session_runs[len(self._windows)][0]['start']
+                    window = AppBehaviorPlot(len(self._windows) + 1, start, 
+                                               self._measurements_only,
+                                               self._network_trace_file,
+                                               self._bandwidth_measurements_file,
+                                               self._cross_country_latency,
+                                               error_history, self._is_server)
+                    self._windows.append(window)
+                    window_num = len(self._windows) - 1
                     if session_runs:
                         sessions = session_runs[window_num]
                         window.setSessions(sessions)
@@ -2090,10 +2089,10 @@ class IntNWPlotter(object):
 
                     window.setXlimMax(durations[window_num] * 60)
 
-                self.__currentPid = pid
+                self._currentPid = pid
                 
-                if len(self.__windows) > 0:
-                    self.__windows[-1].parseLine(line)
+                if len(self._windows) > 0:
+                    self._windows[-1].parseLine(line)
             except LogParsingError as e:
                 trace = sys.exc_info()[2]
                 e.setLine(linenum + 1, line)
@@ -2105,7 +2104,7 @@ class IntNWPlotter(object):
                 raise e, None, trace
 
     def show(self):
-        for window in self.__windows:
+        for window in self._windows:
             window.show()
 
            
@@ -2154,7 +2153,7 @@ def main():
         global RELATIVE_ERROR
         RELATIVE_ERROR = False
     
-    plotter = IntNWPlotter(args)
+    plotter = AppPlotter(args)
     if not args.noplot:
         plotter.show()
         app.exec_()
