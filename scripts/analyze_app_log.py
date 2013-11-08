@@ -1,24 +1,7 @@
 #!/usr/bin/env python
 
 '''
-# Things I want this tool to show:
-# 1) Application data that's sent or received
-#    a) With annotations: IROB numbers, data size, dependencies
-# 2) Which network data is transferred on
-# 3) When data is acknowledged (IntNW ACK)
-# 4) When data is retransmitted
-# 5) When networks come and go
-# 6) (Maybe) IntNW control messages
-
-
-# Visualization ideas:
-# 1) Which network: a vertical section of the plot for each network
-# 2) Sending app data: solid colored bar
-# 3) Waiting for ACK: empty bar with solid outline
-# 4) Sent vs. received app data: two vertical subsections (send/recv)
-#    in each network's vertical section
-# 5) Network coming and going: shaded section, same as for IMP
-# 6) Annotations: popup box on hover (PyQt)
+Generic functionality for plotting app behavior.
 
 # Borrows heavily from
 #   http://eli.thegreenplace.net/2009/01/20/matplotlib-with-pyqt-guis/
@@ -301,7 +284,7 @@ def getTimestamp(line):
     return float(re.search(timestamp_regex, line).group(1))
             
 
-class AppBehaviorPlot(QDialog):
+class IntNWBehaviorPlot(QDialog):
     CONFIDENCE_ALPHA = 0.10
     
     def __init__(self, run, start, measurements_only, network_trace_file,
@@ -334,7 +317,7 @@ class AppBehaviorPlot(QDialog):
         self._user_set_max_trace_duration = None
         self._user_set_max_time = None
 
-        self._alpha = AppBehaviorPlot.CONFIDENCE_ALPHA
+        self._alpha = IntNWBehaviorPlot.CONFIDENCE_ALPHA
 
         # app-level sessions from the trace_replayer.log file
         self._sessions = []
@@ -497,7 +480,7 @@ class AppBehaviorPlot(QDialog):
         self._plot_colored_error_regions = QRadioButton("Colored regions")
         
         self._error_error_ci = \
-            QRadioButton("%d%% CI" % alpha_to_percent(AppBehaviorPlot.CONFIDENCE_ALPHA))
+            QRadioButton("%d%% CI" % alpha_to_percent(IntNWBehaviorPlot.CONFIDENCE_ALPHA))
         self._error_error_stddev = QRadioButton("std-dev")
 
         self._plot_colored_error_regions.setChecked(True)
@@ -508,7 +491,7 @@ class AppBehaviorPlot(QDialog):
         self.connect(self._error_error_ci, SIGNAL("toggled(bool)"), self.on_draw)
         self.connect(self._error_error_stddev, SIGNAL("toggled(bool)"), self.on_draw)
 
-        percent = alpha_to_percent(AppBehaviorPlot.CONFIDENCE_ALPHA)
+        percent = alpha_to_percent(IntNWBehaviorPlot.CONFIDENCE_ALPHA)
         self._ci_percent = QLineEdit("%d" % percent)
         self._ci_percent.setFixedWidth(80)
         self.connect(self._ci_percent, SIGNAL("returnPressed()"), self.updateAlpha)
@@ -811,7 +794,7 @@ class AppBehaviorPlot(QDialog):
 
     def _plotTrace(self):
         if self._network_trace_file and not self._trace:
-            self._trace = AppBehaviorPlot.NetworkTrace(self._network_trace_file,
+            self._trace = IntNWBehaviorPlot.NetworkTrace(self._network_trace_file,
                                                           self, self._estimates, 
                                                           self._is_server)
             transfers = self._getAllUploads()
@@ -852,7 +835,7 @@ class AppBehaviorPlot(QDialog):
         
     def _plotActiveMeasurements(self):
         measurements = \
-            AppBehaviorPlot.ActiveMeasurements(self._bandwidth_measurements_file)
+            IntNWBehaviorPlot.ActiveMeasurements(self._bandwidth_measurements_file)
         measurements.plot(self._axes)
 
     def _plotEstimatedTransferTimes(self):
@@ -1436,14 +1419,16 @@ class AppBehaviorPlot(QDialog):
         if end is None:
             end = self._end + 1.0
 
-        matching_irobs = {'wifi': {}, '3G': {}}
+        matching_irobs = {'wifi': {'down': [], 'up': []}, 
+                          '3G': {'down': [], 'up': []}}
         def time_matches(irob):
             irob_start, irob_end = [self.getAdjustedTime(t) for t in irob.getTimeInterval()]
             return (irob_start >= start and irob_end <= end)
             
         for network_type, direction in product(['wifi', '3G'], ['down', 'up']):
-            irobs = self._networks[network_type][direction].values()
-            matching_irobs[network_type][direction] = filter(time_matches, irobs)
+            if network_type in self._networks and direction in self._networks[network_type]:
+                irobs = self._networks[network_type][direction].values()
+                matching_irobs[network_type][direction] = filter(time_matches, irobs)
         return matching_irobs
 
     def _drawDebugging(self):
@@ -1873,33 +1858,32 @@ class ErrorHistory(object):
         return dict(self._history)
 
 class AppPlotter(object):
-    def __init__(self, args):
+    def __init__(self, args, app_client_log, app_server_log):
         self._windows = []
         self._currentPid = None
         self._pid_regex = re.compile("^\[[0-9]+\.[0-9]+\]\[([0-9]+)\]")
-        self._session_regex = re.compile("start ([0-9]+\.[0-9]+)" + 
-                                          ".+duration ([0-9]+\.[0-9]+)")
 
         intnw_log = "intnw.log"
         timing_log = "timing.log"
-        trace_replayer_log = "trace_replayer.log"
         instruments_log = "instruments.log"
         self._is_server = args.server
         if args.server:
-            intnw_log = trace_replayer_log = instruments_log = "replayer_server.log"
+            intnw_log = app_client_log = instruments_log = app_server_log
 
         self._measurements_only = args.measurements
         self._network_trace_file = args.network_trace_file
         self._bandwidth_measurements_file = args.bandwidth_measurements_file
         self._intnw_log = args.basedir + "/" + intnw_log
         self._timing_log = args.basedir + "/" + timing_log
-        self._trace_replayer_log = args.basedir + "/" + trace_replayer_log
+        self._app_client_log = args.basedir + "/" + app_client_log
         self._redundancy_eval_log = args.basedir + "/" + instruments_log
         self._radio_logs = args.radio_log
         self._cross_country_latency = args.cross_country_latency
         self._history_dir = args.history
         
-        self._readFile(self._intnw_log)
+
+    def readLogs(self):
+        self._readIntNWLog()
         self.draw()
         self.printStats()
 
@@ -1919,13 +1903,6 @@ class AppPlotter(object):
 
         return None
 
-    def _getSession(self, line):
-        match = re.search(self._session_regex, line)
-        if not match:
-            raise LogParsingError("expected timestamp and duration")
-
-        return [float(s) for s in match.groups()]
-
     def _readDurations(self):
         filename = self._timing_log
         duration_regex = re.compile("([0-9]+)-minute runs")
@@ -1938,47 +1915,8 @@ class AppPlotter(object):
         return durations
 
     def _readSessions(self):
-        filename = self._trace_replayer_log
-        runs = []
-        new_run = True
-        for linenum, line in enumerate(open(filename).readlines()):
-            fields = line.strip().split()
-            if "Session times:" in line:
-                # start over with the better list of sessions
-                if len(runs[-1]) == 0:
-                    runs = runs[:-1]
-                runs[-1] = []
-            elif "  Session" in line:
-                timestamp, duration = self._getSession(line)
-                transfer = {'start': timestamp, 'end': timestamp + duration}
-
-                sessions = runs[-1]
-                sessions.append(transfer)
-            else:
-                try:
-                    timestamp = float(fields[0])
-                except (ValueError, IndexError):
-                    continue
-
-            if "Executing:" in line and fields[2] == "at":
-                # start of a session
-                transfer = {'start': timestamp, 'end': None}
-                runs[-1].append(transfer)
-            elif (("Waiting to execute" in line and fields[4] == "at") or
-                  "Waiting until trace end" in line):
-                if new_run:
-                    # new run
-                    runs.append([])
-                    new_run = False
-                elif len(runs[-1]) > 0:
-                    # end of a session
-                    runs[-1][-1]['end'] = timestamp
-            elif "Done with trace replay" in line:
-                new_run = True
-
-        if len(runs[-1]) == 0:
-            runs = runs[:-1]
-        return runs
+        'Implement in subclass.'
+        raise NotImplementedError()
 
     def _lineStartsNewRun(self, line, current_pid):
         if self._is_server:
@@ -2037,11 +1975,11 @@ class AppPlotter(object):
                     switches.append((timestamp_secs, prev_type, new_type))
         return switches
 
-    def _readFile(self, filename):
+    def _readIntNWLog(self):
         session_runs = None
         redundancy_decisions = None
         radio_switches = None
-        if self._trace_replayer_log:
+        if self._app_client_log:
             session_runs = self._readSessions()
         if self._radio_logs:
             radio_switches = self._readRadioLogs()
@@ -2059,7 +1997,7 @@ class AppPlotter(object):
         
         print "Parsing log file..."
         progress = ProgressBar()
-        for linenum, line in enumerate(progress(open(filename).readlines())):
+        for linenum, line in enumerate(progress(open(self._intnw_log).readlines())):
             try:
                 pid = self._getPid(line)
                 if pid == None:
@@ -2072,7 +2010,7 @@ class AppPlotter(object):
 
 
                     start = session_runs[len(self._windows)][0]['start']
-                    window = AppBehaviorPlot(len(self._windows) + 1, start, 
+                    window = IntNWBehaviorPlot(len(self._windows) + 1, start, 
                                                self._measurements_only,
                                                self._network_trace_file,
                                                self._bandwidth_measurements_file,
@@ -2124,7 +2062,7 @@ def debug_trace():
 import sys
 sys.excepthook = exception_hook
     
-def main():
+def main(args, args_list, plotter_class):
     parser = ArgumentParser()
     parser.add_argument("basedir")
     parser.add_argument("--measurements", action="store_true", default=False)
@@ -2134,7 +2072,7 @@ def main():
     parser.add_argument("--cross-country-latency", action="store_true", default=False,
                         help="Add 100ms latency when plotting the trace.")
     parser.add_argument("--server", action="store_true", default=False,
-                        help="Look in replayer_server.log for all logging.")
+                        help="Look in server logfile for all logging.")
     parser.add_argument("--absolute-error", action="store_true", default=False,
                         help="Use absolute error rather than relative error in calculations")
     parser.add_argument("--history", default=None,
@@ -2142,7 +2080,7 @@ def main():
                               +" {client,server}_error_distributions.txt"))
     parser.add_argument("--radio-log", default=None)
     parser.add_argument("-d", "--debug", action="store_true", default=False)
-    args = parser.parse_args()
+    parser.parse_args(args_list, namespace=args)
 
     global debug
     debug = args.debug
@@ -2153,10 +2091,12 @@ def main():
         global RELATIVE_ERROR
         RELATIVE_ERROR = False
     
-    plotter = AppPlotter(args)
+    plotter = plotter_class(args)
+    plotter.readLogs()
     if not args.noplot:
         plotter.show()
         app.exec_()
 
 if __name__ == '__main__':
-    main()
+    print "Should be run from another script that subclasses AppPlotter."
+    sys.exit(1)
