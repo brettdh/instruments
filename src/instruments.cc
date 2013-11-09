@@ -2,7 +2,10 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <thread>
+#include <functional>
 using std::thread;
+using std::max;
+using std::function;
 
 #include <instruments.h>
 #include <instruments_private.h>
@@ -187,6 +190,16 @@ choose_strategy_async(instruments_strategy_evaluator_t evaluator_handle,
     evaluator->chooseStrategyAsync(chooser_arg, callback, callback_arg);
 }
 
+void
+choose_nonredundant_strategy_async(instruments_strategy_evaluator_t evaluator_handle,
+                                   void *chooser_arg,
+                                   instruments_strategy_chosen_callback_t callback,
+                                   void *callback_arg)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    evaluator->chooseStrategyAsync(chooser_arg, callback, callback_arg, /* redundancy = */ false);
+}
+
 
 instruments_scheduled_reevaluation_t
 schedule_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
@@ -202,6 +215,22 @@ schedule_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
                                            pre_evaluation_callback, pre_eval_callback_arg,
                                            chosen_callback, chosen_callback_arg, 
                                            seconds_in_future);
+}
+
+instruments_scheduled_reevaluation_t
+schedule_nonredundant_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
+                                   void *chooser_arg,
+                                   instruments_pre_evaluation_callback_t pre_evaluation_callback,
+                                   void *pre_eval_callback_arg,
+                                   instruments_strategy_chosen_callback_t chosen_callback,
+                                   void *chosen_callback_arg,
+                                   double seconds_in_future)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    return evaluator->scheduleReevaluation(chooser_arg, 
+                                           pre_evaluation_callback, pre_eval_callback_arg,
+                                           chosen_callback, chosen_callback_arg, 
+                                           seconds_in_future, /* redundancy = */ false);
 }
 
 void cancel_scheduled_reevaluation(instruments_scheduled_reevaluation_t handle)
@@ -302,6 +331,165 @@ void clear_estimator_conditions(instruments_estimator_t est_handle)
     Estimator *estimator = static_cast<Estimator *>(est_handle);
     estimator->clearConditions();
 }
+
+static function<bool(instruments_strategy_t)>
+get_bound_finder(instruments_estimator_condition_type_t bound_type,
+                 instruments_strategy_t current_winner)
+{
+    if (bound_type == INSTRUMENTS_ESTIMATOR_VALUE_AT_LEAST) {
+        return [=](instruments_strategy_t winner) { return (winner != current_winner); };
+    } else {
+        return [=](instruments_strategy_t winner) { return (winner == current_winner); };
+    }
+}
+
+static double find_upper_bound(instruments_strategy_evaluator_t evaluator,
+                               instruments_estimator_t estimator, 
+                               instruments_estimator_condition_type_t bound_type, 
+                               decltype(choose_strategy) chooser, 
+                               double lower, 
+                               instruments_strategy_t current_winner,
+                               void *chooser_arg)
+{
+    // O(lg(N)) search for rough upper bound on tipping point
+    // N is at most DBL_MAX; in practice, it will be much less
+    
+    instruments_strategy_t winner = current_winner;
+    set_estimator_condition(estimator, bound_type, lower);
+    winner = chooser(evaluator, chooser_arg);
+    function<bool(instruments_strategy_t)> found_bound = get_bound_finder(bound_type, current_winner);
+    while (!found_bound(winner)) {
+        lower = max(lower * 2.0, 1.0);
+        clear_estimator_conditions(estimator);
+        set_estimator_condition(estimator, bound_type, lower);
+        winner = chooser(evaluator, chooser_arg);
+    }
+    clear_estimator_conditions(estimator);
+    return lower;
+}
+
+
+struct EstimatorBound 
+calculate_tipping_point(instruments_strategy_evaluator_t evaluator, 
+                        instruments_estimator_t estimator,
+                        instruments_estimator_condition_type_t bound_type,
+                        int redundant, 
+                        instruments_strategy_t current_winner,
+                        void *chooser_arg)
+{
+    // StrategyEvaluator *evaluator = static_cast<StrategyEvaluator*>(evaluator_handle);
+    // Estimator *estimator = static_cast<Estimator*>(estimator_handle);
+    // Strategy *current_winner = static_cast<Strategy*>(current_winner_handle);
+    // Strategy *future_winner = static_cast<Strategy*>(future_winner_handle);
+    // return evaluator->calculateTippingPoint(estimator, bound_type, current_winner, future_winner);
+
+    /* First, assume that the evaluator decision is monotonic as a function of a bound on one estimator,
+     * (with all others evaluated over their error distributions).  In other words, if wifi beats 3G
+     * and I increase the latency bound on wifi, eventually it will be worse than 3G, but it will
+     * never become better again as a result of further latency increase.  Hence, there is one
+     * tipping point rather than many.
+     *
+     * Next, since I can assume that, I can binary search over a range of possible bound values
+     * to find the tipping point.  If the bound is an upper bound, the range is [0.0, current_value],
+     * since I'm assuming estimator values are >= 0.  If the bound is a lower bound, the range is
+     * [current_value, N), where N is theoretically infinite.  In order to make the search finite, 
+     * I will calculate N by starting with current_value and doubling it until the decision changes.
+     * I can then proceed with binary search.  If N overflows, I assume that the bound won't work,
+     * and I will discover this in lg(DBL_MAX) steps.  For normal usage (i.e. the bound works),
+     * I will discover the limits much faster.
+     */
+    
+    //double estimate = get_estimator_value(NULL, estimator);
+
+    /*
+    double lowest_value, highest_value;
+    if (estimator_has_range_hints(estimator)) {
+        Estimator *est = static_cast<Estimator *>(estimator);
+        EstimatorRangeHints hints = est->getRangeHints();
+
+        // use the range hints to set some loose bounds.  
+        //  hopefully the hints are reasonably good and these work.
+        static const double hedge_factor = 3.0;
+        lowest_value = hints.min / hedge_factor;
+        highest_value = hints.max * hedge_factor;
+    } else {
+        lowest_value = 0.0;
+        highest_value = DBL_MAX;
+    }
+    */
+    
+    auto chooser = (redundant ? choose_strategy : choose_nonredundant_strategy);
+
+    double lower, upper;
+    bool is_lower_bound;
+    if (bound_type == INSTRUMENTS_ESTIMATOR_VALUE_AT_LEAST) {
+        is_lower_bound = true;
+    } else {
+        assert(bound_type == INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST);
+        is_lower_bound = false;
+    } 
+    lower = 0.0;
+    upper = find_upper_bound(evaluator, estimator, bound_type, chooser, 0.0, current_winner, chooser_arg);
+    
+    // XXX: not sure whether the starting range is correct.  
+    // must be a range where one endpoint results in current_winner
+    //  and the other endpoint results in a different strategy.
+    // NOTE: if there is more than one strategy change (e.g. wifi -> redundant -> 3G),
+    //        this will return the tipping point of the FIRST strategy change, 
+    //        which is exactly what we want.
+    
+
+#ifndef NDEBUG
+    clear_estimator_conditions(estimator);
+    set_estimator_condition(estimator, bound_type, lower);
+    instruments_strategy_t lower_winner = chooser(evaluator, chooser_arg);
+    clear_estimator_conditions(estimator);
+    
+    set_estimator_condition(estimator, bound_type, upper);
+    instruments_strategy_t upper_winner = chooser(evaluator, chooser_arg);
+    clear_estimator_conditions(estimator);
+
+    if (is_lower_bound) {
+        assert(lower_winner == current_winner);
+        assert(upper_winner != current_winner);
+    } else {
+        assert(lower_winner != current_winner);
+        assert(upper_winner == current_winner);
+    }
+#endif
+
+    double threshold = 0.1; // XXX: maybe too coarse or fine; TODO: time this code, see how long it takes
+    EstimatorBound bound;
+    while (upper - lower > threshold) {
+        clear_estimator_conditions(estimator);
+        double mid = (upper + lower) / 2.0;
+        set_estimator_condition(estimator, bound_type, mid);
+
+        instruments_strategy_t winner = chooser(evaluator, chooser_arg);
+        if (winner == current_winner) {
+            if (is_lower_bound) { // if lower bound,
+                lower = mid;      // then tipping point is above the midpoint
+                bound.value = upper;
+            } else {
+                upper = mid;      // else tipping point is below the midpoint
+                bound.value = lower;
+            }
+        } else {
+            if (is_lower_bound) { // if lower bound,
+                upper = mid;      // then tipping point is below the midpoint
+                bound.value = upper;
+            } else {
+                lower = mid;      // else tipping point is above the midpoint
+                bound.value = lower;
+            }
+        }
+    }
+    clear_estimator_conditions(estimator);
+    bound.valid = true; //TODO: detect failure case
+    
+    return bound;
+}
+
 
 instruments_continuous_distribution_t create_continuous_distribution(double shape, double scale)
 {

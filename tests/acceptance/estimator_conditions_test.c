@@ -1,7 +1,9 @@
 #include <instruments.h>
 #include <instruments_private.h>
 #include <eval_method.h>
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <assert.h>
 #include "ctest.h"
@@ -176,20 +178,52 @@ static void run_set_and_clear_condition(CTEST_DATA(estimator_conditions) *data,
     clear_estimator_conditions(data->hilo_estimator);
     check_chosen_strategy(evaluator, method, strategies[0], "Failed to choose mid strategy after clearing conditions");
 
-    instruments_scheduled_reevaluation_t eval = 
-        schedule_reevaluation(evaluator, NULL, 
-                              set_reeval_condition, data, 
-                              set_chosen_strategy, data,
-                              0.25);
     pthread_mutex_lock(&mutex);
     strategy = NULL;
+    instruments_scheduled_reevaluation_t eval = 
+        schedule_nonredundant_reevaluation(evaluator, NULL, 
+                                           set_reeval_condition, data, 
+                                           set_chosen_strategy, data,
+                                           0.25);
     while (strategy == NULL) {
         pthread_cond_wait(&cv, &mutex);
     }
-    check_strategy(strategies[1], strategy, method, "Failed to choose hilo strategy after re-evaluation");
+    instruments_strategy_t local_strategy = strategy;
     pthread_mutex_unlock(&mutex);
 
+    check_strategy(strategies[1], local_strategy, method, "Failed to choose hilo strategy after re-evaluation");
+
     free_scheduled_reevaluation(eval);
+
+    
+    // test the re-evaluation scheduling code; the value it returns should reliably make the decision change
+    clear_estimator_conditions(data->hilo_estimator);
+    check_chosen_strategy(evaluator, method, strategies[0],
+                          "Failed to choose mid strategy again after clearing conditions");
+
+
+    /*
+    double upper_bound;
+    int cols = 0;
+    for (upper_bound = 0.0; upper_bound < 250; upper_bound += 1) {
+        set_estimator_condition(data->hilo_estimator, INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST, upper_bound);
+        instruments_strategy_t winner = choose_nonredundant_strategy(evaluator, NULL);
+        fprintf(stderr, "%3.0f  %s   ", upper_bound, get_strategy_name(winner));
+        if (++cols % 10 == 0) {
+            fprintf(stderr, "\n");
+        }
+        clear_estimator_conditions(data->hilo_estimator);
+    }
+    */
+
+    // calculate the upper bound on hilo_estimator at which the decision changes from strategies[0] to strategies[1]
+    struct EstimatorBound bound = calculate_tipping_point(evaluator, data->hilo_estimator, 
+                                                          INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST, 0,
+                                                          strategies[0], NULL);
+    ASSERT_TRUE(bound.valid);
+    set_estimator_condition(data->hilo_estimator, INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST, bound.value);
+    check_chosen_strategy(evaluator, method, strategies[1],
+                          "Failed to choose hilo strategy beyond tipping point");
 }
 
 CTEST2(estimator_conditions, set_and_clear_condition)
@@ -200,12 +234,12 @@ CTEST2(estimator_conditions, set_and_clear_condition)
 
 CTEST2(estimator_conditions, set_and_clear_condition_prob_bounds)
 {
-    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
+    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
     run_set_and_clear_condition(data, CONFIDENCE_BOUNDS);
 }
 
 CTEST2(estimator_conditions, set_and_clear_condition_bayesian)
 {
-    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
+    instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_NONE);
     run_set_and_clear_condition(data, BAYESIAN);
 }

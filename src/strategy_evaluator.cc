@@ -378,10 +378,10 @@ StrategyEvaluator::getLastStrategyTime(instruments_strategy_t strategy)
 void
 StrategyEvaluator::chooseStrategyAsync(void *chooser_arg, 
                                        instruments_strategy_chosen_callback_t callback,
-                                       void *callback_arg)
+                                       void *callback_arg, bool redundancy)
 {
     auto async_choose = [=]() {
-        instruments_strategy_t strategy = chooseStrategy(chooser_arg);
+        instruments_strategy_t strategy = chooseStrategy(chooser_arg, redundancy);
         callback(strategy, callback_arg); // thread-safety of this is up to the caller
     };
 
@@ -394,11 +394,12 @@ StrategyEvaluator::scheduleReevaluation(void *chooser_arg,
                                         void *pre_eval_callback_arg,
                                         instruments_strategy_chosen_callback_t chosen_callback,
                                         void *chosen_callback_arg,
-                                        double seconds_in_future)
+                                        double seconds_in_future,
+                                        bool redundancy)
 {
     auto reevaluate = [=]() {
         pre_evaluation_callback(pre_eval_callback_arg);
-        chooseStrategyAsync(chooser_arg, chosen_callback, chosen_callback_arg);
+        chooseStrategyAsync(chooser_arg, chosen_callback, chosen_callback_arg, redundancy);
     };
     ThreadPool::TimerTaskPtr task = pool->scheduleTask(seconds_in_future, reevaluate);
     return new ScheduledReevaluationHandle(task);

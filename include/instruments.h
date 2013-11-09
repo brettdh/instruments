@@ -171,6 +171,10 @@ CDECL void
 choose_strategy_async(instruments_strategy_evaluator_t evaluator, void *chooser_arg,
                       instruments_strategy_chosen_callback_t callback, void *callback_arg);
 
+CDECL void
+choose_nonredundant_strategy_async(instruments_strategy_evaluator_t evaluator, void *chooser_arg,
+                                   instruments_strategy_chosen_callback_t callback, void *callback_arg);
+
 
 typedef void * instruments_scheduled_reevaluation_t;
 typedef void (*instruments_pre_evaluation_callback_t)(void *);
@@ -196,6 +200,15 @@ schedule_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
                       instruments_strategy_chosen_callback_t chosen_callback,
                       void *chosen_callback_arg,
                       double seconds_in_future);
+
+CDECL instruments_scheduled_reevaluation_t
+schedule_nonredundant_reevaluation(instruments_strategy_evaluator_t evaluator_handle,
+                                   void *chooser_arg,
+                                   instruments_pre_evaluation_callback_t pre_evaluation_callback,
+                                   void *pre_eval_callback_arg,
+                                   instruments_strategy_chosen_callback_t chosen_callback,
+                                   void *chosen_callback_arg,
+                                   double seconds_in_future);
 
 /** Cancel the scheduled re-evaluation.
  *
@@ -325,6 +338,23 @@ CDECL void set_estimator_condition(instruments_estimator_t estimator,
 /** Clear all conditions on this estimator set by set_estimator_condition.
  */
 CDECL void clear_estimator_conditions(instruments_estimator_t estimator);
+
+#include "estimator_bound.h"
+
+/** For a given estimator, calculate the conditional bound of the given type
+ *  at which point the estimator's bounded distribution will cause the evaluator
+ *  to switch from current_winner to future_winner.
+ *  Returns an EstimatorBound struct, where
+ *    bound.valid = true iff the estimator found such a bound
+ *    bound.value = the bound, iff bound.valid
+ */
+CDECL struct EstimatorBound calculate_tipping_point(instruments_strategy_evaluator_t evaluator, 
+                                                    instruments_estimator_t estimator,
+                                                    instruments_estimator_condition_type_t bound_type, 
+                                                    int redundant, 
+                                                    instruments_strategy_t current_winner,
+                                                    void *chooser_arg);
+                                             
 
 typedef void * instruments_continuous_distribution_t;
 

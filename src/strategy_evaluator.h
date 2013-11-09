@@ -43,7 +43,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     instruments_strategy_t chooseStrategy(void *chooser_arg, bool redundancy=true);
     void chooseStrategyAsync(void *chooser_arg, 
                              instruments_strategy_chosen_callback_t callback,
-                             void *callback_arg);
+                             void *callback_arg, bool redundancy=true);
     double getLastStrategyTime(instruments_strategy_t strategy);
     
     instruments_scheduled_reevaluation_t
@@ -52,7 +52,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
                          void *pre_eval_callback_arg,
                          instruments_strategy_chosen_callback_t chosen_callback,
                          void *chosen_callback_arg,
-                         double seconds_in_future);
+                         double seconds_in_future,
+                         bool redundancy=true);
     void cancelReevaluation(instruments_scheduled_reevaluation_t handle);
     
     void addEstimator(Estimator *estimator);

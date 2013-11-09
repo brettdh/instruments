@@ -2,11 +2,15 @@
 #include <instruments_private.h>
 #include "debug.h"
 
-#include <stdio.h>
-#include <assert.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #include "ctest.h"
+
+#undef M_PI
+#define M_PI 3.14159265358979323846264338327
 
 CTEST_DATA(range_hints) {
     instruments_external_estimator_t high_estimator;

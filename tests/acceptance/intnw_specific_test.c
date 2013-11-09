@@ -432,7 +432,7 @@ CTEST2(confidence_bounds_test, test_both_networks_best)
 
 CTEST2(confidence_bounds_test, test_save_restore)
 {
-    instruments_set_debug_level(DEBUG);
+    //instruments_set_debug_level(DEBUG);
     
     test_save_restore(&data->common_data, "/tmp/confidence_bounds_saved_evaluation_state.txt", 
                       CONFIDENCE_BOUNDS);
