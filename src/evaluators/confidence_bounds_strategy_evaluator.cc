@@ -90,6 +90,7 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::ErrorConfidenceBounds(
     log_error_variance = 0.0;
     M2 = 0.0;
     num_samples = 0;
+    error_bounds[LOWER] = error_bounds[UPPER] = 0.0;
 }
 
 void 

@@ -2,7 +2,6 @@
 #include "ctest.h"
 
 #include <pthread.h>
-#include "pthread_util.h"
 
 static double
 one_of_two_values(instruments_context_t ctx, void *strategy_arg, void *chooser_arg)
@@ -17,7 +16,7 @@ static double no_cost(instruments_context_t ctx, void *strategy_arg, void *choos
     return 0.0;
 }
 
-static pthread_mutex_t mutex = MY_PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
 instruments_strategy_t strategy;
 
