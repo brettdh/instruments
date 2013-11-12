@@ -76,7 +76,7 @@ GoalAdaptiveResourceWeight::GoalAdaptiveResourceWeight(std::string type, double 
         logPrint("Goal is %f seconds in the past!!\n", secondsSince(goalTime));
     }
                         
-    pthread_mutex_init(&mutex, NULL);
+    MY_PTHREAD_MUTEX_INIT(&mutex);
     pthread_cond_init(&cv, NULL);
     memset(&update_thread, 0, sizeof(update_thread));
 }

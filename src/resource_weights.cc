@@ -16,7 +16,7 @@ static double fixed_data_weight = 0.0;
 static GoalAdaptiveResourceWeight *adaptive_energy_weight = NULL;
 static GoalAdaptiveResourceWeight *adaptive_data_weight = NULL;
 
-static pthread_mutex_t weights_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t weights_lock = MY_PTHREAD_MUTEX_INITIALIZER;
 
 // must be holding weights_lock.
 static double 

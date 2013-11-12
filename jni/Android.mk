@@ -3,7 +3,7 @@ LOCAL_PATH := $(call my-dir)
 my_PROFILING_BUILD := yes
 my_PROFILING_CFLAGS := -pg -DPROFILING_BUILD
 
-common_CFLAGS:=-g -O3 -Wall -Werror -DANDROID
+common_CFLAGS:=-g -Wall -Werror -DANDROID -O3
 common_CXXFLAGS:=$(common_CFLAGS) -std=gnu++0x
 INSTRUMENTS_INCLUDES := \
 	$(LOCAL_PATH)/../include \
@@ -32,11 +32,11 @@ LOCAL_SRC_FILES := ../$(MOCKTIME_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libmocktime.
 include $(PREBUILT_SHARED_LIBRARY)
 
 
-include $(CLEAR_VARS)
+#include $(CLEAR_VARS)
 
-LOCAL_MODULE := flipflop
-LOCAL_SRC_FILES := ../$(INTNW_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libflipflop.a
-include $(PREBUILT_STATIC_LIBRARY)
+#LOCAL_MODULE := flipflop
+#LOCAL_SRC_FILES := ../$(INTNW_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libflipflop.a
+#include $(PREBUILT_STATIC_LIBRARY)
 
 
 
@@ -77,7 +77,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 
 LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(MOCKTIME_INCLUDES) $(LIBPT_INCLUDES) $(INTNW_ROOT)
 LOCAL_CXXFLAGS := $(common_CXXFLAGS)
-LOCAL_STATIC_LIBRARIES += flipflop
+#LOCAL_STATIC_LIBRARIES += flipflop
 ifneq ($(my_PROFILING_BUILD),)
 LOCAL_CXXFLAGS += $(my_PROFILING_CFLAGS)
 LOCAL_STATIC_LIBRARIES += android-ndk-profiler 

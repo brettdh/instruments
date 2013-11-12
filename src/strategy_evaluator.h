@@ -78,7 +78,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
 
     virtual ~StrategyEvaluator();
   protected:
-    StrategyEvaluator();
+    StrategyEvaluator(bool trivial=false);
     virtual void setStrategies(const instruments_strategy_t *strategies,
                                size_t num_strategies);
 
@@ -98,6 +98,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     double calculateCost(Strategy *strategy, void *chooser_arg, ComparisonType comparison_type);
     Strategy *currentStrategy;
     bool silent;
+    bool subscribe_all;
 
     std::string name;
 

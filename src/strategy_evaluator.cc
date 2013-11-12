@@ -25,14 +25,18 @@ using inst::INFO;
 #include <map>
 using std::vector; using std::map;
 
-StrategyEvaluator::StrategyEvaluator()
-    : currentStrategy(NULL), silent(false)
+StrategyEvaluator::StrategyEvaluator(bool trivial)
+    : currentStrategy(NULL), silent(false), subscribe_all(!trivial)
 {
-    pthread_mutex_init(&evaluator_mutex, NULL);
-    pthread_mutex_init(&cache_mutex, NULL);
+    MY_PTHREAD_MUTEX_INIT(&evaluator_mutex);
+    MY_PTHREAD_MUTEX_INIT(&cache_mutex);
     
     const int ASYNC_EVAL_THREADS = 3;
-    pool = new ThreadPool(ASYNC_EVAL_THREADS);
+    if (trivial) {
+        pool = nullptr;
+    } else {
+        pool = new ThreadPool(ASYNC_EVAL_THREADS);
+    }
 }
 
 StrategyEvaluator::~StrategyEvaluator()
@@ -59,8 +63,10 @@ StrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
 void
 StrategyEvaluator::addEstimator(Estimator *estimator)
 {
-    estimator->subscribe(this);
-    subscribed_estimators.insert(estimator);
+    if (subscribe_all) {
+        estimator->subscribe(this);
+        subscribed_estimators.insert(estimator);
+    }
 }
 
 const small_set<Estimator*>&

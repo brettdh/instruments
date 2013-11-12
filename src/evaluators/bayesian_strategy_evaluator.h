@@ -80,6 +80,9 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
     void clearDistributions();
 
     bool weighted;
+
+    std::string simple_evaluator_name;
+    std::string makeSimpleEvaluatorName();
 };
 
 #endif

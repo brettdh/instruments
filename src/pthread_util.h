@@ -21,22 +21,29 @@
         }                                                   \
     } while (0)
 
-#ifdef ANDROID
-/* #include <boost/thread/shared_mutex.hpp> */
-/* typedef boost::shared_mutex RWLOCK_T; */
-/* #define RWLOCK_INIT(LOCK, ATTR) */
-/* inline int RWLOCK_RDLOCK(RWLOCK_T *lock)   { lock->lock_shared();   return 0; } */
-/* inline int RWLOCK_WRLOCK(RWLOCK_T *lock)   { lock->lock();          return 0; } */
-/* inline int RWLOCK_RDUNLOCK(RWLOCK_T *lock) { lock->unlock_shared(); return 0; } */
-/* inline int RWLOCK_WRUNLOCK(RWLOCK_T *lock) { lock->unlock();        return 0; } */
-#else
 typedef pthread_rwlock_t RWLOCK_T;
 #define RWLOCK_INIT pthread_rwlock_init
 #define RWLOCK_RDLOCK pthread_rwlock_rdlock
 #define RWLOCK_WRLOCK pthread_rwlock_wrlock
 #define RWLOCK_RDUNLOCK pthread_rwlock_unlock
 #define RWLOCK_WRUNLOCK pthread_rwlock_unlock
+
+#define MUTEX_DEBUGGING
+#ifdef MUTEX_DEBUGGING
+#define MY_PTHREAD_MUTEX_INITIALIZER PTHREAD_ERRORCHECK_MUTEX_INITIALIZER
+
+#define MY_PTHREAD_MUTEX_INIT(pmutex)                                   \
+    do {                                                                \
+        pthread_mutexattr_t attr;                                       \
+        PTHREAD_ASSERT_SUCCESS(pthread_mutexattr_init(&attr));          \
+        PTHREAD_ASSERT_SUCCESS(pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK)); \
+        PTHREAD_ASSERT_SUCCESS(pthread_mutex_init((pmutex), &attr));    \
+    } while (0)
+#else
+#define MY_PTHREAD_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER 
+#define MY_PTHREAD_MUTEX_INIT(pmutex) pthread_mutex_init(pmutex, NULL)
 #endif
+
 
 class PthreadScopedLock {
   public:

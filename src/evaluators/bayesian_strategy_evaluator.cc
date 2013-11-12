@@ -44,7 +44,7 @@ class VectorLess {
   public:
     // return true iff first < second
     bool operator()(const vector<T>& first, const vector<T>& second) const {
-        assert(first.size() == second.size());
+        ASSERT(first.size() == second.size());
         for (size_t i = 0; i < first.size(); ++i) {
             T diff = first[i] - second[i];
             if (fabs(diff) > THRESHOLD) {
@@ -115,7 +115,7 @@ DistributionKey::~DistributionKey()
 void 
 DistributionKey::addEstimatorValue(Estimator *estimator, double value)
 {
-    assert(estimator_indices != nullptr);
+    ASSERT(estimator_indices != nullptr);
     if (estimator_indices->count(estimator) == 0) {
         estimator_indices->insert(make_pair(estimator, estimator_indices->size()));
     }
@@ -124,7 +124,7 @@ DistributionKey::addEstimatorValue(Estimator *estimator, double value)
         key.resize(index + 1);
     }
 
-    assert(evaluator->estimatorSamples.count(estimator) > 0);
+    ASSERT(evaluator->estimatorSamples.count(estimator) > 0);
     size_t bin_index = evaluator->estimatorSamples[estimator]->getIndex(value);
     key[index] = bin_index;
 }
@@ -132,12 +132,12 @@ DistributionKey::addEstimatorValue(Estimator *estimator, double value)
 void
 DistributionKey::forEachEstimator(std::function<bool(Estimator *, double)> fn) const
 {
-    assert(estimator_indices != nullptr);
-    assert(estimator_indices->size() == key.size());
+    ASSERT(estimator_indices != nullptr);
+    ASSERT(estimator_indices->size() == key.size());
     for (auto& p : *estimator_indices) {
         Estimator *estimator = p.first;
         size_t index = p.second;
-        assert(index < key.size());
+        ASSERT(index < key.size());
         
         // unnecessary most of the time, except when the tail values can change.
         double value = evaluator->estimatorSamples[estimator]->getValueAtIndex(key[index]);
@@ -190,8 +190,10 @@ DistributionKey::getPrintSize() const
 
 class BayesianStrategyEvaluator::SimpleEvaluator : public StrategyEvaluator {
   public:
-    SimpleEvaluator(const instruments_strategy_t *new_strategies,
+    SimpleEvaluator(const string& name,
+                    const instruments_strategy_t *new_strategies,
                     size_t num_strategies);
+    ~SimpleEvaluator();
     
     Strategy *chooseStrategy(void *chooser_arg);
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 
@@ -286,13 +288,21 @@ BayesianStrategyEvaluator::clearDistributions()
     normalizer->clear();
 }
 
+string
+BayesianStrategyEvaluator::makeSimpleEvaluatorName()
+{
+    ostringstream oss;
+    oss << getName() << "-simple";
+    return oss.str();
+}
+
 void
 BayesianStrategyEvaluator::setStrategies(const instruments_strategy_t *new_strategies,
                                          size_t num_strategies)
 {
     StrategyEvaluator::setStrategies(new_strategies, num_strategies);
     if (!simple_evaluator) {
-        simple_evaluator = new SimpleEvaluator(new_strategies, num_strategies);
+        simple_evaluator = new SimpleEvaluator(makeSimpleEvaluatorName(), new_strategies, num_strategies);
         simple_evaluator->setSilent(true);
     }
 
@@ -322,7 +332,7 @@ BayesianStrategyEvaluator::uninitializedStrategiesExist()
 Strategy *
 BayesianStrategyEvaluator::getBestSingularStrategy(void *chooser_arg)
 {
-    assert(!uninitializedStrategiesExist());
+    ASSERT(!uninitializedStrategiesExist());
     return (Strategy *) simple_evaluator->chooseStrategy(chooser_arg);
 }
 
@@ -341,6 +351,9 @@ void
 BayesianStrategyEvaluator::processObservation(Estimator *estimator, double observation,
                                               double old_estimate, double new_estimate)
 {
+    inst::dbgprintf(INFO, "[bayesian] %s evaluator: Adding observation %f to estimator %s\n",
+                    getName(), observation, estimator->getName().c_str());
+
     bool add_decision = !uninitializedStrategiesExist();
 
     const string& name = estimator->getName();
@@ -405,7 +418,9 @@ BayesianStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t 
     for (size_t i = 0; i < strategies.size(); ++i) {
         strategies_array[i] = strategies[i];
     }
-    SimpleEvaluator tmp_simple_evaluator(strategies_array, strategies.size());
+
+    // temporary, so don't store updates to me
+    SimpleEvaluator tmp_simple_evaluator(makeSimpleEvaluatorName(), strategies_array, strategies.size());
     delete [] strategies_array;
     tmp_simple_evaluator.setSilent(true);
     
@@ -434,13 +449,13 @@ BayesianStrategyEvaluator::Likelihood::addDecision(const vector<pair<Estimator *
     DistributionKey key = getCurrentEstimatorKey(estimator_values);
     if (likelihood_distribution.count(key) == 0) {
         // make sure that all vectors used as keys for the map have the same length
-        assert(likelihood_distribution.empty() || 
+        ASSERT(likelihood_distribution.empty() || 
                (likelihood_distribution.begin()->first == key ||
                 !(likelihood_distribution.begin()->first == key)));
         likelihood_distribution[key] = new DecisionsHistogram(evaluator);
     }
     DecisionsHistogram *histogram = likelihood_distribution[key];
-    assert(histogram);
+    ASSERT(histogram);
     histogram->addDecision(estimator_values);
 }
 
@@ -459,7 +474,7 @@ BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorKey(const vector<pair<
     DistributionKey key(evaluator);
     for (auto& p : estimator_values) {
         Estimator *estimator = p.first;
-        assert(last_observation.count(estimator) > 0);
+        ASSERT(last_observation.count(estimator) > 0);
         
         double obs = last_observation[estimator];
         key.addEstimatorValue(estimator, obs);
@@ -482,7 +497,7 @@ BayesianStrategyEvaluator::Likelihood::makeEstimatorKey(const vector<pair<Estima
 double 
 BayesianStrategyEvaluator::Likelihood::getCurrentEstimatorSample(Estimator *estimator)
 {
-    assert(currentEstimatorSamples.count(estimator) > 0);
+    ASSERT(currentEstimatorSamples.count(estimator) > 0);
     return currentEstimatorSamples[estimator];
 }
 
@@ -496,7 +511,7 @@ BayesianStrategyEvaluator::Likelihood::jointPriorProbability(DistributionKey& ke
         oss.str("");
     }
     key.forEachEstimator([&](Estimator *estimator, double sample) {
-            assert(evaluator->estimatorSamples.count(estimator) > 0);
+            ASSERT(evaluator->estimatorSamples.count(estimator) > 0);
             if (!estimator->valueMeetsConditions(sample)) {
                 // we're doing a conditional probability summation, so
                 // prune this sample from the joint prior distribution
@@ -528,7 +543,7 @@ BayesianStrategyEvaluator::Likelihood::jointPriorProbability(DistributionKey& ke
         if (value < -threshold || value - 1.0 > threshold) {            \
             fprintf(stderr, "%s (%f) is invalid probability at %s:%d\n", \
                     #value, value, __FILE__, __LINE__);                 \
-            assert(false);                                              \
+            ASSERT(false);                                              \
         }                                                               \
     } while (0)
 #endif
@@ -678,7 +693,7 @@ BayesianStrategyEvaluator::Likelihood::getWeightedSum(SimpleEvaluator *tmp_simpl
     
     // here's the normalization.  summing the posterior values ensures that
     //  I'm using the correct value.
-    assert(posterior_sum > 0.0);
+    ASSERT(posterior_sum > 0.0);
     return weightedSum / posterior_sum;
 }
 
@@ -726,7 +741,7 @@ BayesianStrategyEvaluator::DecisionsHistogram::getWinnerProbability(SimpleEvalua
     stopwatch.setEnabled(debugging);
     
     Strategy *winner = evaluator->getBestSingularStrategy(chooser_arg);
-    assert(winner);
+    ASSERT(winner);
 
     if (chooser_arg == last_chooser_arg) {
         if (last_winner_probability.count(winner) > 0) {
@@ -887,14 +902,17 @@ BayesianStrategyEvaluator::restoreFromFileImpl(const char *filename)
 Estimator *
 BayesianStrategyEvaluator::getEstimator(const string& name)
 {
-    assert(estimators_by_name.count(name) > 0);
+    ASSERT(estimators_by_name.count(name) > 0);
     return estimators_by_name[name];
 }
 
-BayesianStrategyEvaluator::SimpleEvaluator::SimpleEvaluator(const instruments_strategy_t *new_strategies,
+BayesianStrategyEvaluator::SimpleEvaluator::SimpleEvaluator(const string& name,
+                                                            const instruments_strategy_t *new_strategies,
                                                             size_t num_strategies)
-
+    : StrategyEvaluator(true) // these don't need updates from estimators
 {
+    setName(name.c_str());
+    
     instruments_strategy_t *singular_strategies = new instruments_strategy_t[num_strategies];
     size_t count = 0;
     for (size_t i = 0; i < num_strategies; ++i) {
@@ -905,6 +923,15 @@ BayesianStrategyEvaluator::SimpleEvaluator::SimpleEvaluator(const instruments_st
     }
     StrategyEvaluator::setStrategies(singular_strategies, count);
     delete [] singular_strategies;
+
+    inst::dbgprintf(INFO, "[bayesian] %s evaluator: Creating simple evaluator %p\n",
+                    getName(), this);
+}
+
+BayesianStrategyEvaluator::SimpleEvaluator::~SimpleEvaluator()
+{
+    inst::dbgprintf(INFO, "[bayesian] %s evaluator: Destroying simple evaluator %p\n",
+                    getName(), this);
 }
 
 Strategy *
@@ -933,8 +960,12 @@ BayesianStrategyEvaluator::SimpleEvaluator::expectedValue(Strategy *strategy, ty
 double 
 BayesianStrategyEvaluator::SimpleEvaluator::getAdjustedEstimatorValue(Estimator *estimator)
 {
-    assert(estimator_values.count(estimator) > 0);
-    return estimator_values[estimator];
+    if (estimator_values.count(estimator) > 0) {
+        return estimator_values[estimator];
+    } else {
+        // this should only happen once, when I have no history on this estimator.
+        return estimator->getEstimate();
+    }
 }
 
 

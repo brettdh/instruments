@@ -78,6 +78,7 @@ class Estimator {
     std::string name;
     bool has_estimate;
 
+    pthread_mutex_t subscribers_mutex;
     small_set<StrategyEvaluator*> subscribers;
     const static EstimatorType DEFAULT_TYPE = RUNNING_MEAN;
 

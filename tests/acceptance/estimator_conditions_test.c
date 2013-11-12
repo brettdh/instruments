@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "pthread_util.h"
 #include <assert.h>
 #include "ctest.h"
 
@@ -86,7 +87,7 @@ check_chosen_strategy(instruments_strategy_evaluator_t evaluator,
     check_strategy(correct_strategy, chosen, method, msg);
 }
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t mutex = MY_PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cv = PTHREAD_COND_INITIALIZER;
 static instruments_strategy_t strategy;
 

@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <float.h>
 #include <math.h>
+#include "pthread_util.h"
 #include "estimator.h"
 #include "last_observation_estimator.h"
 #include "running_mean_estimator.h"
@@ -51,10 +52,13 @@ Estimator::Estimator(const string& name_)
             name[i] = '_';
         }
     }
+
+    MY_PTHREAD_MUTEX_INIT(&subscribers_mutex);
 }
 
 Estimator::~Estimator()
 {
+    PthreadScopedLock guard(&subscribers_mutex);
     for (StrategyEvaluator *subscriber : subscribers) {
         subscriber->removeEstimator(this);
     }
@@ -83,6 +87,7 @@ Estimator::addObservation(double observation)
     has_estimate = true;
     new_estimate = getEstimate();
 
+    PthreadScopedLock guard(&subscribers_mutex);
     for (StrategyEvaluator *subscriber : subscribers) {
         subscriber->observationAdded(this, observation, old_estimate, new_estimate);
     }
@@ -97,17 +102,23 @@ Estimator::hasEstimate()
 void
 Estimator::subscribe(StrategyEvaluator *subscriber)
 {
-    dbgprintf(inst::INFO, "Evaluator %s subscribed to estimator %s\n",
-              subscriber->getName(), name.c_str());
-    subscribers.insert(subscriber);
+    PthreadScopedLock guard(&subscribers_mutex);
+    if (subscribers.count(subscriber) == 0) {
+        dbgprintf(inst::INFO, "Evaluator %s subscribed to estimator %s\n",
+                  subscriber->getName(), name.c_str());
+        subscribers.insert(subscriber);
+    }
 }
 
 void
 Estimator::unsubscribe(StrategyEvaluator *unsubscriber)
 {
-    dbgprintf(inst::INFO, "Evaluator %s unsubscribed from estimator %s\n",
-              unsubscriber->getName(), name.c_str());
-    subscribers.erase(unsubscriber);
+    PthreadScopedLock guard(&subscribers_mutex);
+    if (subscribers.count(unsubscriber) > 0) {
+        dbgprintf(inst::INFO, "Evaluator %s unsubscribed from estimator %s\n",
+                  unsubscriber->getName(), name.c_str());
+        subscribers.erase(unsubscriber);
+    }
 }
 
 string
@@ -154,6 +165,7 @@ Estimator::setCondition(enum ConditionType type, double value)
     inst::dbgprintf(inst::INFO, "Setting %s bound for estimator %s: %f\n", 
                     type == AT_MOST ? "upper" : "lower", name.c_str(), value);
 
+    PthreadScopedLock guard(&subscribers_mutex);
     for (StrategyEvaluator *subscriber : subscribers) {
         subscriber->estimatorConditionsChanged(this);
     }
@@ -164,6 +176,8 @@ void Estimator::clearConditions()
     inst::dbgprintf(inst::INFO, "Clearing bounds for estimator %s\n",
                     name.c_str());
     conditions.clear();
+
+    PthreadScopedLock guard(&subscribers_mutex);
     for (StrategyEvaluator *subscriber : subscribers) {
         subscriber->estimatorConditionsChanged(this);
     }

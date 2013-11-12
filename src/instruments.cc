@@ -9,6 +9,7 @@ using std::function;
 
 #include <instruments.h>
 #include <instruments_private.h>
+#include "debug.h"
 #include "strategy.h"
 #include "estimator.h"
 #include "external_estimator.h"
@@ -60,6 +61,7 @@ double get_adjusted_estimator_value(instruments_context_t ctx, Estimator *estima
         return context->getAdjustedEstimatorValue(estimator);
     } else {
         // app just wants the raw value.
+        ASSERT(estimator);
         return estimator->getEstimate();
     }
 }
