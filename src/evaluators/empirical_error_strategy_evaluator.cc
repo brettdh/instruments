@@ -18,6 +18,7 @@ using std::ostringstream;
 
 #include "generic_joint_distribution.h"
 #include "joint_distributions/intnw_joint_distribution.h"
+#include "joint_distributions/remote_exec_joint_distribution.h"
 
 EmpiricalErrorStrategyEvaluator::EmpiricalErrorStrategyEvaluator(EvalMethod method)
 {
@@ -46,8 +47,12 @@ EmpiricalErrorStrategyEvaluator::setStrategies(const instruments_strategy_t *str
 AbstractJointDistribution *
 EmpiricalErrorStrategyEvaluator::createJointDistribution(JointDistributionType joint_distribution_type)
 {
+    //return new OptimizedGenericJointDistribution(dist_type, strategies);
+
     if (joint_distribution_type == INTNW_JOINT_DISTRIBUTION) {
         return new IntNWJointDistribution(dist_type, strategies);
+    } else if (joint_distribution_type == REMOTE_EXEC_JOINT_DISTRIBUTION) {
+        return new RemoteExecJointDistribution(dist_type, strategies);
     } else if (joint_distribution_type == GENERIC_JOINT_DISTRIBUTION) {
         return new GenericJointDistribution(dist_type, strategies);
     } else abort();

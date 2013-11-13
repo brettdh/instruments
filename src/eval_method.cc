@@ -32,7 +32,8 @@ static NameMap::value_type names_initializer[] = {
     NameMap::value_type(EMPIRICAL_ERROR_BINNED, "ee-binned"),
     NameMap::value_type(EMPIRICAL_ERROR_ALL_SAMPLES_INTNW, "ee-as-intnw"),
     NameMap::value_type(EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED_INTNW, "ee-as-weighted-intnw"),
-    NameMap::value_type(EMPIRICAL_ERROR_BINNED_INTNW, "ee-binned-intnw")
+    NameMap::value_type(EMPIRICAL_ERROR_BINNED_INTNW, "ee-binned-intnw"),
+    NameMap::value_type(EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED_INTNW, "ee-as-weighted-remote-exec"),
 };
 
 static NameMap names(names_initializer, 

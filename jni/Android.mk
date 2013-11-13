@@ -63,6 +63,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	instruments.cc \
 	generic_joint_distribution.cc \
 	joint_distributions/intnw_joint_distribution.cc \
+	joint_distributions/remote_exec_joint_distribution.cc \
 	resource_weights.cc \
 	running_mean_estimator.cc \
 	stats_distribution.cc \

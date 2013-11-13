@@ -15,7 +15,8 @@ CDECL enum StatsDistributionType {
 
 CDECL enum JointDistributionType {
     GENERIC_JOINT_DISTRIBUTION = 0x00, // default
-    INTNW_JOINT_DISTRIBUTION = 0x10
+    INTNW_JOINT_DISTRIBUTION = 0x10,
+    REMOTE_EXEC_JOINT_DISTRIBUTION = 0x20
 };
 
 #ifdef __cplusplus
@@ -44,6 +45,8 @@ CDECL enum EvalMethod {
                                                 INTNW_JOINT_DISTRIBUTION),
     EMPIRICAL_ERROR_BINNED_INTNW=(EMPIRICAL_ERROR_BINNED | 
                                   INTNW_JOINT_DISTRIBUTION),
+    EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED_REMOTE_EXEC=(EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED |
+                                                      REMOTE_EXEC_JOINT_DISTRIBUTION),
 };
 
 CDECL const char *
