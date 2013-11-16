@@ -112,6 +112,24 @@ register_strategy_set(const char *name, const instruments_strategy_t *strategies
  */
 CDECL void free_strategy_evaluator(instruments_strategy_evaluator_t evaluator);
 
+struct instruments_chooser_arg_fns {
+    /* comparator function type for chooser_arg passed to choose_strategy.
+     * returns  1 if first argument is less
+     *          0 if first argument is greater-or-equal
+     */
+    int (*chooser_arg_less)(void *, void *);
+
+    /* functions to allow the framework to create and destroy its own
+     * internal copies of the chooser arg, for caching purposes. 
+     */
+    void * (*copy_chooser_arg)(void *);
+    void (*delete_chooser_arg)(void *);
+};
+
+CDECL instruments_strategy_evaluator_t
+register_strategy_set_with_fns(const char *name, const instruments_strategy_t *strategies, size_t num_strategies,
+                               struct instruments_chooser_arg_fns chooser_arg_fns);
+
 
 CDECL void set_strategy_evaluator_name(instruments_strategy_evaluator_t evaluator, const char * name);
 CDECL const char *get_strategy_evaluator_name(instruments_strategy_evaluator_t evaluator);

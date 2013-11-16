@@ -3,7 +3,7 @@ LOCAL_PATH := $(call my-dir)
 my_PROFILING_BUILD := yes
 my_PROFILING_CFLAGS := -pg -DPROFILING_BUILD
 
-common_CFLAGS:=-g -Wall -Werror -DANDROID -O3
+common_CFLAGS:=-g -Wall -Werror -DANDROID -O0 #-O3
 common_CXXFLAGS:=$(common_CFLAGS) -std=gnu++0x
 INSTRUMENTS_INCLUDES := \
 	$(LOCAL_PATH)/../include \

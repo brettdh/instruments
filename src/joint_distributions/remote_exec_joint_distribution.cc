@@ -448,20 +448,21 @@ static void ensure_valid(double& memoized_value)
 
 static void
 ensure_values_valid(double *saved_values, size_t max_i,
-                    typesafe_eval_fn_t fn)
+                    Strategy *strategy, typesafe_eval_fn_t fn)
 {
     for (size_t i = 0; i < max_i; ++i) {
-        assert(saved_values[i] != DBL_MAX || fn == NULL);
+        assert(saved_values[i] != DBL_MAX || 
+               (fn == NULL || strategy->usesNoEstimators(fn)));
         ensure_valid(saved_values[i]);
     }
 }
 
 static void
 ensure_values_valid(double **saved_values, size_t max_i, size_t max_j, 
-                    typesafe_eval_fn_t fn)
+                    Strategy *strategy, typesafe_eval_fn_t fn)
 {
     for (size_t i = 0; i < max_i; ++i) {
-        ensure_values_valid(saved_values[i], max_j, fn);
+        ensure_values_valid(saved_values[i], max_j, strategy, fn);
     }
 }
 
@@ -474,11 +475,15 @@ RemoteExecJointDistribution::ensureValidMemoizedValues(eval_fn_type_t saved_valu
     max_k = singular_samples_count[1][1]; /* (strategy 1, estimator 2) */
     max_m = singular_samples_count[1][2]; /* (strategy 1, estimator 3) */
 
-    ensure_values_valid(local_strategy_saved_values[saved_value_type], max_m,
-                        singular_strategies[LOCAL_STRATEGY_INDEX]->getEvalFn(saved_value_type));
-    for (size_t i = 0; i < max_i; ++i) {
-        ensure_values_valid(remote_strategy_saved_values[saved_value_type][i], max_j, max_k,
-                            singular_strategies[REMOTE_STRATEGY_INDEX]->getEvalFn(saved_value_type));
+    typesafe_eval_fn_t fns[REMOTE_STRATEGY_INDEX + 1] = {
+        singular_strategies[LOCAL_STRATEGY_INDEX]->getEvalFn(saved_value_type),
+        singular_strategies[REMOTE_STRATEGY_INDEX]->getEvalFn(saved_value_type)
+    };
+    ensure_values_valid(local_strategy_saved_values[saved_value_type], max_i,
+                        singular_strategies[LOCAL_STRATEGY_INDEX], fns[LOCAL_STRATEGY_INDEX]);
+    for (size_t j = 0; j < max_j; ++j) {
+        ensure_values_valid(remote_strategy_saved_values[saved_value_type][j], max_k, max_m,
+                            singular_strategies[REMOTE_STRATEGY_INDEX], fns[REMOTE_STRATEGY_INDEX]);
     }
 }
 

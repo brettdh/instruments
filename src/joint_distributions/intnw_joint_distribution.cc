@@ -472,11 +472,12 @@ static void ensure_valid(double& memoized_value)
 
 static void
 ensure_values_valid(double **saved_values, size_t max_i, size_t max_j, 
-                    typesafe_eval_fn_t fn)
+                    Strategy *strategy, typesafe_eval_fn_t fn)
 {
     for (size_t i = 0; i < max_i; ++i) {
         for (size_t j = 0; j < max_j; ++j) {
-            assert(saved_values[i][j] != DBL_MAX || fn == NULL);
+            assert(saved_values[i][j] != DBL_MAX || 
+                   (fn == NULL || strategy->usesNoEstimators(fn)));
             ensure_valid(saved_values[i][j]);
         }
     }
@@ -494,17 +495,21 @@ IntNWJointDistribution::ensureValidMemoizedValues(eval_fn_type_t saved_value_typ
     max_m = singular_samples_count[1][0]; /* (strategy 1, estimator 3) */
     max_n = singular_samples_count[1][1]; /* (strategy 1, estimator 4) */
 
+    typesafe_eval_fn_t fns[2] = {
+        singular_strategies[0]->getEvalFn(saved_value_type),
+        singular_strategies[1]->getEvalFn(saved_value_type)
+    };
     if (wifi_uses_sessions) {
         for (size_t i = 0; i < max_i; ++i) {
             ensure_values_valid(wifi_strategy_with_sessions_saved_values[saved_value_type][i], max_j, max_k,
-                                singular_strategies[0]->getEvalFn(saved_value_type));
+                                singular_strategies[0], fns[0]);
         }
     } else {
         ensure_values_valid(wifi_strategy_saved_values[saved_value_type], max_i, max_j,
-                            singular_strategies[0]->getEvalFn(saved_value_type));
+                            singular_strategies[0], fns[0]);
     }
     ensure_values_valid(cellular_strategy_saved_values[saved_value_type], max_m, max_n,
-                        singular_strategies[1]->getEvalFn(saved_value_type));
+                        singular_strategies[1], fns[1]);
 }
 
 double 

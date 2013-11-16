@@ -20,6 +20,11 @@ CDECL instruments_strategy_evaluator_t
 register_strategy_set_with_method(const char *name, const instruments_strategy_t *strategies, size_t num_strategies,
                                   enum EvalMethod type);
 
+CDECL instruments_strategy_evaluator_t
+register_strategy_set_with_method_and_fns(const char *name, const instruments_strategy_t *strategies, size_t num_strategies,
+                                          enum EvalMethod method, struct instruments_chooser_arg_fns chooser_arg_fns);
+
+
 #include "estimator_range_hints.h"
 
 #ifdef __cplusplus

@@ -25,8 +25,45 @@ using inst::INFO;
 #include <map>
 using std::vector; using std::map;
 
+StrategyEvaluator::DelegatingChooserArgComparator::
+DelegatingChooserArgComparator(StrategyEvaluator *evaluator_)
+    : evaluator(evaluator_) 
+{
+}
+
+bool 
+StrategyEvaluator::DelegatingChooserArgComparator::
+operator()(void *left, void *right)
+{
+    return evaluator->chooser_arg_fns.chooser_arg_less(left, right);
+};
+
+static int default_chooser_arg_less(void *left, void *right)
+{
+    return (left < right);
+}
+
+static void *default_copy_chooser_arg(void *arg)
+{
+    return arg;
+}
+
+static void default_delete_chooser_arg(void *arg)
+{
+    // no-op
+}
+
+struct instruments_chooser_arg_fns default_chooser_arg_fns = {
+    default_chooser_arg_less,
+    default_copy_chooser_arg,
+    default_delete_chooser_arg
+};
+
 StrategyEvaluator::StrategyEvaluator(bool trivial)
-    : currentStrategy(NULL), silent(false), subscribe_all(!trivial)
+    : currentStrategy(NULL), silent(false), subscribe_all(!trivial), delegating_comparator(this),
+      chooser_arg_fns(default_chooser_arg_fns),
+      nonredundant_choice_cache(delegating_comparator),
+      redundant_choice_cache(delegating_comparator)
 {
     MY_PTHREAD_MUTEX_INIT(&evaluator_mutex);
     MY_PTHREAD_MUTEX_INIT(&cache_mutex);
@@ -45,6 +82,7 @@ StrategyEvaluator::~StrategyEvaluator()
         estimator->unsubscribe(this);
     }
     delete pool;
+    clearCache();
 }
 
 void
@@ -97,9 +135,10 @@ StrategyEvaluator::usesEstimator(Estimator *estimator)
 StrategyEvaluator *
 StrategyEvaluator::create(const char *name_, 
                           const instruments_strategy_t *strategies,
-                          size_t num_strategies)
+                          size_t num_strategies,
+                          struct instruments_chooser_arg_fns chooser_arg_fns)
 {
-    return create(name_, strategies, num_strategies, DEFAULT_EVAL_METHOD);
+    return create(name_, strategies, num_strategies, DEFAULT_EVAL_METHOD, chooser_arg_fns);
 }
 
 void wait_for_debugger()
@@ -115,7 +154,8 @@ void wait_for_debugger()
 StrategyEvaluator *
 StrategyEvaluator::create(const char *name_, 
                           const instruments_strategy_t *strategies,
-                          size_t num_strategies, EvalMethod type)
+                          size_t num_strategies, EvalMethod type,
+                          struct instruments_chooser_arg_fns chooser_arg_fns_)
 {
     //wait_for_debugger();
 
@@ -139,6 +179,7 @@ StrategyEvaluator::create(const char *name_,
     }
     evaluator->setName(name_);
     evaluator->setStrategies(strategies, num_strategies);
+    evaluator->chooser_arg_fns = chooser_arg_fns_;
     return evaluator;
 }
 
@@ -172,8 +213,6 @@ StrategyEvaluator::getCachedChoice(void *chooser_arg, bool redundancy)
     PthreadScopedLock lock(&cache_mutex);
     auto& cache = (redundancy ? redundant_choice_cache : nonredundant_choice_cache);
 
-    // XXX: chooser_arg needs an equality function, not just pointer equality,
-    // XXX: to differentiate whether the same argument has been passed again.
     auto it = cache.find(chooser_arg);
     if (it != cache.end()) {
         return it->second;
@@ -188,9 +227,13 @@ StrategyEvaluator::saveCachedChoice(instruments_strategy_t winner, void *chooser
     PthreadScopedLock lock(&cache_mutex);
     auto& cache = (redundancy ? redundant_choice_cache : nonredundant_choice_cache);
 
-    // XXX: chooser_arg needs an equality function, not just pointer equality,
-    // XXX: to differentiate whether the same argument has been passed again.
-    cache[chooser_arg] = winner;
+    auto it = cache.find(chooser_arg);
+    if (it != cache.end()) {
+        it->second = winner;
+    } else {
+        void *my_copy = chooser_arg_fns.copy_chooser_arg(chooser_arg);
+        cache[my_copy] = winner;
+    }
     
     for (auto& p : strategy_times) {
         instruments_strategy_t strategy = p.first;
@@ -203,8 +246,15 @@ void
 StrategyEvaluator::clearCache()
 {
     PthreadScopedLock lock(&cache_mutex);
+    for (auto &cache : {nonredundant_choice_cache, redundant_choice_cache}) {
+        for (auto& it : cache) {
+            void *my_copy = it.first;
+            chooser_arg_fns.delete_chooser_arg(my_copy);
+        }
+    }
     nonredundant_choice_cache.clear();
     redundant_choice_cache.clear();
+    
     strategy_times_cache.clear();
 }
 
@@ -386,8 +436,14 @@ StrategyEvaluator::chooseStrategyAsync(void *chooser_arg,
                                        instruments_strategy_chosen_callback_t callback,
                                        void *callback_arg, bool redundancy)
 {
+    // because choose_strategy_async returns immediately, 
+    // we need to make sure the chooser_arg still exists when 
+    // chooseStrategy is actually called.
+    void *my_copy = chooser_arg_fns.copy_chooser_arg(chooser_arg);
+    
     auto async_choose = [=]() {
-        instruments_strategy_t strategy = chooseStrategy(chooser_arg, redundancy);
+        instruments_strategy_t strategy = chooseStrategy(my_copy, redundancy);
+        chooser_arg_fns.delete_chooser_arg(my_copy);
         callback(strategy, callback_arg); // thread-safety of this is up to the caller
     };
 
@@ -403,9 +459,14 @@ StrategyEvaluator::scheduleReevaluation(void *chooser_arg,
                                         double seconds_in_future,
                                         bool redundancy)
 {
+    // same here; we even need a copy before we call async.
+    // that creates two copies here, but that's still cheap compared
+    // to everything else that's going on anyway.
+    void *my_copy = chooser_arg_fns.copy_chooser_arg(chooser_arg);
     auto reevaluate = [=]() {
         pre_evaluation_callback(pre_eval_callback_arg);
-        chooseStrategyAsync(chooser_arg, chosen_callback, chosen_callback_arg, redundancy);
+        chooseStrategyAsync(my_copy, chosen_callback, chosen_callback_arg, redundancy);
+        chooser_arg_fns.delete_chooser_arg(my_copy);
     };
     ThreadPool::TimerTaskPtr task = pool->scheduleTask(seconds_in_future, reevaluate);
     return new ScheduledReevaluationHandle(task);

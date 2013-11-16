@@ -99,10 +99,24 @@ register_strategy_set(const char *name, const instruments_strategy_t *strategies
 }
 
 instruments_strategy_evaluator_t
+register_strategy_set_with_cmp(const char *name, const instruments_strategy_t *strategies, size_t num_strategies,
+                               struct instruments_chooser_arg_fns chooser_arg_fns)
+{
+    return StrategyEvaluator::create(name, strategies, num_strategies, chooser_arg_fns);
+}
+
+instruments_strategy_evaluator_t
 register_strategy_set_with_method(const char *name, const instruments_strategy_t *strategies, size_t num_strategies,
                                   EvalMethod method)
 {
     return StrategyEvaluator::create(name, strategies, num_strategies, method);
+}
+
+instruments_strategy_evaluator_t
+register_strategy_set_with_method_and_fns(const char *name, const instruments_strategy_t *strategies, size_t num_strategies,
+                                          EvalMethod method, struct instruments_chooser_arg_fns chooser_arg_fns)
+{
+    return StrategyEvaluator::create(name, strategies, num_strategies, method, chooser_arg_fns);
 }
 
 void

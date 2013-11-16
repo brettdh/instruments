@@ -16,6 +16,8 @@
     max_j = singular_samples_count[1][0]; /* (strategy 1, estimator 1) */            \
     max_k = singular_samples_count[1][1]; /* (strategy 1, estimator 2) */ \
     max_m = singular_samples_count[1][2]; /* (strategy 1, estimator 3) */            \
+    ASSERT(max_i == max_j);                                            \
+    (void)max_j;                                                        \
                                                                                    \
     double *local_strategy_cur_saved_values = local_strategy_saved_values[saved_value_type];          \
     double ***remote_strategy_cur_saved_values = remote_strategy_saved_values[saved_value_type]; \
@@ -23,21 +25,18 @@
     for (size_t i = 0; i < max_i; ++i) {                                \
         double prob_i = singular_probabilities[0][0][i];                \
         double tmp_local_strategy = local_strategy_cur_saved_values[i]; \
+        double **tmp_i_remote = remote_strategy_cur_saved_values[i];    \
         assert(tmp_local_strategy != DBL_MAX);                          \
-        for (size_t j = 0; j < max_j; ++j) {                            \
-            double prob_j = prob_i * singular_probabilities[1][0][j];   \
-            double **tmp_j = remote_strategy_cur_saved_values[j];       \
-            for (size_t k = 0; k < max_k; ++k) {                        \
-                double prob_k = prob_j * singular_probabilities[1][1][k]; \
-                double *tmp_k = tmp_j[k];                               \
-                for (size_t m = 0; m < max_m; ++m) {                    \
-                    double tmp_remote_strategy = tmp_k[m];              \
-                    assert(tmp_remote_strategy != DBL_MAX);             \
+        for (size_t k = 0; k < max_k; ++k) {                            \
+            double prob_k = prob_i * singular_probabilities[1][1][k];   \
+            double *tmp_k = tmp_i_remote[k];                            \
+            for (size_t m = 0; m < max_m; ++m) {                        \
+                double tmp_remote_strategy = tmp_k[m];                  \
+                assert(tmp_remote_strategy != DBL_MAX);                 \
                                                                         \
-                    double value = COMBINER(tmp_local_strategy, tmp_remote_strategy); \
-                    double probability = (prob_k * singular_probabilities[1][2][m]); \
-                    weightedSum += (value * probability);               \
-                }                                                       \
+                double value = COMBINER(tmp_local_strategy, tmp_remote_strategy); \
+                double probability = (prob_k * singular_probabilities[1][2][m]); \
+                weightedSum += (value * probability);                   \
             }                                                           \
         }                                                               \
     }

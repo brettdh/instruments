@@ -15,6 +15,8 @@
 class Estimator;
 class Strategy;
 
+extern struct instruments_chooser_arg_fns default_chooser_arg_fns;
+
 /*
  * These help implement the different uncertainty evaluation methods
  *   by deciding how to return estimator values.
@@ -28,10 +30,11 @@ class StrategyEvaluator : public StrategyEvaluationContext {
   public:
     static StrategyEvaluator *create(const char *name_, 
                                      const instruments_strategy_t *strategies,
-                                     size_t num_strategies);
+                                     size_t num_strategies, struct instruments_chooser_arg_fns chooser_arg_fns=default_chooser_arg_fns);
     static StrategyEvaluator *create(const char *name_, 
                                      const instruments_strategy_t *strategies,
-                                     size_t num_strategies, EvalMethod type);
+                                     size_t num_strategies, EvalMethod type,
+                                     struct instruments_chooser_arg_fns chooser_arg_fns=default_chooser_arg_fns);
 
     void setSilent(bool silent_);
     bool isSilent();
@@ -102,11 +105,21 @@ class StrategyEvaluator : public StrategyEvaluationContext {
 
     std::string name;
 
+    class DelegatingChooserArgComparator {
+      public:
+        DelegatingChooserArgComparator(StrategyEvaluator *evaluator_);
+        bool operator()(void *left, void *right);
+      private:
+        StrategyEvaluator *evaluator;
+    };
+    DelegatingChooserArgComparator delegating_comparator;
+    struct instruments_chooser_arg_fns chooser_arg_fns;
+
     small_set<Estimator *> subscribed_estimators;
 
     pthread_mutex_t cache_mutex;
-    std::map<void *, instruments_strategy_t> nonredundant_choice_cache;
-    std::map<void *, instruments_strategy_t> redundant_choice_cache;
+    std::map<void *, instruments_strategy_t, DelegatingChooserArgComparator> nonredundant_choice_cache;
+    std::map<void *, instruments_strategy_t, DelegatingChooserArgComparator> redundant_choice_cache;
     std::map<instruments_strategy_t, double> strategy_times_cache;
 
     instruments_strategy_t getCachedChoice(void *chooser_arg, bool redundancy);
