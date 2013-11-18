@@ -237,6 +237,12 @@ bool
 Estimator::hasConditions()
 {
     PthreadScopedLock guard(&estimator_mutex);
+    return hasConditionsLocked();
+}
+
+bool
+Estimator::hasConditionsLocked()
+{
     return ((conditions.count(AT_LEAST) +
              conditions.count(AT_MOST)) > 0);
 }
@@ -259,7 +265,7 @@ double
 Estimator::getConditionalBound()
 {
     PthreadScopedLock guard(&estimator_mutex);
-    ASSERT(hasConditions());
+    ASSERT(hasConditionsLocked());
     
     if (conditions.count(AT_LEAST) > 0 && conditions.count(AT_MOST) > 0) {
         return (conditions[AT_LEAST] + conditions[AT_MOST]) / 2.0;

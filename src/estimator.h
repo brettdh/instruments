@@ -91,6 +91,7 @@ class Estimator {
 
     std::map<enum ConditionType, double> conditions;
 
+    bool hasConditionsLocked();
 };
 
 bool estimate_is_valid(double estimate);
