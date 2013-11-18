@@ -8,8 +8,8 @@ class ExternalEstimator : public Estimator {
     ExternalEstimator(const std::string& name);
     void addObservation(double observation, double new_value);
 
-    virtual double getEstimate();
   protected:
+    virtual double getEstimateLocked();
     virtual void storeNewObservation(double observation);
 
   private:

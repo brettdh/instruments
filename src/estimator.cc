@@ -53,6 +53,7 @@ Estimator::Estimator(const string& name_)
         }
     }
 
+    MY_PTHREAD_MUTEX_INIT(&estimator_mutex);
     MY_PTHREAD_MUTEX_INIT(&subscribers_mutex);
 }
 
@@ -76,26 +77,40 @@ double invalid_estimate()
     return e;
 }
 
+double
+Estimator::getEstimate()
+{
+    PthreadScopedLock guard(&estimator_mutex);
+    return getEstimateLocked();
+}
+
+
 void
 Estimator::addObservation(double observation)
 {
     double old_estimate = invalid_estimate(), new_estimate = invalid_estimate();
-    if (has_estimate) {
-        old_estimate = getEstimate();
+    {
+        PthreadScopedLock guard(&estimator_mutex);
+        if (has_estimate) {
+            old_estimate = getEstimate();
+        }
+        storeNewObservation(observation);
+        has_estimate = true;
+        new_estimate = getEstimate();
     }
-    storeNewObservation(observation);
-    has_estimate = true;
-    new_estimate = getEstimate();
-
-    PthreadScopedLock guard(&subscribers_mutex);
-    for (StrategyEvaluator *subscriber : subscribers) {
-        subscriber->observationAdded(this, observation, old_estimate, new_estimate);
+    
+    {
+        PthreadScopedLock guard(&subscribers_mutex);
+        for (StrategyEvaluator *subscriber : subscribers) {
+            subscriber->observationAdded(this, observation, old_estimate, new_estimate);
+        }
     }
 }
 
 bool
 Estimator::hasEstimate()
 {
+    PthreadScopedLock guard(&estimator_mutex);
     return has_estimate;
 }
 
@@ -152,34 +167,43 @@ Estimator::setRangeHints(double min, double max, size_t num_bins)
 void
 Estimator::setCondition(enum ConditionType type, double value)
 {
-    conditions[type] = value;
-    ConditionType other_type = (type == AT_MOST ? AT_LEAST : AT_MOST);
-    if (conditions.count(other_type) > 0) {
-        if (conditions[AT_LEAST] > conditions[AT_MOST]) {
-            inst::dbgprintf(inst::ERROR, "Warning: tried to set impossible conditions [>= %f, <= %f] on estimator %s (both are now %f)\n",
-                            conditions[AT_LEAST], conditions[AT_MOST], name.c_str(), conditions[other_type]);
-            conditions[type] = conditions[other_type];
+    {
+        PthreadScopedLock guard(&estimator_mutex);
+        conditions[type] = value;
+        ConditionType other_type = (type == AT_MOST ? AT_LEAST : AT_MOST);
+        if (conditions.count(other_type) > 0) {
+            if (conditions[AT_LEAST] > conditions[AT_MOST]) {
+                inst::dbgprintf(inst::ERROR, "Warning: tried to set impossible conditions [>= %f, <= %f] on estimator %s (both are now %f)\n",
+                                conditions[AT_LEAST], conditions[AT_MOST], name.c_str(), conditions[other_type]);
+                conditions[type] = conditions[other_type];
+            }
         }
+
+        inst::dbgprintf(inst::INFO, "Setting %s bound for estimator %s: %f\n", 
+                    type == AT_MOST ? "upper" : "lower", name.c_str(), value);
     }
 
-    inst::dbgprintf(inst::INFO, "Setting %s bound for estimator %s: %f\n", 
-                    type == AT_MOST ? "upper" : "lower", name.c_str(), value);
-
-    PthreadScopedLock guard(&subscribers_mutex);
-    for (StrategyEvaluator *subscriber : subscribers) {
-        subscriber->estimatorConditionsChanged(this);
+    {
+        PthreadScopedLock guard(&subscribers_mutex);
+        for (StrategyEvaluator *subscriber : subscribers) {
+            subscriber->estimatorConditionsChanged(this);
+        }
     }
 }
 
 void Estimator::clearConditions()
 {
-    inst::dbgprintf(inst::INFO, "Clearing bounds for estimator %s\n",
-                    name.c_str());
-    conditions.clear();
-
-    PthreadScopedLock guard(&subscribers_mutex);
-    for (StrategyEvaluator *subscriber : subscribers) {
-        subscriber->estimatorConditionsChanged(this);
+    {
+        PthreadScopedLock guard(&estimator_mutex);
+        inst::dbgprintf(inst::INFO, "Clearing bounds for estimator %s\n",
+                        name.c_str());
+        conditions.clear();
+    }
+    {
+        PthreadScopedLock guard(&subscribers_mutex);
+        for (StrategyEvaluator *subscriber : subscribers) {
+            subscriber->estimatorConditionsChanged(this);
+        }
     }
 }
 
@@ -204,6 +228,7 @@ float_is_less_or_equal(double a, double b)
 bool
 Estimator::valueMeetsConditions(double value)
 {
+    PthreadScopedLock guard(&estimator_mutex);
     return ((conditions.count(AT_LEAST) == 0 || float_is_greater_or_equal(value, conditions[AT_LEAST])) &&
             (conditions.count(AT_MOST) == 0 || float_is_less_or_equal(value, conditions[AT_MOST])));
 }
@@ -211,6 +236,7 @@ Estimator::valueMeetsConditions(double value)
 bool
 Estimator::hasConditions()
 {
+    PthreadScopedLock guard(&estimator_mutex);
     return ((conditions.count(AT_LEAST) +
              conditions.count(AT_MOST)) > 0);
 }
@@ -218,18 +244,21 @@ Estimator::hasConditions()
 double
 Estimator::getLowerBound()
 {
+    PthreadScopedLock guard(&estimator_mutex);
     return conditions.count(AT_LEAST) == 0 ? DBL_MIN : conditions[AT_LEAST];
 }
 
 double
 Estimator::getUpperBound()
 {
+    PthreadScopedLock guard(&estimator_mutex);
     return conditions.count(AT_MOST) == 0 ? DBL_MAX : conditions[AT_MOST];
 }
 
 double 
 Estimator::getConditionalBound()
 {
+    PthreadScopedLock guard(&estimator_mutex);
     ASSERT(hasConditions());
     
     if (conditions.count(AT_LEAST) > 0 && conditions.count(AT_MOST) > 0) {

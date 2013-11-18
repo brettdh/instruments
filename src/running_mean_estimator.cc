@@ -1,7 +1,7 @@
 #include "running_mean_estimator.h"
 
 double
-RunningMeanEstimator::getEstimate()
+RunningMeanEstimator::getEstimateLocked()
 {
     return mean;
 }

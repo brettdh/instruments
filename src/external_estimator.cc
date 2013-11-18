@@ -13,7 +13,7 @@ void ExternalEstimator::addObservation(double observation, double new_value)
     Estimator::addObservation(observation);
 }
 
-double ExternalEstimator::getEstimate()
+double ExternalEstimator::getEstimateLocked()
 {
     return lastValue;
 }

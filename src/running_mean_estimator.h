@@ -7,8 +7,8 @@ class RunningMeanEstimator : public Estimator {
   public:
     RunningMeanEstimator(const std::string& name);
 
-    virtual double getEstimate();
   protected:
+    virtual double getEstimateLocked();
     virtual void storeNewObservation(double value);
 
   private:

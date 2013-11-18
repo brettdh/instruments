@@ -35,7 +35,7 @@ class Estimator {
     void unsubscribe(StrategyEvaluator *unsubscriber);
 
     bool hasEstimate();
-    virtual double getEstimate() = 0;
+    double getEstimate();
     virtual ~Estimator();
 
     virtual std::string getName();
@@ -73,8 +73,12 @@ class Estimator {
 
     /* override to get estimates from addObservation. */
     virtual void storeNewObservation(double value) = 0;
+    virtual double getEstimateLocked() = 0;
     
   private:
+    // protects all non-subscriber state.
+    pthread_mutex_t estimator_mutex;
+    
     std::string name;
     bool has_estimate;
 
@@ -86,6 +90,7 @@ class Estimator {
     EstimatorRangeHints range_hints;
 
     std::map<enum ConditionType, double> conditions;
+
 };
 
 bool estimate_is_valid(double estimate);

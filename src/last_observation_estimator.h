@@ -8,10 +8,10 @@ class LastObservationEstimator : public Estimator {
     LastObservationEstimator(const std::string& name) 
         : Estimator(name), lastValue(0.0) {}
 
-    virtual double getEstimate() {
+  protected:
+    virtual double getEstimateLocked() {
         return lastValue;
     }
-  protected:
     virtual void storeNewObservation(double value) {
         lastValue = value;
     }
