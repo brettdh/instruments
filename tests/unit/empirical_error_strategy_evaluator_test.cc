@@ -243,9 +243,9 @@ EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimatorsTwice()
 class CallCountEstimator : public LastObservationEstimator {
   public:
     CallCountEstimator() : LastObservationEstimator("call-count"), count(0) {}
-    virtual double getEstimate() {
+    virtual double getEstimateLocked() {
         ++count;
-        return LastObservationEstimator::getEstimate();
+        return LastObservationEstimator::getEstimateLocked();
     }
     int getCount() { return count; }
   private:

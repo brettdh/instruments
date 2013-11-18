@@ -92,11 +92,11 @@ Estimator::addObservation(double observation)
     {
         PthreadScopedLock guard(&estimator_mutex);
         if (has_estimate) {
-            old_estimate = getEstimate();
+            old_estimate = getEstimateLocked();
         }
         storeNewObservation(observation);
         has_estimate = true;
-        new_estimate = getEstimate();
+        new_estimate = getEstimateLocked();
     }
     
     {

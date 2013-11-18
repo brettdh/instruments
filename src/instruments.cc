@@ -114,7 +114,7 @@ register_strategy_set_with_method(const char *name, const instruments_strategy_t
 
 instruments_strategy_evaluator_t
 register_strategy_set_with_method_and_fns(const char *name, const instruments_strategy_t *strategies, size_t num_strategies,
-                                          EvalMethod method, struct instruments_chooser_arg_fns chooser_arg_fns)
+                                          enum EvalMethod method, struct instruments_chooser_arg_fns chooser_arg_fns)
 {
     return StrategyEvaluator::create(name, strategies, num_strategies, method, chooser_arg_fns);
 }

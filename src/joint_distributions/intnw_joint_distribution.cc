@@ -486,7 +486,7 @@ ensure_values_valid(double **saved_values, size_t max_i, size_t max_j,
 void
 IntNWJointDistribution::ensureValidMemoizedValues(eval_fn_type_t saved_value_type)
 {
-    size_t max_i, max_j, max_k, max_m, max_n;  /* counts for: */
+    size_t max_i, max_j, max_k=0, max_m, max_n;  /* counts for: */
     max_i = singular_samples_count[0][0]; /* (strategy 0, estimator 0) */
     max_j = singular_samples_count[0][1]; /* (strategy 0, estimator 1) */
     if (wifi_uses_sessions) {
