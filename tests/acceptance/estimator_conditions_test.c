@@ -224,6 +224,16 @@ static void run_set_and_clear_condition(CTEST_DATA(estimator_conditions) *data,
     set_estimator_condition(data->hilo_estimator, INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST, bound.value);
     check_chosen_strategy(evaluator, method, strategies[1],
                           "Failed to choose hilo strategy beyond tipping point");
+
+    clear_estimator_conditions(data->hilo_estimator);
+
+    // note from above: a lower bound on hilo doesn't change the decision; 
+    // we will choose mid no matter how high the hilo estimator gets.
+    // calculate_tipping_point should detect this quickly and report that 
+    // no valid bound exists for the requested conditions.
+    bound = calculate_tipping_point(evaluator, data->hilo_estimator, 
+                                    INSTRUMENTS_ESTIMATOR_VALUE_AT_LEAST, 0, strategies[0], NULL);
+    ASSERT_FALSE(bound.valid);
 }
 
 CTEST2(estimator_conditions, set_and_clear_condition)

@@ -6,6 +6,9 @@
 using std::thread;
 using std::max;
 using std::function;
+using std::tie;
+using std::tuple;
+using std::make_tuple;
 
 #include <instruments.h>
 #include <instruments_private.h>
@@ -359,13 +362,14 @@ get_bound_finder(instruments_estimator_condition_type_t bound_type,
     }
 }
 
-static double find_upper_bound(instruments_strategy_evaluator_t evaluator,
-                               instruments_estimator_t estimator, 
-                               instruments_estimator_condition_type_t bound_type, 
-                               decltype(choose_strategy) chooser, 
-                               double lower, 
-                               instruments_strategy_t current_winner,
-                               void *chooser_arg)
+static tuple<double, bool> 
+find_upper_bound(instruments_strategy_evaluator_t evaluator,
+                 instruments_estimator_t estimator, 
+                 instruments_estimator_condition_type_t bound_type, 
+                 decltype(choose_strategy) chooser, 
+                 double lower, 
+                 instruments_strategy_t current_winner,
+                 void *chooser_arg)
 {
     // O(lg(N)) search for rough upper bound on tipping point
     // N is at most DBL_MAX; in practice, it will be much less
@@ -376,12 +380,15 @@ static double find_upper_bound(instruments_strategy_evaluator_t evaluator,
     function<bool(instruments_strategy_t)> found_bound = get_bound_finder(bound_type, current_winner);
     while (!found_bound(winner)) {
         lower = max(lower * 2.0, 1.0);
+        if (isinf(lower)) {
+            return make_tuple(0.0, false);
+        }
         clear_estimator_conditions(estimator);
         set_estimator_condition(estimator, bound_type, lower);
         winner = chooser(evaluator, chooser_arg);
     }
     clear_estimator_conditions(estimator);
-    return lower;
+    return make_tuple(lower, true);
 }
 
 
@@ -434,6 +441,8 @@ calculate_tipping_point(instruments_strategy_evaluator_t evaluator,
     }
     */
     
+    EstimatorBound bound{0.0, false};
+
     auto chooser = (redundant ? choose_strategy : choose_nonredundant_strategy);
 
     double lower, upper;
@@ -445,7 +454,12 @@ calculate_tipping_point(instruments_strategy_evaluator_t evaluator,
         is_lower_bound = false;
     } 
     lower = 0.0;
-    upper = find_upper_bound(evaluator, estimator, bound_type, chooser, 0.0, current_winner, chooser_arg);
+    bool valid = false;
+    tie(upper, valid) = find_upper_bound(evaluator, estimator, bound_type, 
+                                         chooser, 0.0, current_winner, chooser_arg);
+    if (!valid) {
+        return bound;
+    }
     
     // XXX: not sure whether the starting range is correct.  
     // must be a range where one endpoint results in current_winner
@@ -475,7 +489,6 @@ calculate_tipping_point(instruments_strategy_evaluator_t evaluator,
 #endif
 
     double threshold = 0.1; // XXX: maybe too coarse or fine; TODO: time this code, see how long it takes
-    EstimatorBound bound;
     while (upper - lower > threshold) {
         clear_estimator_conditions(estimator);
         double mid = (upper + lower) / 2.0;
