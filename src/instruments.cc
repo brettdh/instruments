@@ -4,6 +4,7 @@
 #include <thread>
 #include <functional>
 #include <map>
+#include <cmath>
 using std::thread;
 using std::max;
 using std::function;
@@ -11,6 +12,7 @@ using std::tie;
 using std::tuple;
 using std::make_tuple;
 using std::map;
+using std::isinf;
 
 #include <instruments.h>
 #include <instruments_private.h>
