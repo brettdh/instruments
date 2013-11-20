@@ -70,6 +70,10 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     // override if the comparison_type argument to expectedValue actually matters.
     virtual bool singularComparisonIsDifferent();
 
+    // only used during tipping point upper bound calculation.
+    bool strategyGapIsWidening(Strategy *current_winner, bool redundant,
+                               std::map<Strategy*, double>& last_strategy_badness);
+
     void observationAdded(Estimator *estimator, double observation, 
                           double old_estimate, double new_estimate);
     void estimatorConditionsChanged(Estimator *estimator);
@@ -121,10 +125,12 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     std::map<void *, instruments_strategy_t, DelegatingChooserArgComparator> nonredundant_choice_cache;
     std::map<void *, instruments_strategy_t, DelegatingChooserArgComparator> redundant_choice_cache;
     std::map<instruments_strategy_t, double> strategy_times_cache;
+    std::map<instruments_strategy_t, double> strategy_costs_cache; // weighted cost sum
 
     instruments_strategy_t getCachedChoice(void *chooser_arg, bool redundancy);
     void saveCachedChoice(instruments_strategy_t winner, void *chooser_arg, bool redundancy,
-                          std::map<instruments_strategy_t, double>& strategy_times);
+                          std::map<instruments_strategy_t, double>& strategy_times,
+                          std::map<instruments_strategy_t, double>& strategy_costs);
     void clearCache();
 
     

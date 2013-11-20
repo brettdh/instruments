@@ -222,7 +222,8 @@ StrategyEvaluator::getCachedChoice(void *chooser_arg, bool redundancy)
 
 void
 StrategyEvaluator::saveCachedChoice(instruments_strategy_t winner, void *chooser_arg, bool redundancy,
-                                    map<instruments_strategy_t, double>& strategy_times)
+                                    map<instruments_strategy_t, double>& strategy_times,
+                                    map<instruments_strategy_t, double>& strategy_costs)
 {
     PthreadScopedLock lock(&cache_mutex);
     auto& cache = (redundancy ? redundant_choice_cache : nonredundant_choice_cache);
@@ -235,10 +236,15 @@ StrategyEvaluator::saveCachedChoice(instruments_strategy_t winner, void *chooser
         cache[my_copy] = winner;
     }
     
+    ASSERT(strategy_times.size() == strategy_costs.size());
     for (auto& p : strategy_times) {
         instruments_strategy_t strategy = p.first;
         double strategy_time = p.second;
+        ASSERT(strategy_costs.count(strategy) > 0);
+        double strategy_cost = strategy_costs[strategy];
+        
         strategy_times_cache[strategy] = strategy_time;
+        strategy_costs_cache[strategy] = strategy_cost;
     }
 }
 
@@ -256,6 +262,7 @@ StrategyEvaluator::clearCache()
     redundant_choice_cache.clear();
     
     strategy_times_cache.clear();
+    strategy_costs_cache.clear();
 }
 
 void
@@ -290,6 +297,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
     ASSERT(currentStrategy == NULL);
 
     map<instruments_strategy_t, double> strategy_times;
+    map<instruments_strategy_t, double> strategy_costs;
 
     // turn this on and off.  if false, uses time as ranking for singular strategies.
     // if true, uses weighted cost function.
@@ -325,6 +333,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
                 // XXX:  the class that does the caching.
                 cost = calculateCost(currentStrategy, chooser_arg, SINGULAR_TO_SINGULAR);
                 ASSERT(!isnan(cost));
+                strategy_costs[currentStrategy] = cost;
                 inst::dbgprintf(INFO, "Singular strategy \"%s\"  time: %f  cost: %f  sum: %f\n",
                                 currentStrategy->getName(), time, cost, time + cost);
 
@@ -348,7 +357,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
         inst::dbgprintf(INFO, "Not considering redundancy; returning best "
                         "singular strategy (time %f)\n",
                         best_singular_time);
-        saveCachedChoice(best_singular, chooser_arg, redundancy, strategy_times);
+        saveCachedChoice(best_singular, chooser_arg, redundancy, strategy_times, strategy_costs);
         return best_singular;
     }
 
@@ -377,8 +386,23 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
             double redundant_cost = calculateCost(currentStrategy, chooser_arg,
                                                   SINGULAR_TO_REDUNDANT);
             ASSERT(!isnan(redundant_cost));
+            strategy_costs[currentStrategy] = redundant_cost;
+            
             double extra_redundant_cost = redundant_cost - best_singular_cost;
             double net_benefit = benefit - extra_redundant_cost;
+
+            /*
+              NOTE: this calculation is exactly the same as the comparison
+                    between singular strategies above, just written in the
+                    language of why you might choose a redundant strategy.
+                    
+              net_benefit = benefit - extra_redundant_cost
+
+              benefit - extra_redundant_cost > 0.0  # condition for redundancy winning
+              benefit > extra_redundant_cost
+              best_singular_time - redundant_time > redundant_cost - best_singular_cost
+              best_singular_time + best_singular_cost > redundant_time + redundant_cost
+             */
 
             if (!silent) {
                 inst::dbgprintf(INFO, "Best singular strategy time: %f\n", best_singular_time);
@@ -416,7 +440,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
         winner = best_singular;
     }
     
-    saveCachedChoice(winner, chooser_arg, redundancy, strategy_times);
+    saveCachedChoice(winner, chooser_arg, redundancy, strategy_times, strategy_costs);
     return winner;
 }
 
@@ -428,6 +452,88 @@ StrategyEvaluator::getLastStrategyTime(instruments_strategy_t strategy)
         return strategy_times_cache[strategy];
     }
     return 0.0;
+}
+
+bool
+StrategyEvaluator::strategyGapIsWidening(Strategy *current_winner, bool redundant,
+                                         map<Strategy*, double>& last_strategy_badness)
+{
+    /*
+      I want to know whether the given strategy is getting better or worse
+      relative to the other strategies, based only on the changing conditional
+      bound on an estimator.  
+
+      This will only be called when trying to find the upper bound of 
+      a range where the winning strategy is different at the endpoints.
+      If the winner at the lower bound is getting better as I increase 
+      the upper bound, I will stop trying to find an upper bound, because 
+      I know it's infinite.
+
+      Let t = time step; i.e. evaluation count.
+      Define badness(strategy, t) = time(t) + cost(t)
+
+      This strategy has gotten better if:
+      - For each other strategy "s":
+          badness(s, t) - badness(winner, t) < badness(s, t-1) - badness(winner, t-1)
+            or equivalently (and slightly more understandably):
+          badness(s, t) - badness(s, t-1) < badness(winner, t) - badness(winner, t-1)
+      Otherwise, it has gotten worse with respect to one of them.
+      
+      Written another way: if this is true for the min-badness strategy, 
+      it is true for all of them.
+
+      Remember, I'm assuming that a strategy doesn't go from winning to losing back to winning
+      just by increasing the bound on one estimator, because the badness is a monotonic
+      function of that estimator.
+
+      I think I'm also assuming that this function's second derivative is zero... hmm. XXX
+      Welp, that assumption holds for latency and utterance size, so.
+     */
+    
+
+    PthreadScopedLock lock(&cache_mutex);
+
+    double min_badness_gap = 0.0;
+    Strategy *min_gap_strategy = nullptr;
+    for (Strategy *strategy : strategies) {
+        if (strategy == current_winner || 
+            (!redundant && strategy->isRedundant())) {
+            continue;
+        }
+
+        // it must be there, because we just called choose_strategy, and we held
+        // the evaluator mutex beforehand (and still hold it).
+        ASSERT(strategy_times_cache.count(strategy) == 1);
+        ASSERT(strategy_costs_cache.count(strategy) == 1);
+        double strategy_time = strategy_times_cache[strategy];
+        double strategy_cost = strategy_costs_cache[strategy];
+        double strategy_badness = strategy_time + strategy_cost;
+
+        if (last_strategy_badness.count(strategy) > 0) {
+            double last_badness = last_strategy_badness[strategy];
+            double last_badness_gap = strategy_badness - last_badness;
+            if (!min_gap_strategy || last_badness_gap < min_badness_gap) {
+                min_badness_gap = last_badness_gap;
+                min_gap_strategy = strategy;
+            }
+        }
+        
+        last_strategy_badness[strategy] = strategy_badness;
+    }
+
+    ASSERT(strategy_times_cache.count(current_winner) == 1);
+    ASSERT(strategy_costs_cache.count(current_winner) == 1);
+    
+    double cur_strategy_time = strategy_times_cache[current_winner];
+    double cur_strategy_cost = strategy_costs_cache[current_winner];
+    double cur_strategy_badness = cur_strategy_time + cur_strategy_cost;
+    bool widening = false;
+    if (min_gap_strategy) {
+        double cur_strategy_gap = cur_strategy_badness - last_strategy_badness[current_winner];
+        widening = (cur_strategy_gap < min_badness_gap);
+    }
+    last_strategy_badness[current_winner] = cur_strategy_badness;
+    return widening;
 }
 
 

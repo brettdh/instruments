@@ -3,12 +3,14 @@
 #include <sys/time.h>
 #include <thread>
 #include <functional>
+#include <map>
 using std::thread;
 using std::max;
 using std::function;
 using std::tie;
 using std::tuple;
 using std::make_tuple;
+using std::map;
 
 #include <instruments.h>
 #include <instruments_private.h>
@@ -362,6 +364,23 @@ get_bound_finder(instruments_estimator_condition_type_t bound_type,
     }
 }
 
+static bool
+strategy_gap_is_widening(instruments_strategy_evaluator_t evaluator_handle,
+                         instruments_strategy_t current_winner_handle,
+                         instruments_estimator_t estimator_handle,
+                         bool redundant, 
+                         map<Strategy *, double>& last_strategy_badnesses)
+{
+    // only useful if I'm in the middle of find_upper_bound, below.
+    
+    StrategyEvaluator *evaluator = static_cast<StrategyEvaluator*>(evaluator_handle);
+    Estimator *estimator = static_cast<Estimator*>(estimator_handle);
+    (void) estimator; // not needed, though the calculation is only changing the bound on one estimator.
+    Strategy *current_winner = static_cast<Strategy*>(current_winner_handle);
+    return evaluator->strategyGapIsWidening(current_winner, redundant,
+                                            last_strategy_badnesses);
+}
+
 static tuple<double, bool> 
 find_upper_bound(instruments_strategy_evaluator_t evaluator,
                  instruments_estimator_t estimator, 
@@ -375,20 +394,43 @@ find_upper_bound(instruments_strategy_evaluator_t evaluator,
     // N is at most DBL_MAX; in practice, it will be much less
     
     instruments_strategy_t winner = current_winner;
-    set_estimator_condition(estimator, bound_type, lower);
+    double upper = lower;
+    if (estimator_has_range_hints(estimator)) {
+        // try to speed this up by picking a higher value to start with
+        Estimator *e = static_cast<Estimator*>(estimator);
+        EstimatorRangeHints hints = e->getRangeHints();
+        upper = hints.max;
+    }
+
+    map<Strategy *, double> last_strategy_badnesses;
+
+    bool valid = true;
+    set_estimator_condition(estimator, bound_type, upper);
     winner = chooser(evaluator, chooser_arg);
     function<bool(instruments_strategy_t)> found_bound = get_bound_finder(bound_type, current_winner);
     while (!found_bound(winner)) {
-        lower = max(lower * 2.0, 1.0);
-        if (isinf(lower)) {
-            return make_tuple(0.0, false);
+        upper = max(upper * 2.0, 1.0);
+        if (isinf(upper)) {
+            valid = false;
+            break;
         }
         clear_estimator_conditions(estimator);
-        set_estimator_condition(estimator, bound_type, lower);
+        set_estimator_condition(estimator, bound_type, upper);
         winner = chooser(evaluator, chooser_arg);
+
+        if (!found_bound(winner) && 
+            strategy_gap_is_widening(evaluator, winner, estimator, 
+                                     (chooser == choose_strategy), last_strategy_badnesses)) {
+            // current winner is best, and the other strategies are getting comparatively worse;
+            //  e.g. redundancy cost is increasing faster than redundancy benefit.
+            // the decision is not going to change (assuming that time and cost are 
+            // monotonic functions of this estimator)
+            valid = false;
+            break;
+        }
     }
     clear_estimator_conditions(estimator);
-    return make_tuple(lower, true);
+    return make_tuple(upper, valid);
 }
 
 
@@ -400,12 +442,6 @@ calculate_tipping_point(instruments_strategy_evaluator_t evaluator,
                         instruments_strategy_t current_winner,
                         void *chooser_arg)
 {
-    // StrategyEvaluator *evaluator = static_cast<StrategyEvaluator*>(evaluator_handle);
-    // Estimator *estimator = static_cast<Estimator*>(estimator_handle);
-    // Strategy *current_winner = static_cast<Strategy*>(current_winner_handle);
-    // Strategy *future_winner = static_cast<Strategy*>(future_winner_handle);
-    // return evaluator->calculateTippingPoint(estimator, bound_type, current_winner, future_winner);
-
     /* First, assume that the evaluator decision is monotonic as a function of a bound on one estimator,
      * (with all others evaluated over their error distributions).  In other words, if wifi beats 3G
      * and I increase the latency bound on wifi, eventually it will be worse than 3G, but it will
@@ -422,25 +458,6 @@ calculate_tipping_point(instruments_strategy_evaluator_t evaluator,
      * I will discover the limits much faster.
      */
     
-    //double estimate = get_estimator_value(NULL, estimator);
-
-    /*
-    double lowest_value, highest_value;
-    if (estimator_has_range_hints(estimator)) {
-        Estimator *est = static_cast<Estimator *>(estimator);
-        EstimatorRangeHints hints = est->getRangeHints();
-
-        // use the range hints to set some loose bounds.  
-        //  hopefully the hints are reasonably good and these work.
-        static const double hedge_factor = 3.0;
-        lowest_value = hints.min / hedge_factor;
-        highest_value = hints.max * hedge_factor;
-    } else {
-        lowest_value = 0.0;
-        highest_value = DBL_MAX;
-    }
-    */
-    
     EstimatorBound bound{0.0, false};
 
     auto chooser = (redundant ? choose_strategy : choose_nonredundant_strategy);
@@ -453,11 +470,11 @@ calculate_tipping_point(instruments_strategy_evaluator_t evaluator,
         assert(bound_type == INSTRUMENTS_ESTIMATOR_VALUE_AT_MOST);
         is_lower_bound = false;
     } 
+
     lower = 0.0;
-    bool valid = false;
-    tie(upper, valid) = find_upper_bound(evaluator, estimator, bound_type, 
-                                         chooser, 0.0, current_winner, chooser_arg);
-    if (!valid) {
+    tie(upper, bound.valid) = find_upper_bound(evaluator, estimator, bound_type, 
+                                               chooser, 0.0, current_winner, chooser_arg);
+    if (!bound.valid) {
         return bound;
     }
     
