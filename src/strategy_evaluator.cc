@@ -285,7 +285,7 @@ StrategyEvaluator::estimatorConditionsChanged(Estimator *estimator)
 }
 
 instruments_strategy_t
-StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
+StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy, bool consider_cost)
 {
     instruments_strategy_t cached_choice = getCachedChoice(chooser_arg, redundancy);
     if (cached_choice) {
@@ -299,13 +299,13 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
     map<instruments_strategy_t, double> strategy_times;
     map<instruments_strategy_t, double> strategy_costs;
 
-    // turn this on and off.  if false, uses time as ranking for singular strategies.
+    // the consider_cost argument turns cost consideration on and off.
+    // if false, we use time as ranking for singular strategies.
     // if true, uses weighted cost function.
     // redundancy eval always uses weighted cost function.
-    const bool OPTIMIZE_WEIGHTED_COST_FUNCTION = true;
 
     // first, pick the singular strategy that takes the least time (expected)
-    // WHOOPS!  I should be picking the singular strategy that minimizes the weighted cost function.
+    //  or minimizes the weighted cost function, depending on consider_cost.
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
 
@@ -325,7 +325,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
             double cost = 0.0;
             bool new_winner = (best_singular == NULL);
 
-            if (OPTIMIZE_WEIGHTED_COST_FUNCTION) {
+            if (consider_cost) {
                 inst::dbgprintf(INFO, "Calculating cost\n");
                 // calculate the singular-strategy cost so I don't have to do it
                 //  later when calculating redundant-strategy costs.

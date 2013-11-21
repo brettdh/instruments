@@ -162,6 +162,14 @@ choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator_handle,
     return evaluator->chooseStrategy(chooser_arg, /* redundancy = */ false);
 }
 
+instruments_strategy_t
+choose_nonredundant_strategy_ignore_cost(instruments_strategy_evaluator_t evaluator_handle,
+                                         void *chooser_arg)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    return evaluator->chooseStrategy(chooser_arg, /* redundancy = */ false, /* consider_cost = */ false);
+}
+
 double
 get_last_strategy_time(instruments_strategy_evaluator_t evaluator_handle,
                        instruments_strategy_t strategy)

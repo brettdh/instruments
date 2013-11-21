@@ -152,6 +152,11 @@ choose_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
 CDECL instruments_strategy_t
 choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
 
+/** Choose and return the best nonredundant strategy, considering only performance and ignoring costs.
+ */
+CDECL instruments_strategy_t
+choose_nonredundant_strategy_ignore_cost(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
+
 /** Returns the calculated completion time for the given strategy. 
  *
  *  This does not begin a new computation; it merely returns

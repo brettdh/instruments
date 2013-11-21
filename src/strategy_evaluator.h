@@ -42,8 +42,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     void setName(const char *name_);
     const char *getName() const;
 
-    // TODO: declare this not-thread-safe?  that seems reasonable.
-    instruments_strategy_t chooseStrategy(void *chooser_arg, bool redundancy=true);
+    instruments_strategy_t chooseStrategy(void *chooser_arg, bool redundancy=true, 
+                                          bool consider_cost=true);
     void chooseStrategyAsync(void *chooser_arg, 
                              instruments_strategy_chosen_callback_t callback,
                              void *callback_arg, bool redundancy=true);
