@@ -289,8 +289,11 @@ class IntNWBehaviorPlot(QDialog):
     
     def __init__(self, run, start, measurements_only, network_trace_file,
                  bandwidth_measurements_file, cross_country_latency, error_history, 
-                 is_server, parent=None):
+                 is_server, appFeatureDrawers, appMeasurementDrawers, parent=None):
         QDialog.__init__(self, parent)
+
+        self._appFeatureDrawers = appFeatureDrawers
+        self._appMeasurementDrawers = appMeasurementDrawers
 
         self._initRegexps()
         self._run = run
@@ -553,6 +556,8 @@ class IntNWBehaviorPlot(QDialog):
             else:
                 self._plotMeasurements()
 
+            self._drawAppMeasurements()
+
             self._axes.set_xlabel("Time (seconds)")
             self._axes.set_ylabel(self._getYAxisLabel())
             if self._show_legend.isChecked():
@@ -569,6 +574,7 @@ class IntNWBehaviorPlot(QDialog):
             self._drawSessions()
             self._drawRedundancyDecisions()
             self._drawRadioSwitches()
+            self._drawAppFeatures()
 
             max_time = self._session_axes.get_ylim()[1]
             if self._user_set_max_time:
@@ -594,6 +600,14 @@ class IntNWBehaviorPlot(QDialog):
             self._session_axes.set_xlim(*xlims)
 
         self._canvas.draw()
+
+    def _drawAppFeatures(self):
+        for drawer in self._appFeatureDrawers:
+            drawer(self._run-1, self, self._axes)
+
+    def _drawAppMeasurements(self):
+        for drawer in self._appMeasurementDrawers:
+            drawer(self._run-1, self, self._axes)
 
     def saveErrorTable(self):
         for network_type, metric in network_metric_pairs():
@@ -1880,7 +1894,11 @@ class AppPlotter(object):
         self._radio_logs = args.radio_log
         self._cross_country_latency = args.cross_country_latency
         self._history_dir = args.history
-        
+
+        # subclasses may append functions here to draw extra data
+        #  functions should be void(IntNWBehaviorPlot, matplotlib.Axes)
+        self._appFeatureDrawers = []
+        self._appMeasurementDrawers = []
 
     def readLogs(self):
         self._readIntNWLog()
@@ -2015,7 +2033,9 @@ class AppPlotter(object):
                                                self._network_trace_file,
                                                self._bandwidth_measurements_file,
                                                self._cross_country_latency,
-                                               error_history, self._is_server)
+                                               error_history, self._is_server,
+                                               self._appFeatureDrawers,
+                                               self._appMeasurementDrawers)
                     self._windows.append(window)
                     window_num = len(self._windows) - 1
                     if session_runs:
