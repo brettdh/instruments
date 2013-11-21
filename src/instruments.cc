@@ -4,7 +4,6 @@
 #include <thread>
 #include <functional>
 #include <map>
-#include <math.h>
 using std::thread;
 using std::max;
 using std::function;
@@ -12,6 +11,14 @@ using std::tie;
 using std::tuple;
 using std::make_tuple;
 using std::map;
+
+#ifdef ANDROID
+// WHAT.  why is the necessary?  bleh.
+#include <cmath>
+using std::isinf;
+#else
+#include <math.h>
+#endif
 
 #include <instruments.h>
 #include <instruments_private.h>
