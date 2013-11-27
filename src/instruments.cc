@@ -296,6 +296,20 @@ restore_evaluator(instruments_strategy_evaluator_t evaluator_handle, const char 
     evaluator->restoreFromFile(filename);
 }
 
+void
+reset_to_no_error(instruments_estimator_t estimator_handle)
+{
+    Estimator *estimator = static_cast<Estimator *>(estimator_handle);
+    estimator->resetToNoError();
+}
+
+void
+reset_to_historical_error(instruments_estimator_t estimator_handle, const char *filename)
+{
+    Estimator *estimator = static_cast<Estimator *>(estimator_handle);
+    estimator->resetToHistoricalError(filename);
+}
+
 
 static instruments_estimator_t
 get_coin_flip_heads_estimator()

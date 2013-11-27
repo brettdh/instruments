@@ -25,6 +25,7 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     virtual void processObservation(Estimator *estimator, double observation,
                                     double old_estimate, double new_estimate);
     virtual void processEstimatorConditionsChange(Estimator *estimator);
+    virtual void processEstimatorReset(Estimator *estimator, const char *filename);
   private:
     enum BoundType {
         LOWER=0, UPPER, CENTER
@@ -50,12 +51,16 @@ class ConfidenceBoundsStrategyEvaluator : public StrategyEvaluator {
     double evaluateBounded(BoundType bound_type, typesafe_eval_fn_t fn,
                            void *strategy_arg, void *chooser_arg);
 
+    ErrorConfidenceBounds *getBounds(Estimator *estimator);
+
     void setConditionalBounds();
     void clearConditionalBounds();
 
     void *last_chooser_arg;
     std::map<std::tuple<Strategy*, typesafe_eval_fn_t, ComparisonType>, double> cache;
     void clearCache();
+
+    virtual void restoreFromFileImpl(const char *filename, const std::string& estimator_name);
 
     bool weighted;
 };

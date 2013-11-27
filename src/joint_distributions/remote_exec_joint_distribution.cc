@@ -560,6 +560,28 @@ RemoteExecJointDistribution::processEstimatorConditionsChange(Estimator *estimat
     clearEstimatorSamplesDistributions();
 }
 
+void 
+RemoteExecJointDistribution::processEstimatorReset(Estimator *estimator, const char *filename)
+{
+    clearEstimatorSamplesDistributions();
+    if (filename) {
+        ifstream in(filename);
+        if (!in) {
+            ostringstream oss;
+            oss << "Failed to open " << filename;
+            throw runtime_error(oss.str());
+        }
+        
+        restoreFromFile(in, estimator->getName());
+    } else {
+        if (estimatorSamples.count(estimator) > 0) {
+            delete estimatorSamples[estimator];
+            estimatorSamples.erase(estimator);
+        }
+        // default no-error value will be added later before it's actually used
+    }
+}
+
 void
 RemoteExecJointDistribution::saveToFile(ofstream& out)
 {
@@ -608,6 +630,12 @@ RemoteExecJointDistribution::getExistingEstimator(const string& key)
 void 
 RemoteExecJointDistribution::restoreFromFile(ifstream& in)
 {
+    restoreFromFile(in, "");
+}
+
+void 
+RemoteExecJointDistribution::restoreFromFile(ifstream& in, const string& estimator_name)
+{
     try {
         size_t num_estimators = 0;
         string dummy;
@@ -618,13 +646,17 @@ RemoteExecJointDistribution::restoreFromFile(ifstream& in)
             StatsDistribution *dist = createSamplesDistribution();
             key = dist->restoreFromFile(in);
             
-            Estimator *estimator = getExistingEstimator(key);
-            if (estimator) {
-                assert(estimatorSamples.count(estimator) > 0);
-                delete estimatorSamples[estimator];
-                estimatorSamples[estimator] = dist;
+            if (estimator_name.empty() || estimator_name == key) {
+                Estimator *estimator = getExistingEstimator(key);
+                if (estimator) {
+                    assert(estimatorSamples.count(estimator) > 0);
+                    delete estimatorSamples[estimator];
+                    estimatorSamples[estimator] = dist;
+                } else {
+                    estimatorSamplesPlaceholders[key] = dist;
+                }
             } else {
-                estimatorSamplesPlaceholders[key] = dist;
+                delete dist;
             }
         }
 

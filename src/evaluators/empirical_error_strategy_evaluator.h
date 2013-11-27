@@ -25,6 +25,8 @@ class EmpiricalErrorStrategyEvaluator : public StrategyEvaluator {
     virtual void processObservation(Estimator *estimator, double observation, 
                                     double old_estimate, double new_estimate);
     virtual void processEstimatorConditionsChange(Estimator *estimator);
+    virtual void processEstimatorReset(Estimator *estimator, const char *filename);
+
     virtual void setStrategies(const instruments_strategy_t *strategies_,
                                size_t num_strategies_);
 

@@ -68,6 +68,9 @@ class Estimator {
 
     // returns upper bound on estimator if set, or DBL_MAX if none.
     double getUpperBound();
+
+    void resetToNoError();
+    void resetToHistoricalError(const char *filename);
   protected:
     Estimator(const std::string& name_);
 

@@ -22,6 +22,7 @@ class AbstractJointDistribution : public StrategyEvaluationContext {
     virtual void processObservation(Estimator *estimator, double observation, 
                                     double old_estimate, double new_estimate) = 0;
     virtual void processEstimatorConditionsChange(Estimator *estimator) = 0;
+    virtual void processEstimatorReset(Estimator *estimator, const char *filename) {}
 
     virtual void saveToFile(std::ofstream& out) = 0;
     virtual void restoreFromFile(std::ifstream& in) = 0;

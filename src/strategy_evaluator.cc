@@ -284,6 +284,21 @@ StrategyEvaluator::estimatorConditionsChanged(Estimator *estimator)
     processEstimatorConditionsChange(estimator);
 }
 
+void 
+StrategyEvaluator::resetToNoError(Estimator *estimator)
+{
+    resetToHistoricalError(estimator, nullptr);
+}
+
+void 
+StrategyEvaluator::resetToHistoricalError(Estimator *estimator, const char *filename)
+{
+    clearCache();
+
+    PthreadScopedLock lock(&evaluator_mutex);
+    processEstimatorReset(estimator, filename);
+}
+
 instruments_strategy_t
 StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy, bool consider_cost)
 {
