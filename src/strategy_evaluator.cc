@@ -211,6 +211,7 @@ instruments_strategy_t
 StrategyEvaluator::getCachedChoice(void *chooser_arg, bool redundancy)
 {
     PthreadScopedLock lock(&cache_mutex);
+    
     auto& cache = (redundancy ? redundant_choice_cache : nonredundant_choice_cache);
 
     auto it = cache.find(chooser_arg);
@@ -258,11 +259,14 @@ StrategyEvaluator::clearCache()
             chooser_arg_fns.delete_chooser_arg(my_copy);
         }
     }
+
     nonredundant_choice_cache.clear();
     redundant_choice_cache.clear();
-    
-    strategy_times_cache.clear();
-    strategy_costs_cache.clear();
+
+    // don't clear the last-time and last-energy caches,
+    // since they're not really invalidated; they are just
+    // used as the *last* values computed, not to make
+    // a new strategy decision.
 }
 
 void
