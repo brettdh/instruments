@@ -5,6 +5,10 @@
 //  make a (relatively) performant 3-way loop.
 // (I think. Just copying this to reuse with remote-exec.)
 
+#ifdef DEBUG_REMOTE_EXEC_LOOP
+void RemoteExecJointDistribution::FN_BODY_WITH_COMBINER(double& weightedSum, double (*COMBINER)(double, double), size_t saved_value_type) {
+#endif
+
 #define FN_BODY_WITH_COMBINER(weightedSum, COMBINER, saved_value_type) \
     assert(local_strategy_saved_values != NULL);                  \
     assert(remote_strategy_saved_values != NULL);                  \
@@ -40,5 +44,9 @@
             }                                                           \
         }                                                               \
     }
+
+#ifdef DEBUG_REMOTE_EXEC_LOOP
+}
+#endif
 
 #endif

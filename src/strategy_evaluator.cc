@@ -289,17 +289,18 @@ StrategyEvaluator::estimatorConditionsChanged(Estimator *estimator)
 }
 
 void 
-StrategyEvaluator::resetToNoError(Estimator *estimator)
-{
-    resetToHistoricalError(estimator, nullptr);
-}
-
-void 
-StrategyEvaluator::resetToHistoricalError(Estimator *estimator, const char *filename)
+StrategyEvaluator::resetError(Estimator *estimator)
 {
     clearCache();
 
     PthreadScopedLock lock(&evaluator_mutex);
+    const char *filename = nullptr;
+    if (!last_history_filename.empty()) {
+        filename = last_history_filename.c_str();
+    }
+
+    inst::dbgprintf(INFO, "evaluator %s resetting estimator %s to %s error\n", 
+                    name.c_str(), estimator->getName().c_str(), filename ? "historical" : "no");
     processEstimatorReset(estimator, filename);
 }
 
@@ -437,7 +438,11 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy, bool consi
                 //  the singular strategy can never have a lower time, and
                 //  the redundant strategy can never have a lower cost.
                 // if either happens, the strategy evaluator is broken.
-                ASSERT(benefit >= -0.0001); // tolerate floating-point inaccuracy
+                
+                //ASSERT(benefit >= -0.0001); // tolerate floating-point inaccuracy
+                // if a singular strategy is best and has no error, the noise may be greater,
+                //  since redundancy will never give positive benefit.
+                
                 ASSERT(extra_redundant_cost >= -0.0001);
             }
 
@@ -608,6 +613,7 @@ void
 StrategyEvaluator::restoreFromFile(const char *filename)
 {
     clearCache();
+    last_history_filename = filename;
     restoreFromFileImpl(filename);
 }
 

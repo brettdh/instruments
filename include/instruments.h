@@ -362,8 +362,11 @@ CDECL void set_estimator_condition(instruments_estimator_t estimator,
  */
 CDECL void clear_estimator_conditions(instruments_estimator_t estimator);
 
-CDECL void reset_to_no_error(instruments_estimator_t estimator_handle);
-CDECL void reset_to_historical_error(instruments_estimator_t estimator_handle, const char *filename);
+/** Reset error for this estimator -- either to no error or historical error values,
+ *  depending on whether the evaluators that use this estimator have previously
+ *  restored error from a history file.
+ */
+CDECL void reset_estimator_error(instruments_estimator_t estimator_handle);
 
 #include "estimator_bound.h"
 

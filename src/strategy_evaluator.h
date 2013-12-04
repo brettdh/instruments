@@ -78,8 +78,7 @@ class StrategyEvaluator : public StrategyEvaluationContext {
                           double old_estimate, double new_estimate);
     void estimatorConditionsChanged(Estimator *estimator);
 
-    void resetToNoError(Estimator *estimator);
-    void resetToHistoricalError(Estimator *estimator, const char *filename);
+    void resetError(Estimator *estimator);
     
     virtual void saveToFile(const char *filename) = 0;
 
@@ -103,6 +102,9 @@ class StrategyEvaluator : public StrategyEvaluationContext {
 
     // TODO: change to a better default.
     const static EvalMethod DEFAULT_EVAL_METHOD = TRUSTED_ORACLE;
+
+    // used for resetting estimator error to historical values, per-evaluator.
+    std::string last_history_filename;
 
   private:
     double calculateTime(Strategy *strategy, void *chooser_arg, ComparisonType comparison_type);

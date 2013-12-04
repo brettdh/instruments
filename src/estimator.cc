@@ -280,19 +280,10 @@ Estimator::getConditionalBound()
 }
 
 void
-Estimator::resetToNoError()
+Estimator::resetError()
 {
     PthreadScopedLock guard(&subscribers_mutex);
     for (StrategyEvaluator *subscriber : subscribers) {
-        subscriber->resetToNoError(this);
-    }
-}
-
-void 
-Estimator::resetToHistoricalError(const char *filename)
-{
-    PthreadScopedLock guard(&subscribers_mutex);
-    for (StrategyEvaluator *subscriber : subscribers) {
-        subscriber->resetToHistoricalError(this, filename);
+        subscriber->resetError(this);
     }
 }
