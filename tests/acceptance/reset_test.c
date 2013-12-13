@@ -149,22 +149,25 @@ static void run_reset_test(CTEST_DATA(reset_test) *data,
     const char *history_filename = "/tmp/history_for_reset.txt";
     save_evaluator(evaluator, history_filename);
 
-    reset_to_no_error(data->hilo_estimator);
+    reset_estimator_error(data->hilo_estimator);
     check_chosen_strategy(evaluator, method, strategies[0], "Failed to choose mid strategy after resetting error (last high measurement)");
 
     double hilo_value = frandom_in(1.0, 2.0);
     add_observation(data->hilo_estimator, hilo_value, hilo_value);
     check_chosen_strategy(evaluator, method, strategies[1], "Failed to choose hilo strategy after resetting error");
 
-    reset_to_no_error(data->hilo_estimator);
+    reset_estimator_error(data->hilo_estimator);
 
     hilo_value = frandom_in(20.0, 21.0);
     add_observation(data->hilo_estimator, hilo_value, hilo_value);
     check_chosen_strategy(evaluator, method, strategies[0], "Failed to choose mid strategy after resetting error and high measurement");
 
-    reset_to_historical_error(data->hilo_estimator, history_filename);
+    restore_evaluator(evaluator, history_filename);
+    reset_estimator_error(data->hilo_estimator);
     check_chosen_strategy(evaluator, method, strategies[0], "Failed to choose mid strategy after resetting error to historical values");
-    
+
+    // debugging crash
+    choose_strategy(evaluator, NULL);
 }
 
 CTEST2(reset_test, reset_test_brute_force)
