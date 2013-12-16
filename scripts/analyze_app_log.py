@@ -570,21 +570,24 @@ class IntNWBehaviorPlot(QDialog):
         else:
             self._setupAxes()
             self._setTraceEnd()
+            self._drawWifi()
             self._drawIROBs()
             self._drawSessions()
             self._drawRedundancyDecisions()
             self._drawRadioSwitches()
             self._drawAppFeatures()
 
-            max_time = self._session_axes.get_ylim()[1]
+            session_axes = self._getSessionAxes()
+            max_time = session_axes.get_ylim()[1]
             if self._user_set_max_time:
                 max_time = self._user_set_max_time
-            self._session_axes.set_ylim(0.0, max_time)
+            session_axes.set_ylim(0.0, max_time)
+            session_axes.set_ylabel("Request/response time (seconds)")
+
+            self._axes.set_xlabel("Time (seconds)")
 
             if self._show_debugging.isChecked():
                 self._drawDebugging()
-
-            self._drawWifi()
 
         #max_trace_duration = self._session_axes.get_xlim()[1]
         if self._user_set_max_trace_duration:
@@ -597,9 +600,12 @@ class IntNWBehaviorPlot(QDialog):
         xlims = [-buffer, max_trace_duration + buffer]
         self._axes.set_xlim(*xlims)
         if not self._measurements_only:
-            self._session_axes.set_xlim(*xlims)
+            self._getSessionAxes().set_xlim(*xlims)
 
         self._canvas.draw()
+
+    def save(self, filename):
+        self._figure.savefig("%s_%d.eps" % (filename, self._run), dpi=300, bbox_inches="tight")
 
     def _drawAppFeatures(self):
         for drawer in self._appFeatureDrawers:
@@ -1309,7 +1315,11 @@ class IntNWBehaviorPlot(QDialog):
         vertical_bounds = self._axes.get_ylim()
         height = [vertical_bounds[0] - self._irob_height / 2.0,
                   vertical_bounds[1] - vertical_bounds[0] + self._irob_height]
-        self._axes.broken_barh(bars, height, color="green", alpha=0.2)
+
+        #wifiColor, alpha, linewidth = "green", 0.2, 1.0
+        wifiColor, alpha, linewidth = (0.8, 1.0, 0.8), 1.0, 0.0
+        self._axes.broken_barh(bars, height, color=wifiColor, alpha=alpha,
+                               edgecolor="black", linewidth=linewidth)
 
     def printStats(self):
         if self._choose_network_calls:
@@ -1338,12 +1348,20 @@ class IntNWBehaviorPlot(QDialog):
         def duration(session):
             return session['end'] - session['start']
 
+        def perc_str(sessions, num_sessions):
+            if num_sessions:
+                perc_str = (" (%.2f%%)" % (len(sessions) / float(num_sessions) * 100))
+            else:
+                perc_str = "0.00%"
+                
+            return perc_str
+
         # XXX: could do this more efficiently by marking it
         # XXX: when we first read the log.
         single_network_sessions = filter(one_network_only, self._sessions)
-        print ("Single network sessions: %d/%d (%.2f%%), total time %f seconds" %
+        print ("Single network sessions: %d/%d%s, total time %f seconds" %
                (len(single_network_sessions), num_sessions,
-                len(single_network_sessions)/float(num_sessions) * 100,
+                perc_str(single_network_sessions, num_sessions),
                 sum([duration(s) for s in single_network_sessions])))
 
 
@@ -1377,9 +1395,9 @@ class IntNWBehaviorPlot(QDialog):
             return fail
 
         failover_sessions = filter(failed_over, self._sessions)
-        print ("Failover sessions: %d/%d (%.2f%%), total %f seconds" %
+        print ("Failover sessions: %d/%d%s, total %f seconds" %
                (len(failover_sessions), num_sessions,
-                len(failover_sessions)/float(num_sessions) * 100,
+                perc_str(failover_sessions, num_sessions),
                 sum([duration(s) for s in failover_sessions])))
         
         # check the sessions that started in a single-network period
@@ -1398,9 +1416,9 @@ class IntNWBehaviorPlot(QDialog):
             return False
 
         reevaluation_sessions = filter(needed_reevaluation, self._sessions)
-        print ("Needed-reevaluation sessions: %d/%d (%.2f%%)" %
+        print ("Needed-reevaluation sessions: %d/%d%s" %
                (len(reevaluation_sessions), num_sessions,
-                len(reevaluation_sessions)/float(num_sessions) * 100))
+                perc_str(reevaluation_sessions, num_sessions)))
 
         # TODO: print average wifi, 3G session times
 
@@ -1795,28 +1813,31 @@ class IntNWBehaviorPlot(QDialog):
     
     def _addIROB(self, timestamp, network_type, irob_id, direction):
         # TODO: deal with the case where the IROB announcement arrives after the data
-        irob = self._getIROBOrThrow(network_type, irob_id, direction, start=timestamp)
-        dprint("Adding %s at %f" % (irob, timestamp))
+        irob = self._getIROB(network_type, irob_id, direction, start=timestamp)
+        if irob:
+            dprint("Adding %s at %f" % (irob, timestamp))
 
 
     def _addIROBBytes(self, timestamp, network_type, irob_id, datalen, direction):
         # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
         # XXX: this is double-counting when chunk messages do appear.  fix it.
         # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-        irob = self._getIROBOrThrow(network_type, irob_id, direction)
-        irob.addBytes(timestamp, datalen)
+        irob = self._getIROB(network_type, irob_id, direction)
+        if irob:
+            irob.addBytes(timestamp, datalen)
 
     def _finishReceivedIROB(self, timestamp, network_type, irob_id, expected_bytes):
-        irob = self._getIROBOrThrow(network_type, irob_id, 'down')
-        irob.finish(timestamp, expected_bytes)
+        irob = self._getIROB(network_type, irob_id, 'down')
+        if irob:
+            irob.finish(timestamp, expected_bytes)
 
-        # "finish" the IROB by marking it ACK'd.
-        # Strictly speaking, a received IROB isn't "finished" until
-        #  all expected bytes are received, but until the end_irob messasge
-        #  arrives, we don't know how many to expect, so we hold off on
-        #  marking it finished until then.
-        dprint("Finished %s at %f" % (irob, timestamp))
-        irob.ack(timestamp)
+            # "finish" the IROB by marking it ACK'd.
+            # Strictly speaking, a received IROB isn't "finished" until
+            #  all expected bytes are received, but until the end_irob messasge
+            #  arrives, we don't know how many to expect, so we hold off on
+            #  marking it finished until then.
+            dprint("Finished %s at %f" % (irob, timestamp))
+            irob.ack(timestamp)
 
     def _markDroppedIROBs(self, timestamp, network_type):
         for direction in ['down', 'up']:
@@ -1825,9 +1846,10 @@ class IntNWBehaviorPlot(QDialog):
                     irob.markDropped(timestamp)
 
     def _ackIROB(self, timestamp, network_type, irob_id, direction):
-        irob = self._getIROBOrThrow(network_type, irob_id, direction)
-        irob.ack(timestamp)
-        dprint("Acked %s at %f" % (irob, timestamp))
+        irob = self._getIROB(network_type, irob_id, direction)
+        if irob:
+            irob.ack(timestamp)
+            dprint("Acked %s at %f" % (irob, timestamp))
 
 class RedundancyDecision(object):
     def __init__(self, timestamp):
@@ -2027,7 +2049,11 @@ class AppPlotter(object):
                             self._windows[-1].setRadioSwitches(radio_switches)
 
 
-                    start = session_runs[len(self._windows)][0]['start']
+                    cur_sessions = session_runs[len(self._windows)]
+                    if cur_sessions:
+                        start = session_runs[len(self._windows)][0]['start']
+                    else:
+                        start = getTimestamp(line)
                     window = IntNWBehaviorPlot(len(self._windows) + 1, start, 
                                                self._measurements_only,
                                                self._network_trace_file,
@@ -2060,6 +2086,10 @@ class AppPlotter(object):
                 e = LogParsingError(repr(e) + ": " + str(e))
                 e.setLine(linenum + 1, line)
                 raise e, None, trace
+
+    def save(self, filename):
+        for window in self._windows:
+            window.save(filename)
 
     def show(self):
         for window in self._windows:
@@ -2100,6 +2130,7 @@ def main(args, args_list, plotter_class):
                               +" {client,server}_error_distributions.txt"))
     parser.add_argument("--radio-log", default=None)
     parser.add_argument("-d", "--debug", action="store_true", default=False)
+    parser.add_argument("--saveFile")
     parser.parse_args(args_list, namespace=args)
 
     global debug
@@ -2113,6 +2144,9 @@ def main(args, args_list, plotter_class):
     
     plotter = plotter_class(args)
     plotter.readLogs()
+    if args.saveFile:
+        plotter.save(args.saveFile)
+        
     if not args.noplot:
         plotter.show()
         app.exec_()

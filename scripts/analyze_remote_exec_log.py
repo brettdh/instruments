@@ -26,19 +26,23 @@ class RemoteExecPlotter(AppPlotter):
     def _initParsers(self):
         self._parsers = {
             (lambda line: "Recognizing utterance" in line): self._parseSpeechEnd,
-            (lambda line: "Done with" in line): self._parseRecognitionEnd,
+            (lambda line: "Done with output_" in line): self._parseRecognitionEnd,
             (lambda line: "Starting UTT" in line): self._parseDecoderStart,
             (lambda line: "finished decoding" in line): self._parseDecoderEnd,
             (lambda line: "failed decoding" in line): self._parseDecoderFailure,
             (lambda line: "Terminate was called" in line): self._parseDecoderCancelled,
             (lambda line: "Manually terminated" in line): self._parseDecoderCancelled,
+            (lambda line: "Wifi lost" in line): self._parseWifiLost,
         }
+
+    def _lineStartsNewSessionsRun(self, line):
+        return "Starting experiment" in line or "Speech server starting up" in line
 
     def _readSessions(self):
         self._runs = []
         sessions = []
         for linenum, line in enumerate(open(self._app_client_log).readlines()):
-            if "Starting experiment" in line:
+            if self._lineStartsNewSessionsRun(line):
                 sessions = []
                 decodings = {}
                 failures = []
@@ -47,13 +51,17 @@ class RemoteExecPlotter(AppPlotter):
                 self._decodings.append(decodings)
                 self._failures.append(failures)
                 self._cancellations.append(cancellations)
+                self._remote_decodings = {}
                 continue
                 
             fields = line.strip().split()
-            timestamp = float(fields[0][1:-1]) / 1000.0
-
+            if not fields:
+                continue
+            
             for predicate in self._parsers:
                 if predicate(line):
+                    timestamp = float(fields[0][1:-1]) / 1000.0
+
                     self._parsers[predicate](timestamp, line, fields)
 
         return self._runs
@@ -79,12 +87,26 @@ class RemoteExecPlotter(AppPlotter):
         decodings = self._decodings[-1]
         if type not in decodings:
             decodings[type] = []
-        decodings[type].append({'start': timestamp, 'end': None, 'type': type})
+        decoding = {'start': timestamp, 'end': None, 'type': type}
+        decodings[type].append(decoding)
+        if type == "RemoteDecoder":
+            filename = self._getDecoderFilename(fields)
+            decoding['filename'] = filename
+            if filename not in self._remote_decodings:
+                self._remote_decodings[filename] = decoding
 
     def _parseDecoderEnd(self, timestamp, line, fields):
         type = self._getDecoderType(fields)
         decodings = self._decodings[-1]
+        if type not in decodings:
+            return None
+
         cur_decoding = decodings[type][-1]
+        if 'filename' in cur_decoding:
+            filename = cur_decoding['filename']
+            if filename in self._remote_decodings:
+                del self._remote_decodings[filename]
+
         if cur_decoding['end']:
             return None
         else:
@@ -101,8 +123,22 @@ class RemoteExecPlotter(AppPlotter):
         if cancelled_decoding:
             self._cancellations[-1].append(cancelled_decoding)
 
+    def _parseWifiLost(self, timestamp, line, fields):
+        filename = self._getDecoderFilename(fields)
+        if filename in self._remote_decodings:
+            decoding = self._remote_decodings[filename]
+            if "wifi_loss" not in decoding:
+                decoding["wifi_loss"] = timestamp
+            
+
+    decoder_type_re = re.compile("((?:Local|Remote)Decoder)")
     def _getDecoderType(self, fields):
-        return fields[1].replace(":", "")
+        return self.decoder_type_re.search(fields[1]).group(1)
+
+    filename_re = re.compile("RemoteDecoder\[(.+)\]")
+    def _getDecoderFilename(self, fields):
+        match = self.filename_re.search(fields[1])
+        return match.group(1) if match else None
 
     def _drawRecognitions(self, run, intnw_window, axes):
         ylim = axes.get_ylim()
@@ -118,11 +154,37 @@ class RemoteExecPlotter(AppPlotter):
         }
         
         decodings = self._decodings[run]
+
+        def get_start(decoding):
+            return intnw_window.getAdjustedTime(decoding['start'])
+            
+        fake_length = 10.0
+        def get_length(decoding):
+            if decoding['end']:
+                return decoding['end'] - decoding['start']
+            elif "wifi_loss" in decoding:
+                return decoding['wifi_loss'] - decoding['start']
+            else:
+                unending_decodings.append(decoding)
+                return fake_length # fake, just have something for these weird ones
+                
+
+        unending_decodings = []
         for decoder_type in decodings:
             cur_decodings = decodings[decoder_type]
-            bars = [[intnw_window.getAdjustedTime(d['start']), 
-                     d['end'] - d['start']] for d in cur_decodings]
-            axes.broken_barh(bars, [positions[decoder_type], height], color=colors[decoder_type])
+            for decoding in cur_decodings:
+                if not decoding['end'] and "wifi_lost" in decoding:
+                    decoding['end'] = decoding['wifi_lost']
+                
+            bars = [[get_start(d), get_length(d)] for d in cur_decodings]
+            axes.broken_barh(bars, [positions[decoder_type], height], color=colors[decoder_type],
+                             linewidth=0.33, edgecolor="black")
+
+        if unending_decodings:
+            fake_endings = [get_start(d) + fake_length for d in unending_decodings]
+            fake_end_positions = [positions[d['type']] + height / 2.0 for d in unending_decodings]
+            axes.plot(fake_endings, fake_end_positions, marker='?',
+                      markersize=10, markeredgewidth=2, linestyle='none')
 
         fail_times = []
         fail_positions = []
@@ -146,6 +208,7 @@ class RemoteExecPlotter(AppPlotter):
         
 def main():
     parser = ArgumentParser()
+    parser.add_argument("--server", action="store_true", default=False)
     # no args specific to the remote-exec app
     args, args_list = parser.parse_known_args()
     analyze_app_log.main(args, args_list, RemoteExecPlotter)
