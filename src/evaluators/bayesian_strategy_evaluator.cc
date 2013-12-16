@@ -4,8 +4,10 @@
 #include "debug.h"
 #include "timeops.h"
 #include "stopwatch.h"
+#include "error_weight_params.h"
 namespace inst = instruments;
 using inst::INFO; using inst::DEBUG;
+using inst::MAX_SAMPLES;
 
 #include <vector>
 #include <map>
@@ -283,6 +285,8 @@ BayesianStrategyEvaluator::clearDistributions()
     }
     estimatorSamples.clear();
     last_estimator_values.clear();
+    ordered_observations.clear();
+    num_historical_observations = 0;
 
     likelihood->clear();
     normalizer->clear();
@@ -375,6 +379,41 @@ BayesianStrategyEvaluator::processObservation(Estimator *estimator, double obser
     ordered_observations.push_back({estimator->getName(), observation, old_estimate, new_estimate});
 
     simple_evaluator->setEstimatorValue(estimator, new_estimate);
+}
+
+void 
+BayesianStrategyEvaluator::processEstimatorReset(Estimator *estimator, const char *filename)
+{
+    decltype(ordered_observations) replay_observations;
+    if (filename) {
+        // get all observations since the last restore
+        replay_observations.assign(ordered_observations.begin() + num_historical_observations, 
+                                   ordered_observations.end());
+        
+        restoreFromFileImpl(filename);
+    } else {
+        replay_observations = ordered_observations;
+        clearDistributions();
+    }
+        
+    string estimator_name = estimator->getName();
+    
+    // make sure there's at least one observation for this estimator 
+    //  (the first one among the ones we're choosing not to replay)
+    bool no_observations = (!filename);
+    
+    // replay the observations for all other estimators
+    for (auto& obs : replay_observations) {
+        if (obs.estimator_name != estimator_name || no_observations) {
+            Estimator *other_estimator = getEstimator(obs.estimator_name);
+            processObservation(other_estimator, 
+                               obs.observation, obs.old_estimate, obs.new_estimate);
+
+            if (no_observations && obs.estimator_name == estimator_name) {
+                no_observations = false;
+            }
+        }
+    }
 }
 
 StatsDistributionBinned *
@@ -833,7 +872,7 @@ BayesianStrategyEvaluator::saveToFile(const char *filename)
     out << ordered_observations.size() << " observations" << endl;
     out << "name observation old_estimate new_estimate" << endl;
     for (const stored_observation& obs : ordered_observations) {
-        out << obs.name << " " << setprecision(PRECISION) 
+        out << obs.estimator_name << " " << setprecision(PRECISION) 
             << obs.observation << " ";
         write_estimate(out, obs.old_estimate);
         write_estimate(out, obs.new_estimate);
@@ -892,11 +931,13 @@ BayesianStrategyEvaluator::restoreFromFileImpl(const char *filename)
            read_estimate(in, old_estimate) &&
            read_estimate(in, new_estimate)) {
         Estimator *estimator = getEstimator(name);
-        observationAdded(estimator, observation, old_estimate, new_estimate);
+        processObservation(estimator, observation, old_estimate, new_estimate);
         ++i;
     }
     in.close();
     check(num_observations == i, "Got wrong number of observations");
+    
+    num_historical_observations = ordered_observations.size();
 }
 
 Estimator *

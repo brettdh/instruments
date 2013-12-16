@@ -42,8 +42,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     void setName(const char *name_);
     const char *getName() const;
 
-    // TODO: declare this not-thread-safe?  that seems reasonable.
-    instruments_strategy_t chooseStrategy(void *chooser_arg, bool redundancy=true);
+    instruments_strategy_t chooseStrategy(void *chooser_arg, bool redundancy=true, 
+                                          bool consider_cost=true);
     void chooseStrategyAsync(void *chooser_arg, 
                              instruments_strategy_chosen_callback_t callback,
                              void *callback_arg, bool redundancy=true);
@@ -77,6 +77,8 @@ class StrategyEvaluator : public StrategyEvaluationContext {
     void observationAdded(Estimator *estimator, double observation, 
                           double old_estimate, double new_estimate);
     void estimatorConditionsChanged(Estimator *estimator);
+
+    void resetError(Estimator *estimator);
     
     virtual void saveToFile(const char *filename) = 0;
 
@@ -96,9 +98,13 @@ class StrategyEvaluator : public StrategyEvaluationContext {
                                     double old_estimate, double new_estimate) { /* ignore by default */ }
     virtual void processEstimatorConditionsChange(Estimator *estimator) { /* ignore by default */ }
     virtual void restoreFromFileImpl(const char *filename) = 0;
+    virtual void processEstimatorReset(Estimator *estimator, const char *filename) {/* ignore by default */}
 
     // TODO: change to a better default.
     const static EvalMethod DEFAULT_EVAL_METHOD = TRUSTED_ORACLE;
+
+    // used for resetting estimator error to historical values, per-evaluator.
+    std::string last_history_filename;
 
   private:
     double calculateTime(Strategy *strategy, void *chooser_arg, ComparisonType comparison_type);

@@ -152,6 +152,11 @@ choose_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
 CDECL instruments_strategy_t
 choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
 
+/** Choose and return the best nonredundant strategy, considering only performance and ignoring costs.
+ */
+CDECL instruments_strategy_t
+choose_nonredundant_strategy_ignore_cost(instruments_strategy_evaluator_t evaluator, void *chooser_arg);
+
 /** Returns the calculated completion time for the given strategy. 
  *
  *  This does not begin a new computation; it merely returns
@@ -356,6 +361,12 @@ CDECL void set_estimator_condition(instruments_estimator_t estimator,
 /** Clear all conditions on this estimator set by set_estimator_condition.
  */
 CDECL void clear_estimator_conditions(instruments_estimator_t estimator);
+
+/** Reset error for this estimator -- either to no error or historical error values,
+ *  depending on whether the evaluators that use this estimator have previously
+ *  restored error from a history file.
+ */
+CDECL void reset_estimator_error(instruments_estimator_t estimator_handle);
 
 #include "estimator_bound.h"
 

@@ -78,6 +78,12 @@ EmpiricalErrorStrategyEvaluator::processEstimatorConditionsChange(Estimator *est
     jointDistribution->processEstimatorConditionsChange(estimator);
 }
 
+void 
+EmpiricalErrorStrategyEvaluator::processEstimatorReset(Estimator *estimator, const char *filename)
+{
+    jointDistribution->processEstimatorReset(estimator, filename);
+}
+
 
 double
 EmpiricalErrorStrategyEvaluator::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn, 

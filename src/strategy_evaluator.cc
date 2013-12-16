@@ -211,6 +211,7 @@ instruments_strategy_t
 StrategyEvaluator::getCachedChoice(void *chooser_arg, bool redundancy)
 {
     PthreadScopedLock lock(&cache_mutex);
+    
     auto& cache = (redundancy ? redundant_choice_cache : nonredundant_choice_cache);
 
     auto it = cache.find(chooser_arg);
@@ -258,11 +259,14 @@ StrategyEvaluator::clearCache()
             chooser_arg_fns.delete_chooser_arg(my_copy);
         }
     }
+
     nonredundant_choice_cache.clear();
     redundant_choice_cache.clear();
-    
-    strategy_times_cache.clear();
-    strategy_costs_cache.clear();
+
+    // don't clear the last-time and last-energy caches,
+    // since they're not really invalidated; they are just
+    // used as the *last* values computed, not to make
+    // a new strategy decision.
 }
 
 void
@@ -284,8 +288,24 @@ StrategyEvaluator::estimatorConditionsChanged(Estimator *estimator)
     processEstimatorConditionsChange(estimator);
 }
 
+void 
+StrategyEvaluator::resetError(Estimator *estimator)
+{
+    clearCache();
+
+    PthreadScopedLock lock(&evaluator_mutex);
+    const char *filename = nullptr;
+    if (!last_history_filename.empty()) {
+        filename = last_history_filename.c_str();
+    }
+
+    inst::dbgprintf(INFO, "evaluator %s resetting estimator %s to %s error\n", 
+                    name.c_str(), estimator->getName().c_str(), filename ? "historical" : "no");
+    processEstimatorReset(estimator, filename);
+}
+
 instruments_strategy_t
-StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
+StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy, bool consider_cost)
 {
     instruments_strategy_t cached_choice = getCachedChoice(chooser_arg, redundancy);
     if (cached_choice) {
@@ -299,13 +319,13 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
     map<instruments_strategy_t, double> strategy_times;
     map<instruments_strategy_t, double> strategy_costs;
 
-    // turn this on and off.  if false, uses time as ranking for singular strategies.
+    // the consider_cost argument turns cost consideration on and off.
+    // if false, we use time as ranking for singular strategies.
     // if true, uses weighted cost function.
     // redundancy eval always uses weighted cost function.
-    const bool OPTIMIZE_WEIGHTED_COST_FUNCTION = true;
 
     // first, pick the singular strategy that takes the least time (expected)
-    // WHOOPS!  I should be picking the singular strategy that minimizes the weighted cost function.
+    //  or minimizes the weighted cost function, depending on consider_cost.
     Strategy *best_singular = NULL;
     double best_singular_time = 0.0;
 
@@ -325,7 +345,7 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
             double cost = 0.0;
             bool new_winner = (best_singular == NULL);
 
-            if (OPTIMIZE_WEIGHTED_COST_FUNCTION) {
+            if (consider_cost) {
                 inst::dbgprintf(INFO, "Calculating cost\n");
                 // calculate the singular-strategy cost so I don't have to do it
                 //  later when calculating redundant-strategy costs.
@@ -418,7 +438,11 @@ StrategyEvaluator::chooseStrategy(void *chooser_arg, bool redundancy)
                 //  the singular strategy can never have a lower time, and
                 //  the redundant strategy can never have a lower cost.
                 // if either happens, the strategy evaluator is broken.
-                ASSERT(benefit >= -0.0001); // tolerate floating-point inaccuracy
+                
+                //ASSERT(benefit >= -0.0001); // tolerate floating-point inaccuracy
+                // if a singular strategy is best and has no error, the noise may be greater,
+                //  since redundancy will never give positive benefit.
+                
                 ASSERT(extra_redundant_cost >= -0.0001);
             }
 
@@ -589,6 +613,7 @@ void
 StrategyEvaluator::restoreFromFile(const char *filename)
 {
     clearCache();
+    last_history_filename = filename;
     restoreFromFileImpl(filename);
 }
 

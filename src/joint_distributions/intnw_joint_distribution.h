@@ -30,6 +30,7 @@ class IntNWJointDistribution : public AbstractJointDistribution {
     virtual void processObservation(Estimator *estimator, double observation,
                                     double old_estimate, double new_estimate);
     virtual void processEstimatorConditionsChange(Estimator *estimator);
+    virtual void processEstimatorReset(Estimator *estimator, const char *filename);
 
     virtual void saveToFile(std::ofstream& out);
     virtual void restoreFromFile(std::ifstream& in);
@@ -76,6 +77,8 @@ class IntNWJointDistribution : public AbstractJointDistribution {
 
     //void FN_BODY_WITH_COMBINER(double& weightedSum, double (*COMBINER)(double, double), size_t saved_value_type);
 
+  private:
+    void restoreFromFile(std::ifstream& in, const std::string& estimator_name);
 };
 
 

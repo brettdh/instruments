@@ -4,7 +4,6 @@
 #include <thread>
 #include <functional>
 #include <map>
-#include <cmath>
 using std::thread;
 using std::max;
 using std::function;
@@ -12,7 +11,14 @@ using std::tie;
 using std::tuple;
 using std::make_tuple;
 using std::map;
+
+#ifdef ANDROID
+// WHAT.  why is the necessary?  bleh.
+#include <cmath>
 using std::isinf;
+#else
+#include <math.h>
+#endif
 
 #include <instruments.h>
 #include <instruments_private.h>
@@ -162,6 +168,14 @@ choose_nonredundant_strategy(instruments_strategy_evaluator_t evaluator_handle,
     return evaluator->chooseStrategy(chooser_arg, /* redundancy = */ false);
 }
 
+instruments_strategy_t
+choose_nonredundant_strategy_ignore_cost(instruments_strategy_evaluator_t evaluator_handle,
+                                         void *chooser_arg)
+{
+    StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
+    return evaluator->chooseStrategy(chooser_arg, /* redundancy = */ false, /* consider_cost = */ false);
+}
+
 double
 get_last_strategy_time(instruments_strategy_evaluator_t evaluator_handle,
                        instruments_strategy_t strategy)
@@ -280,6 +294,13 @@ restore_evaluator(instruments_strategy_evaluator_t evaluator_handle, const char 
 {
     StrategyEvaluator *evaluator = (StrategyEvaluator *) evaluator_handle;
     evaluator->restoreFromFile(filename);
+}
+
+void
+reset_estimator_error(instruments_estimator_t estimator_handle)
+{
+    Estimator *estimator = static_cast<Estimator *>(estimator_handle);
+    estimator->resetError();
 }
 
 
@@ -498,6 +519,18 @@ calculate_tipping_point(instruments_strategy_evaluator_t evaluator,
     instruments_strategy_t upper_winner = chooser(evaluator, chooser_arg);
     clear_estimator_conditions(estimator);
 
+    if (lower_winner == upper_winner) {
+        bound.value = is_lower_bound ? lower : upper;
+
+        // if both bounds show the current winner, the tipping point calc failed
+        //   (since that means that the current strategy will always win).
+        // if both bounds don't show the current winner, re-eval should happen now.
+        // either way, return now and indicate what happened by the bound's validity.
+        bound.valid = (lower_winner != current_winner);
+        
+        return bound;
+    }
+
     if (is_lower_bound) {
         assert(lower_winner == current_winner);
         assert(upper_winner != current_winner);
@@ -507,7 +540,7 @@ calculate_tipping_point(instruments_strategy_evaluator_t evaluator,
     }
 #endif
 
-    double threshold = 0.1; // XXX: maybe too coarse or fine; TODO: time this code, see how long it takes
+    double threshold = 1.0; // XXX: maybe too coarse or fine; TODO: time this code, see how long it takes
     while (upper - lower > threshold) {
         clear_estimator_conditions(estimator);
         double mid = (upper + lower) / 2.0;

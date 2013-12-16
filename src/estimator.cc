@@ -278,3 +278,12 @@ Estimator::getConditionalBound()
         __builtin_unreachable();
     }
 }
+
+void
+Estimator::resetError()
+{
+    PthreadScopedLock guard(&subscribers_mutex);
+    for (StrategyEvaluator *subscriber : subscribers) {
+        subscriber->resetError(this);
+    }
+}

@@ -12,6 +12,8 @@ class StatsDistribution;
 #include <map>
 #include <string>
 
+//#define DEBUG_REMOTE_EXEC_LOOP
+
 typedef small_map<Estimator *, StatsDistribution *> EstimatorSamplesMap;
 typedef small_map<std::string, StatsDistribution *> EstimatorSamplesPlaceholderMap;
 typedef small_map<Estimator *, double *> EstimatorSamplesValuesMap;
@@ -30,6 +32,7 @@ class RemoteExecJointDistribution : public AbstractJointDistribution {
     virtual void processObservation(Estimator *estimator, double observation,
                                     double old_estimate, double new_estimate);
     virtual void processEstimatorConditionsChange(Estimator *estimator);
+    virtual void processEstimatorReset(Estimator *estimator, const char *filename);
 
     virtual void saveToFile(std::ofstream& out);
     virtual void restoreFromFile(std::ifstream& in);
@@ -71,6 +74,12 @@ class RemoteExecJointDistribution : public AbstractJointDistribution {
     void ensureSamplesDistributionExists(Estimator *estimator);
 
     virtual void addDefaultValue(Estimator *estimator);
+
+#ifdef DEBUG_REMOTE_EXEC_LOOP
+    void FN_BODY_WITH_COMBINER(double& weightedSum, double (*COMBINER)(double, double), size_t saved_value_type);
+#endif
+  private:
+    virtual void restoreFromFile(std::ifstream& in, const std::string& estimator_name);
 };
 
 

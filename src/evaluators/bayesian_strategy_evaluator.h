@@ -41,6 +41,7 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
   protected:
     virtual void processObservation(Estimator *estimator, double observation, 
                                     double old_estimate, double new_estimate);
+    virtual void processEstimatorReset(Estimator *estimator, const char *filename);
     virtual void setStrategies(const instruments_strategy_t *strategies_,
                                size_t num_strategies_);
     
@@ -66,12 +67,16 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
 
     // A list of all observations, for simplifying save/restore.
     struct stored_observation {
-        std::string name;
+        std::string estimator_name;
         double observation;
         double old_estimate;
         double new_estimate;
     };
     std::vector<stored_observation> ordered_observations;
+
+    // stores size of ordered_observations immediately after restoring from file,
+    // so that later observations can be replayed after resetting one estimator
+    size_t num_historical_observations;
     
     std::map<std::string, Estimator *> estimators_by_name;
 
@@ -83,6 +88,8 @@ class BayesianStrategyEvaluator : public StrategyEvaluator {
 
     std::string simple_evaluator_name;
     std::string makeSimpleEvaluatorName();
+
+    void restoreFromFileImpl(const char *filename, const std::string& estimator_name);
 };
 
 #endif

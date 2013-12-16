@@ -42,6 +42,7 @@ class ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds {
     string getName();
     void setConditionalBounds();
     void clearConditionalBounds();
+    void reset();
 
     void setEstimator(Estimator *estimator_);
   private:
@@ -86,11 +87,18 @@ const double ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::CONFIDENC
 ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::ErrorConfidenceBounds(bool weighted_, Estimator *estimator_)
     : estimator(estimator_), weighted(weighted_) //, flipflop_log_error(estimator ? estimator->getName() : "(no name)")
 {
+    reset();
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::reset()
+{
     log_error_mean = 0.0;
     log_error_variance = 0.0;
     M2 = 0.0;
     num_samples = 0;
     error_bounds[LOWER] = error_bounds[UPPER] = 0.0;
+    log_error_samples.clear();
 }
 
 void 
@@ -463,13 +471,9 @@ ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds::restoreFromFile(ifstre
     return name;
 }
 
-void 
-ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, double observation, 
-                                                      double old_estimate, double new_estimate)
+ConfidenceBoundsStrategyEvaluator::ErrorConfidenceBounds *
+ConfidenceBoundsStrategyEvaluator::getBounds(Estimator *estimator)
 {
-    inst::dbgprintf(INFO, "%s evaluator: Adding observation %f to estimator %s\n", 
-                    getName(), observation, estimator->getName().c_str());
-    
     assert(estimator);
     string name = estimator->getName();
     ErrorConfidenceBounds *bounds = NULL;
@@ -492,6 +496,17 @@ ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, doub
     } else {
         estimators_by_name[name] = estimator;
     }
+    return bounds;
+}
+
+void 
+ConfidenceBoundsStrategyEvaluator::processObservation(Estimator *estimator, double observation, 
+                                                      double old_estimate, double new_estimate)
+{
+    inst::dbgprintf(INFO, "%s evaluator: Adding observation %f to estimator %s\n", 
+                    getName(), observation, estimator->getName().c_str());
+    
+    ErrorConfidenceBounds *bounds = getBounds(estimator);
     
     if (estimate_is_valid(old_estimate)) {
         inst::dbgprintf(INFO, "Adding observation %f to estimator-bounds %s\n",
@@ -506,6 +521,16 @@ void
 ConfidenceBoundsStrategyEvaluator::processEstimatorConditionsChange(Estimator *estimator)
 {
     clearCache();
+}
+
+void 
+ConfidenceBoundsStrategyEvaluator::processEstimatorReset(Estimator *estimator, const char *filename)
+{
+    ErrorConfidenceBounds *bounds = getBounds(estimator);
+    bounds->reset();
+    if (filename) {
+        restoreFromFileImpl(filename, estimator->getName());
+    }
 }
 
 
@@ -708,6 +733,12 @@ ConfidenceBoundsStrategyEvaluator::saveToFile(const char *filename)
 void 
 ConfidenceBoundsStrategyEvaluator::restoreFromFileImpl(const char *filename)
 {
+    restoreFromFileImpl(filename, "");
+}
+
+void
+ConfidenceBoundsStrategyEvaluator::restoreFromFileImpl(const char *filename, const string& estimator_name)
+{
     ifstream in(filename);
     if (!in) {
         ostringstream oss;
@@ -721,22 +752,37 @@ ConfidenceBoundsStrategyEvaluator::restoreFromFileImpl(const char *filename)
     check(num_estimators >= 0, "Failed to read number of estimator bounds");
     check(tag == "estimator-bounds", "Failed to read tag");
 
-    for (size_t i = 0; i < error_bounds.size(); ++i) {
-        delete error_bounds[i];
-    }
-    error_bounds.clear();
+    if (estimator_name.empty()) {
+        for (size_t i = 0; i < error_bounds.size(); ++i) {
+            delete error_bounds[i];
+        }
+        error_bounds.clear();
+    } // else: we will keep (n-1) of the estimator bounds and just refresh one of them.
     
     for (int i = 0; i < num_estimators; ++i) {
         ErrorConfidenceBounds *bounds = new ErrorConfidenceBounds(weighted, NULL);
         string name = bounds->restoreFromFile(in);
-        if (estimators_by_name.count(name) > 0) {
-            Estimator *estimator = estimators_by_name[name];
-            bounds->setEstimator(estimator);
-            error_bounds.push_back(bounds);
-            bounds_by_estimator[estimator] = bounds;
+        if (estimator_name.empty() || estimator_name == name) {
+            if (estimators_by_name.count(name) > 0) {
+                Estimator *estimator = estimators_by_name[name];
+                bounds->setEstimator(estimator);
+                if (estimator_name.empty()) {
+                    error_bounds.push_back(bounds);
+                } else {
+                    // else: we're only restoring one estimator, and error_bounds is already populated
+                    ErrorConfidenceBounds *old_bounds =  bounds_by_estimator[estimator];
+                    auto it = find(error_bounds.begin(), error_bounds.end(), old_bounds);
+                    assert(it != error_bounds.end());
+                    *it = bounds;
+                    bounds_by_estimator[estimator] = bounds;
+                    delete old_bounds;
+                }
+            } else {
+                assert(placeholders.count(name) == 0);
+                placeholders[name] = bounds;
+            }
         } else {
-            assert(placeholders.count(name) == 0);
-            placeholders[name] = bounds;
+            delete bounds;
         }
     }
     
