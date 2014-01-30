@@ -757,6 +757,7 @@ ConfidenceBoundsStrategyEvaluator::restoreFromFileImpl(const char *filename, con
             delete error_bounds[i];
         }
         error_bounds.clear();
+        bounds_by_estimator.clear();
     } // else: we will keep (n-1) of the estimator bounds and just refresh one of them.
     
     for (int i = 0; i < num_estimators; ++i) {
