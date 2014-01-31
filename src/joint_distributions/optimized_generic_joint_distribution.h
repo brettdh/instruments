@@ -5,20 +5,24 @@
 #include "small_map.h"
 #include "strategy.h"
 
+#include <nested_loop.h>
+
+
 class Estimator;
 class StatsDistribution;
 
 #include <vector>
 #include <map>
 #include <string>
-
-typedef small_map<Estimator *, StatsDistribution *> EstimatorSamplesMap;
-typedef small_map<std::string, StatsDistribution *> EstimatorSamplesPlaceholderMap;
-typedef small_map<Estimator *, double *> EstimatorSamplesValuesMap;
-typedef small_map<Estimator *, size_t> EstimatorIndicesMap;
+#include <memory>
 
 class OptimizedGenericJointDistribution : public AbstractJointDistribution {
   public:
+    typedef small_map<Estimator *, StatsDistribution *> EstimatorSamplesMap;
+    typedef small_map<std::string, StatsDistribution *> EstimatorSamplesPlaceholderMap;
+    typedef small_map<Estimator *, std::vector<double> *> EstimatorSamplesValuesMap;
+    typedef small_map<Estimator *, size_t> EstimatorIndicesMap;
+
     OptimizedGenericJointDistribution(StatsDistributionType dist_type, 
                                       const std::vector<Strategy *>& strategies);
     ~OptimizedGenericJointDistribution();
@@ -33,6 +37,8 @@ class OptimizedGenericJointDistribution : public AbstractJointDistribution {
 
     virtual void saveToFile(std::ofstream& out);
     virtual void restoreFromFile(std::ifstream& in);
+
+    void processEstimatorReset(Estimator *estimator, const char *filename);
   protected:
     void *strategy_arg;
     void *chooser_arg;
@@ -44,11 +50,16 @@ class OptimizedGenericJointDistribution : public AbstractJointDistribution {
 
     std::vector<Strategy *> strategies;
     std::vector<std::vector<Estimator *> > strategy_estimators;
+    
+    // for the brute-force nested loop
+    std::vector<std::unique_ptr<AbstractNestedLoop> > loops;
+    
+    typedef std::vector<std::vector<std::vector< double> > > StrategyEstimatorSamples;
+    StrategyEstimatorSamples probabilities;
+    StrategyEstimatorSamples samples_values;
 
     void getEstimatorSamplesDistributions();
     void clearEstimatorSamplesDistributions();
-
-    void ensureValidMemoizedValues(eval_fn_type_t saved_value_type);
 
     EstimatorSamplesPlaceholderMap estimatorSamplesPlaceholders;
     Estimator *getExistingEstimator(const std::string& key);
@@ -57,8 +68,8 @@ class OptimizedGenericJointDistribution : public AbstractJointDistribution {
 
     virtual void addDefaultValue(Estimator *estimator);
 
-    //void FN_BODY_WITH_COMBINER(double& weightedSum, double (*COMBINER)(double, double), size_t saved_value_type);
-
+ private:
+    void restoreFromFile(std::ifstream& in, const std::string& estimator_name);
 };
 
 

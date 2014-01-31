@@ -1,7 +1,7 @@
 solution "Instruments"
   configurations { "Debug", "Release" }
   
-  includedirs { "./include" }
+  includedirs { "./include", "../nested_array" }
 
   include "src"
   include "tests/unit"

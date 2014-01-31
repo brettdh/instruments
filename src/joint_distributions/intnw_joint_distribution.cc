@@ -235,7 +235,7 @@ IntNWJointDistribution::ensureSamplesDistributionExists(Estimator *estimator)
         estimatorSamples[estimator] = estimatorSamplesPlaceholders[key];
         estimatorSamplesPlaceholders.erase(key);
     } else if (estimatorSamples.count(estimator) == 0) {
-        estimatorSamples[estimator] = createSamplesDistribution();
+        estimatorSamples[estimator] = createSamplesDistribution(estimator);
         addDefaultValue(estimator);
    }
     

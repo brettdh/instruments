@@ -192,6 +192,8 @@ EmpiricalErrorStrategyEvaluatorTest::testSaveRestore()
 void
 EmpiricalErrorStrategyEvaluatorTest::testMultipleEstimators()
 {
+    //instruments_set_debug_level(INSTRUMENTS_DEBUG_LEVEL_DEBUG);
+
     Estimator *estimators[NUM_ESTIMATORS];
     for (int i = 0; i < NUM_ESTIMATORS; ++i) {
         ostringstream s;

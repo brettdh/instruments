@@ -421,8 +421,8 @@ CTEST2(confidence_bounds_test, test_each_network_wins)
     //  if x > 4000, network 1 wins.
     //  if x < 4000, network 2 wins.
     
-    assert_correct_strategy(cdata, cdata->strategies[0], 4001);
-    assert_correct_strategy(cdata, cdata->strategies[1], 3999);
+    assert_correct_nonredundant_strategy(cdata, cdata->strategies[0], 4001);
+    assert_correct_nonredundant_strategy(cdata, cdata->strategies[1], 3999);
 }
 
 CTEST2(confidence_bounds_test, test_both_networks_best)
@@ -606,8 +606,8 @@ CTEST2(bayesian_method_test, test_each_network_wins)
     //  if x > 4000, network 1 wins.
     //  if x < 4000, network 2 wins.
     
-    assert_correct_strategy(cdata, cdata->strategies[0], 4001);
-    assert_correct_strategy(cdata, cdata->strategies[1], 3999);
+    assert_correct_nonredundant_strategy(cdata, cdata->strategies[0], 4001);
+    assert_correct_nonredundant_strategy(cdata, cdata->strategies[1], 3999);
 }
 
 CTEST2(bayesian_method_test, test_both_networks_best)
@@ -698,4 +698,60 @@ CTEST2(bayesian_method_test, test_real_distributions)
 
     //instruments_set_debug_level(DEBUG);
     run_real_distributions_test(cdata, "support_files/saved_error_distributions_bayesian.txt");
+}
+
+
+CTEST_DATA(generic_brute_force_test) {
+    struct common_test_data common_data;
+};
+
+CTEST_SETUP(generic_brute_force_test)
+{
+    setup_common(&data->common_data, EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED);
+}
+
+CTEST_TEARDOWN(generic_brute_force_test)
+{
+    teardown_common(&data->common_data);
+}
+
+CTEST2(generic_brute_force_test, test_one_network_wins)
+{
+    struct common_test_data *cdata = &data->common_data;
+    int bytelen = 500000;
+    init_network_params(cdata, 500000, 0.02, 128, 0.5);
+    assert_correct_strategy(cdata, cdata->strategies[0], bytelen);
+}
+
+CTEST2(generic_brute_force_test, test_each_network_wins)
+{
+    //instruments_set_debug_level(DEBUG);
+    
+    set_fixed_resource_weights(0.0, 0.0);
+    struct common_test_data *cdata = &data->common_data;
+    init_network_params(cdata, 5000, 1.0, 2500, 0.2);
+    // break-even: 
+    //   x / 5000 + 1.0 = x / 2500 + 0.2
+    //   x = 0.8 * 5000
+    //   x = 4000
+    //  if x > 4000, network 1 wins.
+    //  if x < 4000, network 2 wins.
+    
+    assert_correct_nonredundant_strategy(cdata, cdata->strategies[0], 4001);
+    assert_correct_nonredundant_strategy(cdata, cdata->strategies[1], 3999);
+}
+
+CTEST2(generic_brute_force_test, test_both_networks_best)
+{
+    test_both_networks_best(&data->common_data);
+}
+
+CTEST2(generic_brute_force_test, test_save_restore)
+{
+    //instruments_set_debug_level(DEBUG);
+    
+    test_save_restore(&data->common_data, "/tmp/generic_brute_force_saved_evaluation_state.txt", 
+                      EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED);
+
+    instruments_set_debug_level(NONE);
 }
