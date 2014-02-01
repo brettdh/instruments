@@ -311,6 +311,7 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     //    estimators they use, so they can be computed in O(N) and cached
     //    for the 2x2 iteration.
     //   So, at least 2 new calls here.
+    //   UPDATE: one of these can be cached with the optimized brute-force calculation.
     //  With simple iteration, it's at most 6.
     (void)evaluator->chooseStrategy(NULL);
 
@@ -320,9 +321,9 @@ EmpiricalErrorStrategyEvaluatorTest::testOnlyIterateOverRelevantEstimators()
     fprintf(stderr, "Estimator 2, new calls: %d\n", estimator2_new_calls);
 
     // lower now, due to memoization.
-    CPPUNIT_ASSERT(estimator1_new_calls >= 2);
+    CPPUNIT_ASSERT(estimator1_new_calls >= 1);
     CPPUNIT_ASSERT(estimator1_new_calls <= 6);
-    CPPUNIT_ASSERT(estimator2_new_calls >= 2);
+    CPPUNIT_ASSERT(estimator2_new_calls >= 1);
     CPPUNIT_ASSERT(estimator2_new_calls <= 6);
 }
 

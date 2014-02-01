@@ -208,12 +208,12 @@ int main(int argc, char *argv[])
 #endif
 
     enum EvalMethod methods[] = { 
-        CONFIDENCE_BOUNDS,
-        BAYESIAN,
-        //EMPIRICAL_ERROR_ALL_SAMPLES,
-        EMPIRICAL_ERROR_ALL_SAMPLES_INTNW,
+        //CONFIDENCE_BOUNDS,
+        //BAYESIAN,
+        EMPIRICAL_ERROR_ALL_SAMPLES,
+        //EMPIRICAL_ERROR_ALL_SAMPLES_INTNW,
         //EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED,
-        EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED_INTNW
+        //EMPIRICAL_ERROR_ALL_SAMPLES_WEIGHTED_INTNW
     };
     const size_t NUM_METHODS = sizeof(methods) / sizeof(enum EvalMethod);
     

@@ -60,9 +60,10 @@ static void adjust_probs_for_estimator_conditions(Estimator *estimator, vector<d
         return;
     }
     
+    double estimate = estimator->getEstimate();
     for (size_t i = 0; i < count; ++i) {
         double error_value = values[i];
-        double error_adjusted_estimate = adjusted_estimate(estimator->getEstimate(), error_value);
+        double error_adjusted_estimate = adjusted_estimate(estimate, error_value);
         
         if (!estimator->valueMeetsConditions(error_adjusted_estimate)) {
             probs[i] = 0.0;
@@ -81,7 +82,7 @@ static void adjust_probs_for_estimator_conditions(Estimator *estimator, vector<d
         //  means that the app is experiencing an extreme, which often
         //  should cause redundancy (e.g. IntNW, higher-than-usual RTT).
         double value = estimator->getConditionalBound();
-        double error_value = calculate_error(estimator->getEstimate(), value);
+        double error_value = calculate_error(estimate, value);
         values[index] = error_value;
         probs[index] = 1.0;
     }
@@ -109,7 +110,7 @@ OptimizedGenericJointDistribution::OptimizedGenericJointDistribution(StatsDistri
         strategy_estimators.push_back(estimators);
         
         size_t num_estimators = estimators.size();
-        loops.emplace_back(getNestedLoop(num_estimators));
+        loops.emplace_back();
 
         // example of these nested vector structures:
         // probabilities[strategy_index][estimator_index] = [vector of probability samples]
@@ -146,6 +147,17 @@ OptimizedGenericJointDistribution::addDefaultValue(Estimator *estimator)
     estimatorSamples[estimator]->addValue(no_error_value());
 }
 
+static vector<double>
+get_error_adjusted_estimates(Estimator *estimator, const vector<double>& error_samples)
+{
+    vector<double> error_adjusted_estimates;
+    double estimate = estimator->getEstimate();
+    for (double error : error_samples) {
+        error_adjusted_estimates.push_back(adjusted_estimate(estimate, error));
+    }
+    return error_adjusted_estimates;
+}
+
 void
 OptimizedGenericJointDistribution::getEstimatorSamplesDistributions()
 {
@@ -171,7 +183,6 @@ OptimizedGenericJointDistribution::getEstimatorSamplesDistributions()
             adjust_probs_for_estimator_conditions(estimator, 
                                                   samples_values[i][j],
                                                   probabilities[i][j], count);
-
         }
     }
 
@@ -179,8 +190,13 @@ OptimizedGenericJointDistribution::getEstimatorSamplesDistributions()
         size_t num_estimators = strategies[i]->getEstimators().size();
         for (size_t j = 0; j < num_estimators; ++j) {
             Estimator *estimator = strategy_estimators[i][j];
-            estimatorSamplesValues[estimator] = &samples_values[i][j];
-            estimatorIndices[estimator] = 0;
+            if (estimatorSamplesValues.count(estimator) == 0) {
+                estimatorSamplesValues[estimator] = &samples_values[i][j];
+                estimatorIndices[estimator] = 0;
+
+                estimatorErrorAdjustedValues[estimator] = 
+                    get_error_adjusted_estimates(estimator, samples_values[i][j]);
+            }
         }
     }
 }
@@ -201,6 +217,7 @@ OptimizedGenericJointDistribution::clearEstimatorSamplesDistributions()
     }
     estimatorSamplesValues.clear();
     estimatorIndices.clear();
+    estimatorErrorAdjustedValues.clear();
 }
 
 void 
@@ -213,6 +230,55 @@ OptimizedGenericJointDistribution::setEvalArgs(void *strategy_arg_, void *choose
     strategy_arg = strategy_arg_;
     chooser_arg = chooser_arg_;
 }
+
+class ExpectedValueLoop {
+    ostringstream indices_values;
+    ostringstream estimator_values;
+    
+    OptimizedGenericJointDistribution *distribution;
+    vector<vector<double> >& cur_strategy_probabilities;
+    vector<Estimator *>& cur_strategy_estimators;
+    double& weightedSum;
+    typesafe_eval_fn_t fn;
+    
+  public:
+    ExpectedValueLoop(OptimizedGenericJointDistribution *distribution_,
+                      vector<vector<double> >& cur_strategy_probabilities_,
+                      vector<Estimator *>& cur_strategy_estimators_,
+                      double& weightedSum_,
+                      typesafe_eval_fn_t fn_)
+        : distribution(distribution_),
+          cur_strategy_probabilities(cur_strategy_probabilities_),
+          cur_strategy_estimators(cur_strategy_estimators_),
+          weightedSum(weightedSum_),
+          fn(fn_)
+    {
+    }
+    
+    void operator()(vector<size_t>& indices) {
+        if (inst::is_debugging_on(DEBUG)) {
+            indices_values.str("");
+            estimator_values.str("");
+        }
+        
+        double probability = 1.0;
+        for (size_t i = 0; i < indices.size(); ++i) {
+            Estimator *estimator = cur_strategy_estimators[i];
+            distribution->estimatorIndices[estimator] = indices[i];
+            probability *= cur_strategy_probabilities[i][indices[i]];
+            if (inst::is_debugging_on(DEBUG)) {
+                indices_values << indices[i] << " ";
+                estimator_values << distribution->getAdjustedEstimatorValue(estimator) << " ";
+            }
+        }
+        double value = fn(distribution, distribution->strategy_arg, distribution->chooser_arg);
+        weightedSum += value * probability;
+        inst::dbgprintf(DEBUG, "  [ %s] [ %s]  value = %f  prob = %f  weightedSum = %f\n",
+                        indices_values.str().c_str(),
+                        estimator_values.str().c_str(),
+                        value, probability, weightedSum);
+    }
+};
 
 double 
 OptimizedGenericJointDistribution::expectedValue(Strategy *strategy, typesafe_eval_fn_t fn)
@@ -229,7 +295,6 @@ OptimizedGenericJointDistribution::expectedValue(Strategy *strategy, typesafe_ev
     assert(strategy_index < strategies.size());
     
     vector<vector<double> >& cur_strategy_probabilities = probabilities[strategy_index];
-    //vector<vector<double> >& cur_strategy_values = samples_values[strategy_index];
     vector<Estimator *>& cur_strategy_estimators = strategy_estimators[strategy_index];
     
     vector<size_t> loop_dims;
@@ -255,32 +320,7 @@ OptimizedGenericJointDistribution::expectedValue(Strategy *strategy, typesafe_ev
         }
     }
 
-    ostringstream indices_values;
-    ostringstream estimator_values;
-
-    AbstractNestedLoop::Looper loop_body = [&](vector<size_t>& indices) {
-        if (inst::is_debugging_on(DEBUG)) {
-            indices_values.str("");
-            estimator_values.str("");
-        }
-        
-        double probability = 1.0;
-        for (size_t i = 0; i < indices.size(); ++i) {
-            Estimator *estimator = cur_strategy_estimators[i];
-            estimatorIndices[estimator] = indices[i];
-            probability *= cur_strategy_probabilities[i][indices[i]];
-            if (inst::is_debugging_on(DEBUG)) {
-                indices_values << indices[i] << " ";
-                estimator_values << getAdjustedEstimatorValue(estimator) << " ";
-            }
-        }
-        double value = fn(this, strategy_arg, chooser_arg);
-        weightedSum += value * probability;
-        inst::dbgprintf(DEBUG, "  [ %s] [ %s]  value = %f  prob = %f  weightedSum = %f\n",
-                        indices_values.str().c_str(),
-                        estimator_values.str().c_str(),
-                        value, probability, weightedSum);
-    };
+    ExpectedValueLoop loop_body(this, cur_strategy_probabilities, cur_strategy_estimators, weightedSum, fn);
 
     ostringstream indices_max;
     if (inst::is_debugging_on(DEBUG)) {
@@ -292,8 +332,7 @@ OptimizedGenericJointDistribution::expectedValue(Strategy *strategy, typesafe_ev
     inst::dbgprintf(DEBUG, "About to run %zu-way nested loop, dims [ %s]\n", 
                     loop_dims.size(), indices_max.str().c_str());
     auto& loop = loops[strategy_index];
-    loop->set_dims(loop_dims);
-    loop->run_loop(loop_body);
+    loop.run_loop(loop_body, loop_dims);
     
     return weightedSum;
 }
@@ -301,16 +340,23 @@ OptimizedGenericJointDistribution::expectedValue(Strategy *strategy, typesafe_ev
 double
 OptimizedGenericJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 {
-    double estimate = estimator->getEstimate();
     if (estimatorSamplesValues.count(estimator) == 0) {
-        return estimate;
+        return estimator->getEstimate();
     }
+
+    //double estimate = estimator->getEstimate();
+    const vector<double>& estimator_error_adjusted_values = estimatorErrorAdjustedValues[estimator];
+    size_t index = estimatorIndices[estimator];
+    return estimator_error_adjusted_values[index];
+    
+    /*
     vector<double> *estimator_samples_values = estimatorSamplesValues[estimator];
     size_t index = estimatorIndices[estimator];
     double error = (*estimator_samples_values)[index];
     double adjusted_value = adjusted_estimate(estimate, error);
 
     return adjusted_value;
+    */
 }
 
 void

@@ -21,6 +21,7 @@ class OptimizedGenericJointDistribution : public AbstractJointDistribution {
     typedef small_map<Estimator *, StatsDistribution *> EstimatorSamplesMap;
     typedef small_map<std::string, StatsDistribution *> EstimatorSamplesPlaceholderMap;
     typedef small_map<Estimator *, std::vector<double> *> EstimatorSamplesValuesMap;
+    typedef small_map<Estimator *, std::vector<double> > EstimatorErrorAdjustedEstimatesMap;
     typedef small_map<Estimator *, size_t> EstimatorIndicesMap;
 
     OptimizedGenericJointDistribution(StatsDistributionType dist_type, 
@@ -47,12 +48,13 @@ class OptimizedGenericJointDistribution : public AbstractJointDistribution {
     
     EstimatorSamplesValuesMap estimatorSamplesValues;
     EstimatorIndicesMap estimatorIndices;
+    EstimatorErrorAdjustedEstimatesMap estimatorErrorAdjustedValues;
 
     std::vector<Strategy *> strategies;
     std::vector<std::vector<Estimator *> > strategy_estimators;
     
     // for the brute-force nested loop
-    std::vector<std::unique_ptr<AbstractNestedLoop> > loops;
+    std::vector<NestedLoop> loops;
     
     typedef std::vector<std::vector<std::vector< double> > > StrategyEstimatorSamples;
     StrategyEstimatorSamples probabilities;
@@ -69,6 +71,7 @@ class OptimizedGenericJointDistribution : public AbstractJointDistribution {
     virtual void addDefaultValue(Estimator *estimator);
 
  private:
+    friend class ExpectedValueLoop;
     void restoreFromFile(std::ifstream& in, const std::string& estimator_name);
 };
 
