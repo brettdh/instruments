@@ -32,6 +32,7 @@ class OptimizedGenericJointDistribution : public AbstractJointDistribution {
     virtual double expectedValue(Strategy *strategy, typesafe_eval_fn_t fn);
 
     virtual double getAdjustedEstimatorValue(Estimator *estimator);
+
     virtual void processObservation(Estimator *estimator, double observation,
                                     double old_estimate, double new_estimate);
     virtual void processEstimatorConditionsChange(Estimator *estimator);
@@ -40,6 +41,8 @@ class OptimizedGenericJointDistribution : public AbstractJointDistribution {
     virtual void restoreFromFile(std::ifstream& in);
 
     void processEstimatorReset(Estimator *estimator, const char *filename);
+
+    const std::vector<double>& getAdjustedEstimatorValues(Estimator *estimator);
   protected:
     void *strategy_arg;
     void *chooser_arg;

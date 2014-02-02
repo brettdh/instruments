@@ -231,7 +231,7 @@ OptimizedGenericJointDistribution::setEvalArgs(void *strategy_arg_, void *choose
     chooser_arg = chooser_arg_;
 }
 
-class ExpectedValueLoop {
+class ExpectedValueLoop : public StrategyEvaluationContext {
     ostringstream indices_values;
     ostringstream estimator_values;
     
@@ -240,6 +240,10 @@ class ExpectedValueLoop {
     vector<Estimator *>& cur_strategy_estimators;
     double& weightedSum;
     typesafe_eval_fn_t fn;
+
+    vector<vector<double> > adjusted_values_per_estimator;
+    size_t estimator_index = 0;
+    size_t current_dist_index = 0;
     
   public:
     ExpectedValueLoop(OptimizedGenericJointDistribution *distribution_,
@@ -271,12 +275,22 @@ class ExpectedValueLoop {
                 estimator_values << distribution->getAdjustedEstimatorValue(estimator) << " ";
             }
         }
-        double value = fn(distribution, distribution->strategy_arg, distribution->chooser_arg);
+        current_dist_index = indices[estimator_index];
+        double value = fn(this, distribution->strategy_arg, distribution->chooser_arg);
         weightedSum += value * probability;
         inst::dbgprintf(DEBUG, "  [ %s] [ %s]  value = %f  prob = %f  weightedSum = %f\n",
                         indices_values.str().c_str(),
                         estimator_values.str().c_str(),
                         value, probability, weightedSum);
+    }
+
+    double getAdjustedEstimatorValue(Estimator *estimator) {
+        if (adjusted_values_per_estimator.size() < cur_strategy_estimators.size()) {
+            adjusted_values_per_estimator.push_back(distribution->getAdjustedEstimatorValues(estimator));
+        }
+        double value = adjusted_values_per_estimator[estimator_index][current_dist_index];
+        estimator_index = (estimator_index + 1) % cur_strategy_estimators.size();
+        return value;
     }
 };
 
@@ -337,6 +351,12 @@ OptimizedGenericJointDistribution::expectedValue(Strategy *strategy, typesafe_ev
     return weightedSum;
 }
 
+const vector<double>&
+OptimizedGenericJointDistribution::getAdjustedEstimatorValues(Estimator *estimator)
+{
+    return estimatorErrorAdjustedValues[estimator];
+}
+
 double
 OptimizedGenericJointDistribution::getAdjustedEstimatorValue(Estimator *estimator)
 {
@@ -344,9 +364,12 @@ OptimizedGenericJointDistribution::getAdjustedEstimatorValue(Estimator *estimato
         return estimator->getEstimate();
     }
 
+    
+
     //double estimate = estimator->getEstimate();
     const vector<double>& estimator_error_adjusted_values = estimatorErrorAdjustedValues[estimator];
     size_t index = estimatorIndices[estimator];
+    //inst::dbgprintf(ERROR, "%p -- %zu\n", estimator, index);
     return estimator_error_adjusted_values[index];
     
     /*
