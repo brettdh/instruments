@@ -32,6 +32,9 @@ sys.path.append(os.getenv("HOME") + "/scripts/nistnet_scripts/traces")
 import mobility_trace
 from mobility_trace import NetworkChooser
 
+USE_DEFAULT_DURATION = False
+DEFAULT_DURATION = 1200.0
+
 debug = False
 def dprint(msg):
     if debug:
@@ -341,7 +344,7 @@ class IntNWBehaviorPlot(QDialog):
         self._choose_network_calls = []
 
         self._start = start
-        self._xlim_max = 1200.0
+        self._xlim_max = DEFAULT_DURATION
 
         # TODO: infer plot title from file path
         client_or_server = "server-side" if self._is_server else "client-side"
@@ -592,6 +595,8 @@ class IntNWBehaviorPlot(QDialog):
         #max_trace_duration = self._session_axes.get_xlim()[1]
         if self._user_set_max_trace_duration:
             max_trace_duration = self._user_set_max_trace_duration
+        elif USE_DEFAULT_DURATION:
+            max_trace_duration = DEFAULT_DURATION
         else:
             max_trace_duration = self._xlim_max
 
@@ -692,7 +697,7 @@ class IntNWBehaviorPlot(QDialog):
                     last_estimate_time = \
                         window.getAdjustedTime(last_estimates[network_type])
                 else:
-                    last_estimate_time = 1200.0 # XXX: hardcoding hack.
+                    last_estimate_time = DEFAULT_DURATION # XXX: hardcoding hack.
 
                 times = self._priv_trace.getData('start', 0, last_estimate_time)
                 values = self._priv_trace.getData(key, 0, last_estimate_time)
@@ -2131,6 +2136,7 @@ def main(args, args_list, plotter_class):
     parser.add_argument("--radio-log", default=None)
     parser.add_argument("-d", "--debug", action="store_true", default=False)
     parser.add_argument("--saveFile")
+    parser.add_argument("--duration", type=float, metavar="secs")
     parser.parse_args(args_list, namespace=args)
 
     global debug
@@ -2141,6 +2147,12 @@ def main(args, args_list, plotter_class):
     if args.absolute_error:
         global RELATIVE_ERROR
         RELATIVE_ERROR = False
+
+    if args.duration:
+        global USE_DEFAULT_DURATION
+        global DEFAULT_DURATION
+        USE_DEFAULT_DURATION = True
+        DEFAULT_DURATION = args.duration
     
     plotter = plotter_class(args)
     plotter.readLogs()
