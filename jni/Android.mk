@@ -9,7 +9,8 @@ INSTRUMENTS_INCLUDES := \
 	$(LOCAL_PATH)/../include \
 	$(LOCAL_PATH)/../src \
 	$(LOCAL_PATH)/../src/evaluators \
-	$(LOCAL_PATH)/../src/joint_distributions
+	$(LOCAL_PATH)/../src/joint_distributions \
+	$(HOME)/src/nested_array
 
 ANDROID_LIBS_ROOT := $(LOCAL_PATH)/../../android-source/external/bdh_apps
 
@@ -64,6 +65,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	generic_joint_distribution.cc \
 	joint_distributions/intnw_joint_distribution.cc \
 	joint_distributions/remote_exec_joint_distribution.cc \
+	joint_distributions/optimized_generic_joint_distribution.cc \
 	resource_weights.cc \
 	running_mean_estimator.cc \
 	stats_distribution.cc \
