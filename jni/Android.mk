@@ -14,23 +14,23 @@ INSTRUMENTS_INCLUDES := \
 
 ANDROID_LIBS_ROOT := $(LOCAL_PATH)/../../android-source/external/bdh_apps
 
-MOCKTIME_ROOT := $(ANDROID_LIBS_ROOT)/mocktime
-MOCKTIME_INCLUDES := $(MOCKTIME_ROOT)
-LIBPT_ROOT := $(ANDROID_LIBS_ROOT)/libpowertutor/cpp_source
-LIBPT_INCLUDES := $(LIBPT_ROOT)
-INTNW_ROOT := $(ANDROID_LIBS_ROOT)/libcmm
+#MOCKTIME_ROOT := $(ANDROID_LIBS_ROOT)/mocktime
+#MOCKTIME_INCLUDES := $(MOCKTIME_ROOT)
+#LIBPT_ROOT := $(ANDROID_LIBS_ROOT)/libpowertutor/cpp_source
+#LIBPT_INCLUDES := $(LIBPT_ROOT)
+#INTNW_ROOT := $(ANDROID_LIBS_ROOT)/libcmm
 
-include $(CLEAR_VARS)
+#include $(CLEAR_VARS)
 
-LOCAL_MODULE := powertutor
-LOCAL_SRC_FILES := ../$(LIBPT_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libpowertutor.so
-include $(PREBUILT_SHARED_LIBRARY)
+#LOCAL_MODULE := powertutor
+#LOCAL_SRC_FILES := ../$(LIBPT_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libpowertutor.so
+#include $(PREBUILT_SHARED_LIBRARY)
 
-include $(CLEAR_VARS)
+#include $(CLEAR_VARS)
 
-LOCAL_MODULE := mocktime
-LOCAL_SRC_FILES := ../$(MOCKTIME_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libmocktime.so
-include $(PREBUILT_SHARED_LIBRARY)
+#LOCAL_MODULE := mocktime
+#LOCAL_SRC_FILES := ../$(MOCKTIME_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libmocktime.so
+#include $(PREBUILT_SHARED_LIBRARY)
 
 
 #include $(CLEAR_VARS)
@@ -44,7 +44,7 @@ include $(PREBUILT_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_CPP_EXTENSION:=.cc
 LOCAL_MODULE := instruments
-LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/include $(LOCAL_PATH)/src
+LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/../include $(LOCAL_PATH)/../src
 LOCAL_SRC_FILES := $(addprefix ../src/, \
 	abstract_joint_distribution.cc \
 	continuous_distribution.cc \
@@ -78,7 +78,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	timeops.cc)
 #	r_singleton.cc \
 
-LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) $(MOCKTIME_INCLUDES) $(LIBPT_INCLUDES) $(INTNW_ROOT)
+LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) #$(LIBPT_INCLUDES) $(INTNW_ROOT)
 LOCAL_CXXFLAGS := $(common_CXXFLAGS)
 #LOCAL_STATIC_LIBRARIES += flipflop
 ifneq ($(my_PROFILING_BUILD),)
@@ -103,9 +103,11 @@ LOCAL_STATIC_LIBRARIES += android-ndk-profiler
 LOCAL_LDLIBS += -llog
 endif
 #LOCAL_LDFLAGS += -fuse-ld=gold
-LOCAL_SHARED_LIBRARIES := libinstruments libpowertutor libmocktime
+LOCAL_SHARED_LIBRARIES := instruments powertutor mocktime
 include $(BUILD_EXECUTABLE)
 
+$(call import-module, edu.umich.mobility/mocktime)
+$(call import-module, edu.umich.mobility/libpowertutor)
 
 ifneq ($(my_PROFILING_BUILD),)
 $(call import-module,android-ndk-profiler)

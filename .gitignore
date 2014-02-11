@@ -4,3 +4,4 @@ libs
 obj
 Makefile
 *.make
+scripts/current_logs
