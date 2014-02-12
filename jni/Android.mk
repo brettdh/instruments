@@ -12,35 +12,6 @@ INSTRUMENTS_INCLUDES := \
 	$(LOCAL_PATH)/../src/joint_distributions \
 	$(HOME)/src/nested_array
 
-ANDROID_LIBS_ROOT := $(LOCAL_PATH)/../../android-source/external/bdh_apps
-
-#MOCKTIME_ROOT := $(ANDROID_LIBS_ROOT)/mocktime
-#MOCKTIME_INCLUDES := $(MOCKTIME_ROOT)
-#LIBPT_ROOT := $(ANDROID_LIBS_ROOT)/libpowertutor/cpp_source
-#LIBPT_INCLUDES := $(LIBPT_ROOT)
-#INTNW_ROOT := $(ANDROID_LIBS_ROOT)/libcmm
-
-#include $(CLEAR_VARS)
-
-#LOCAL_MODULE := powertutor
-#LOCAL_SRC_FILES := ../$(LIBPT_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libpowertutor.so
-#include $(PREBUILT_SHARED_LIBRARY)
-
-#include $(CLEAR_VARS)
-
-#LOCAL_MODULE := mocktime
-#LOCAL_SRC_FILES := ../$(MOCKTIME_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libmocktime.so
-#include $(PREBUILT_SHARED_LIBRARY)
-
-
-#include $(CLEAR_VARS)
-
-#LOCAL_MODULE := flipflop
-#LOCAL_SRC_FILES := ../$(INTNW_ROOT)/obj/local/$(TARGET_ARCH_ABI)/libflipflop.a
-#include $(PREBUILT_STATIC_LIBRARY)
-
-
-
 include $(CLEAR_VARS)
 LOCAL_CPP_EXTENSION:=.cc
 LOCAL_MODULE := instruments
@@ -78,7 +49,7 @@ LOCAL_SRC_FILES := $(addprefix ../src/, \
 	timeops.cc)
 #	r_singleton.cc \
 
-LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES) #$(LIBPT_INCLUDES) $(INTNW_ROOT)
+LOCAL_C_INCLUDES := $(INSTRUMENTS_INCLUDES)
 LOCAL_CXXFLAGS := $(common_CXXFLAGS)
 #LOCAL_STATIC_LIBRARIES += flipflop
 ifneq ($(my_PROFILING_BUILD),)
