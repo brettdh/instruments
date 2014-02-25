@@ -155,7 +155,7 @@ static struct timeval run_test(int num_samples, enum EvalMethod method,
 
     strategies[0] = make_strategy(estimator_value, no_cost, no_cost, (void*) &args[0], NULL);
     strategies[1] = make_strategy(estimator_value, no_cost, no_cost, (void*) &args[1], NULL);
-    strategies[2] = make_redundant_strategy(strategies, 2);
+    strategies[2] = make_redundant_strategy(strategies, 2, NULL);
     
     instruments_strategy_evaluator_t evaluator = 
         register_strategy_set_with_method("", strategies, 3, method);

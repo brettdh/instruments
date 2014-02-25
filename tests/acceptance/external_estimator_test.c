@@ -69,7 +69,7 @@ run_test_with_oscillating_estimator(struct external_estimator_data *data,
     ASSERT_NOT_NULL(strategies[0]);
     strategies[1] = make_strategy(estimator_value, NULL, data_cost, (void*) data->low_estimator, NULL);
     ASSERT_NOT_NULL(strategies[1]);
-    strategies[2] = make_redundant_strategy(strategies, 2);
+    strategies[2] = make_redundant_strategy(strategies, 2, NULL);
     ASSERT_NOT_NULL(strategies[2]);
 
     const char *strategyNames[] = {

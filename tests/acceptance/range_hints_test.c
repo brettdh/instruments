@@ -113,7 +113,7 @@ CTEST2(range_hints, tail_values_are_okay)
     ASSERT_NOT_NULL(strategies[0]);
     strategies[1] = make_strategy(estimator_value, NULL, data_cost, (void*) data->low_estimator, NULL);
     ASSERT_NOT_NULL(strategies[1]);
-    strategies[2] = make_redundant_strategy(strategies, 2);
+    strategies[2] = make_redundant_strategy(strategies, 2, NULL);
     ASSERT_NOT_NULL(strategies[2]);
     
     instruments_strategy_evaluator_t evaluator = register_strategy_set_with_method("", strategies, 3, BAYESIAN);

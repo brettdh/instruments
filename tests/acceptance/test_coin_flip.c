@@ -96,7 +96,7 @@ CTEST_SETUP(coinflip)
     data->strategies = calloc(NUM_STRATEGIES, sizeof(*data));
     data->strategies[0] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 1, NULL);
     data->strategies[1] = make_strategy(coinflip_time, NULL, coinflip_data, (void*) 0, NULL);
-    data->strategies[2] = make_redundant_strategy(data->strategies, 2);
+    data->strategies[2] = make_redundant_strategy(data->strategies, 2, NULL);
     for (i = 0; i < NUM_STRATEGIES; ++i) {
         ASSERT_NOT_NULL(data->strategies[i]);
     }

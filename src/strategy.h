@@ -39,7 +39,7 @@ class Strategy {
              void *strategy_arg_,
              void *default_chooser_arg_);
     Strategy(const instruments_strategy_t strategies[], 
-             size_t num_strategies, void *default_chooser_arg_);
+             size_t num_strategies, void *default_chooser_arg_=nullptr);
 
     void setName(const char *name_);
     const char *getName() const;

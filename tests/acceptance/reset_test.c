@@ -110,7 +110,7 @@ static void run_reset_test(CTEST_DATA(reset_test) *data,
     strategies[1] = make_strategy(estimator_value, NULL, high_cost, (void*) &tdata[1], NULL);
     ASSERT_NOT_NULL(strategies[1]);
     set_strategy_name(strategies[1], "hilo");
-    strategies[2] = make_redundant_strategy(strategies, 2);
+    strategies[2] = make_redundant_strategy(strategies, 2, NULL);
     ASSERT_NOT_NULL(strategies[2]);
     set_strategy_name(strategies[2], "both");
 
