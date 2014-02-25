@@ -87,7 +87,7 @@ make_strategy(eval_fn_t time_fn, /* return seconds */
  */
 CDECL instruments_strategy_t
 make_redundant_strategy(const instruments_strategy_t *strategies, 
-                        size_t num_strategies);
+                        size_t num_strategies, void *default_chooser_arg);
 
 CDECL void set_strategy_name(instruments_strategy_t strategy, const char * name);
 CDECL const char *get_strategy_name(instruments_strategy_t strategy);

@@ -240,11 +240,11 @@ redundant_strategy_total_data_cost(StrategyEvaluationContext *ctx, void *arg, vo
 }
 
 Strategy::Strategy(const instruments_strategy_t strategies[], 
-                   size_t num_strategies)
+                   size_t num_strategies, void *default_chooser_arg_)
     : time_fn(redundant_strategy_minimum_time),
       energy_cost_fn(redundant_strategy_total_energy_cost),
       data_cost_fn(redundant_strategy_total_data_cost),
-      strategy_arg(this), default_chooser_arg(NULL)
+      strategy_arg(this), default_chooser_arg(default_chooser_arg_)
 {
     for (size_t i = 0; i < num_strategies; ++i) {
         this->child_strategies.push_back((Strategy *) strategies[i]);

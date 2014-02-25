@@ -43,9 +43,9 @@ make_strategy(eval_fn_t time_fn, /* return seconds */
 
 instruments_strategy_t
 make_redundant_strategy(const instruments_strategy_t *strategies, 
-                        size_t num_strategies)
+                        size_t num_strategies, void *default_chooser_arg)
 {
-    return new Strategy(strategies, num_strategies);
+    return new Strategy(strategies, num_strategies, default_chooser_arg);
 }
 
 void 
