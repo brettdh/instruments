@@ -553,9 +553,22 @@ StrategyEvaluator::strategyGapIsWidening(Strategy *current_winner, bool redundan
     double cur_strategy_badness = cur_strategy_time + cur_strategy_cost;
     bool widening = false;
     if (min_gap_strategy) {
-        double cur_strategy_gap = cur_strategy_badness - last_strategy_badness[current_winner];
-        widening = (cur_strategy_gap < min_badness_gap);
+        if (min_gap_strategy == current_winner) {
+            inst::dbgprintf(INFO, "min-gap strategy is the current winner. no change.  bailing out.\n");
+            widening = true;
+        } else {
+            double cur_strategy_gap = cur_strategy_badness - last_strategy_badness[current_winner];
+            //widening = (cur_strategy_gap <= min_badness_gap);
+            //widening = (cur_strategy_gap <= min_badness_gap + 0.00001);
+            widening = (cur_strategy_gap - min_badness_gap <= 0.00001);
+            inst::dbgprintf(INFO, "min_gap_strategy: %s  current_winner: %s  cur_strategy_gap: %f  min_badness_gap: %f\n",
+                            get_strategy_name(min_gap_strategy),
+                            get_strategy_name(current_winner),
+                            cur_strategy_gap, min_badness_gap);
+        }
     }
+    inst::dbgprintf(INFO, "cur_strategy_time: %f  cur_strategy_cost: %f cur_strategy_badness: %f\n",
+                    cur_strategy_time, cur_strategy_cost, cur_strategy_badness);
     last_strategy_badness[current_winner] = cur_strategy_badness;
     return widening;
 }
