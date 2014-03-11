@@ -28,7 +28,7 @@ from copy import copy
 
 from progressbar import ProgressBar
 
-sys.path.append(os.getenv("HOME") + "/scripts/nistnet_scripts/traces")
+sys.path.append(os.getenv("HOME") + "/src/network_emulation/traces")
 import mobility_trace
 from mobility_trace import NetworkChooser
 
@@ -1909,7 +1909,7 @@ class AppPlotter(object):
         instruments_log = "instruments.log"
         self._is_server = args.server
         if args.server:
-            intnw_log = app_client_log = instruments_log = app_server_log
+            intnw_log = instruments_log = app_server_log
 
         self._measurements_only = args.measurements
         self._network_trace_file = args.network_trace_file
@@ -1917,6 +1917,8 @@ class AppPlotter(object):
         self._intnw_log = args.basedir + "/" + intnw_log
         self._timing_log = args.basedir + "/" + timing_log
         self._app_client_log = args.basedir + "/" + app_client_log
+        self._app_server_log = args.basedir + "/" + app_server_log
+        self._sessions_log = self._app_client_log if self._is_server else self._app_server_log
         self._redundancy_eval_log = args.basedir + "/" + instruments_log
         self._radio_logs = args.radio_log
         self._cross_country_latency = args.cross_country_latency

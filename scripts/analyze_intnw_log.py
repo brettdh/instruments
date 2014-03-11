@@ -36,7 +36,7 @@ class IntNWPlotter(AppPlotter):
     def _readSessions(self):
         runs = []
         new_run = True
-        for linenum, line in enumerate(open(self._app_client_log).readlines()):
+        for linenum, line in enumerate(open(self._sessions_logfile).readlines()):
             fields = line.strip().split()
             if "Session times:" in line:
                 # start over with the better list of sessions

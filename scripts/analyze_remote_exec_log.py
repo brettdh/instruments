@@ -41,7 +41,7 @@ class RemoteExecPlotter(AppPlotter):
     def _readSessions(self):
         self._runs = []
         sessions = []
-        for linenum, line in enumerate(open(self._app_client_log).readlines()):
+        for linenum, line in enumerate(open(self._sessions_log).readlines()):
             if self._lineStartsNewSessionsRun(line):
                 sessions = []
                 decodings = {}
