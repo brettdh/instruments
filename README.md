@@ -60,6 +60,9 @@ Build:
     $ make  # config=release for optimized build
     $ sudo make install
 
+On Android: see the Android.mk build files in
+[Intentional Networking][intnw] for examples.
+
 Use:
 
 For the moment, I must leave you to look at the API comments in
@@ -69,6 +72,14 @@ is a good example of a full-fledged application (well, middleware)
 that uses Instruments.
 
 More thorough documentation is forthcoming.
+
+### Caveats
+
+The brute-force method (see paper if you don't know what I'm
+talking about) is currently hard-coded for two example applications,
+as there wasn't time to make a generic brute-force method performant
+on my test device (Nexus One). This may be a non-issue on more recent
+Android devices, but I haven't tested it.
 
 ### What's with the name?
 
